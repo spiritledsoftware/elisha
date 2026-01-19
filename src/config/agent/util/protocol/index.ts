@@ -1,7 +1,7 @@
-import CONTEXT_HANDLING from './context-handling.txt';
-import ERROR_HANDLING from './error-handling.txt';
-import ESCALATION from './escalation.txt';
-import PLAN_VERSIONING from './plan-versioning.txt';
+import CONTEXT_HANDLING from './context-handling.md';
+import ERROR_HANDLING from './error-handling.md';
+import ESCALATION from './escalation.md';
+import PLAN_VERSIONING from './plan-versioning.md';
 
 const PROTOCOLS: Record<string, string> = {
   'context-handling': CONTEXT_HANDLING,

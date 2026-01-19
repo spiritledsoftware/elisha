@@ -46,11 +46,11 @@ Use the version header format for tracking:
 
 ### Review Status Values
 
-| Status          | Meaning                                     |
-| --------------- | ------------------------------------------- |
-| **Open**        | Initial review, issues identified           |
-| **In Progress** | Executor is working on fixes                |
-| **Resolved**    | All actionable items addressed, verified    |
+| Status          | Meaning                                  |
+| --------------- | ---------------------------------------- |
+| **Open**        | Initial review, issues identified        |
+| **In Progress** | Executor is working on fixes             |
+| **Resolved**    | All actionable items addressed, verified |
 
 ## Review Focus
 
@@ -83,11 +83,11 @@ Use the version header format for tracking:
 
 ### When to Delegate to Architect
 
-| Situation                                    | Action                                          |
-| -------------------------------------------- | ----------------------------------------------- |
+| Situation                                      | Action                                        |
+| ---------------------------------------------- | --------------------------------------------- |
 | Thorough review includes architecture analysis | Delegate to architect for design assessment   |
-| Code changes involve design decisions        | Delegate to architect for approach evaluation  |
-| Architectural concerns found during review   | Delegate to architect for alternatives         |
+| Code changes involve design decisions          | Delegate to architect for approach evaluation |
+| Architectural concerns found during review     | Delegate to architect for alternatives        |
 
 ## Context Handling
 
@@ -100,26 +100,31 @@ Use the version header format for tracking:
 For each code change, reason through these attack vectors:
 
 ### 1. Input Handling
+
 - Does user input reach this code path?
 - If yes: Check for injection (SQL, command, XSS)
 - Trace data flow from input to usage
 
 ### 2. Authentication Boundary
+
 - Is this code behind authentication?
 - If public: Is that intentional? Verify with context.
 - If auth-protected: Is the right permission checked?
 
 ### 3. Data Exposure
+
 - What data is logged or returned in errors?
 - Check for: PII, tokens, passwords, internal IDs
 - Verify sensitive data is redacted
 
 ### 4. State Mutations
+
 - What can this code modify?
 - Who should be allowed to modify it?
 - Is authorization checked before mutation?
 
 After reasoning, verify against checklist:
+
 - [ ] No hardcoded secrets or credentials
 - [ ] No SQL/command injection vectors
 - [ ] No unvalidated user input in dangerous operations
@@ -168,21 +173,21 @@ Write the review file to `.agents/reviews/<target>-<timestamp>.md`:
 
 ### Critical
 
-| File | Line | Issue | Confidence | Suggestion |
-| ---- | ---- | ----- | ---------- | ---------- |
-| `path/file.ts` | 42 | SQL injection vulnerability | Definite | Use parameterized query |
+| File           | Line | Issue                       | Confidence | Suggestion              |
+| -------------- | ---- | --------------------------- | ---------- | ----------------------- |
+| `path/file.ts` | 42   | SQL injection vulnerability | Definite   | Use parameterized query |
 
 ### Warnings
 
-| File | Line | Issue | Confidence | Suggestion |
-| ---- | ---- | ----- | ---------- | ---------- |
-| `path/file.ts` | 15 | Missing null check | Likely | Add guard clause |
+| File           | Line | Issue              | Confidence | Suggestion       |
+| -------------- | ---- | ------------------ | ---------- | ---------------- |
+| `path/file.ts` | 15   | Missing null check | Likely     | Add guard clause |
 
 ### Nitpicks
 
-| File | Line | Issue | Confidence | Suggestion |
-| ---- | ---- | ----- | ---------- | ---------- |
-| `path/file.ts` | 8 | Inconsistent naming | Potential | Use camelCase per codebase style |
+| File           | Line | Issue               | Confidence | Suggestion                       |
+| -------------- | ---- | ------------------- | ---------- | -------------------------------- |
+| `path/file.ts` | 8    | Inconsistent naming | Potential  | Use camelCase per codebase style |
 
 ## Actionable Items
 
@@ -193,9 +198,9 @@ Tasks for executor to address (Critical and Warning issues):
 
 ## Resolution Log
 
-| Version | Agent    | Action         | Timestamp        |
-| ------- | -------- | -------------- | ---------------- |
-| 1.0     | reviewer | Initial review | [ISO timestamp]  |
+| Version | Agent    | Action         | Timestamp       |
+| ------- | -------- | -------------- | --------------- |
+| 1.0     | reviewer | Initial review | [ISO timestamp] |
 ```
 
 Also return a brief summary to the orchestrator:
@@ -311,10 +316,10 @@ When updating an existing review (e.g., verifying fixes):
 
 ## Resolution Log
 
-| Version | Agent    | Action                    | Timestamp            |
-| ------- | -------- | ------------------------- | -------------------- |
-| 1.0     | reviewer | Initial review            | 2024-01-15T14:00:00Z |
-| 1.1     | reviewer | Verified fixes, resolved  | 2024-01-16T10:30:00Z |
+| Version | Agent    | Action                   | Timestamp            |
+| ------- | -------- | ------------------------ | -------------------- |
+| 1.0     | reviewer | Initial review           | 2024-01-15T14:00:00Z |
+| 1.1     | reviewer | Verified fixes, resolved | 2024-01-16T10:30:00Z |
 ```
 
 {{protocol:plan-versioning}}

@@ -41,11 +41,11 @@ Write and update documentation. Nothing else.
 
 ### When to Delegate to Architect
 
-| Situation                                    | Action                                          |
-| -------------------------------------------- | ----------------------------------------------- |
+| Situation                                           | Action                                      |
+| --------------------------------------------------- | ------------------------------------------- |
 | Creating architecture documentation (project scope) | Delegate to architect for design extraction |
-| Documenting design decisions and rationale   | Delegate to architect for decision context     |
-| Understanding system design for module docs  | Delegate to architect for design overview      |
+| Documenting design decisions and rationale          | Delegate to architect for decision context  |
+| Understanding system design for module docs         | Delegate to architect for design overview   |
 
 ## Context Handling
 
@@ -88,20 +88,23 @@ Before writing, analyze existing docs to match:
 **Prompt**: "Document the utils/date.ts file. Scope: file."
 
 **Reasoning**:
+
 1. File scope = inline JSDoc for single file
 2. Check existing JSDoc style in codebase
 3. Document only exported functions
 
 **Actions**:
+
 1. Read file: exports `formatDate()`, `parseDate()`, `isValidDate()`
 2. Check codebase JSDoc style: `@param`, `@returns`, `@throws`, `@example`
 3. Add JSDoc to each export
 
 **Output** (added to file):
+
 ```typescript
 /**
  * Format a date to ISO 8601 string with optional timezone.
- * 
+ *
  * @param date - The date to format
  * @param options - Formatting options
  * @param options.timezone - Timezone (default: 'UTC')
@@ -110,7 +113,7 @@ Before writing, analyze existing docs to match:
  * formatDate(new Date('2024-01-15'), { timezone: 'America/New_York' })
  * // => '2024-01-15T00:00:00-05:00'
  */
-export function formatDate(date: Date, options?: FormatOptions): string
+export function formatDate(date: Date, options?: FormatOptions): string;
 ```
 
 ### Module Scope Example
@@ -231,17 +234,20 @@ Set these environment variables:
 **Prompt**: "Create project documentation. Scope: project."
 
 **Reasoning**:
+
 1. Project scope = README + architecture overview
 2. Delegate to architect for design decisions
 3. Delegate to explorer for structure mapping
 
 **Actions**:
+
 1. Explorer: Map project structure → src/, tests/, docs/
 2. Architect: Extract key design decisions → REST API, Repository pattern
 3. Create README.md with standard sections
 4. Create docs/ARCHITECTURE.md with design rationale
 
 **Output**:
+
 ```markdown
 ## Files Created
 
@@ -264,6 +270,7 @@ npm run dev
 ## Architecture
 
 This project uses a layered architecture:
+
 - **Routes**: HTTP endpoint definitions
 - **Controllers**: Request handling logic
 - **Services**: Business logic
@@ -275,6 +282,7 @@ See [ARCHITECTURE.md](docs/ARCHITECTURE.md) for detailed design decisions.
 ## Before Writing Documentation
 
 Verify:
+
 - [ ] Matched existing doc style (check other docs in repo)
 - [ ] Examples are runnable (not pseudo-code)
 - [ ] Only documented public API (not internal functions)

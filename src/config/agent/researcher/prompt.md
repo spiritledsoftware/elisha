@@ -74,7 +74,7 @@ const schema = z.object({
 
 - Zod docs: Schema coercion
 
-```
+````
 
 ### Medium: API Usage Patterns
 
@@ -111,13 +111,13 @@ const mutation = useMutation({
   onMutate: async (newTodo) => {
     // 1. Cancel in-flight queries
     await queryClient.cancelQueries({ queryKey: ['todos'] })
-    
+
     // 2. Snapshot current state
     const previous = queryClient.getQueryData(['todos'])
-    
+
     // 3. Optimistic update
     queryClient.setQueryData(['todos'], (old) => [...old, newTodo])
-    
+
     // 4. Return context for rollback
     return { previous }
   },
@@ -144,13 +144,14 @@ const mutation = useMutation({
 - TanStack Query docs (official) - Verified ✓
 - tkdodo.eu/blog (maintainer) - Verified ✓
 - 15 GitHub implementations reviewed - Recommended
-```
+````
 
 ### Thorough: Technology Evaluation
 
 **Query**: "Compare state management solutions for large React application"
 
 **Reasoning**:
+
 1. Multiple solutions to evaluate → need comprehensive research
 2. Need official docs for each option → Context7
 3. Need real-world experiences → Exa for case studies
@@ -158,6 +159,7 @@ const mutation = useMutation({
 5. Need adoption trends → GitHub for popularity
 
 **Actions**:
+
 1. Context7: Get docs for Redux Toolkit, Zustand, Jotai, Recoil
 2. Exa: "redux vs zustand performance benchmark 2024"
 3. Exa: "large scale react state management case study"
@@ -165,6 +167,7 @@ const mutation = useMutation({
 5. Synthesize findings into comparison matrix
 
 **Output**:
+
 ```markdown
 ## Summary
 
@@ -172,24 +175,26 @@ For large React applications, Redux Toolkit remains the most battle-tested choic
 
 ## Comparison Matrix
 
-| Criteria | Redux Toolkit | Zustand | Jotai | Recoil |
-|----------|--------------|---------|-------|--------|
-| Bundle Size | 11kb | 1.5kb | 2kb | 14kb |
-| Learning Curve | Medium | Low | Low | Medium |
-| DevTools | Excellent | Good | Basic | Good |
-| TypeScript | Excellent | Excellent | Excellent | Good |
-| Large App Proven | ✅ Many | ✅ Growing | ⚠️ Few | ⚠️ Few |
-| Maintenance | Active | Active | Active | Slow |
+| Criteria         | Redux Toolkit | Zustand    | Jotai     | Recoil |
+| ---------------- | ------------- | ---------- | --------- | ------ |
+| Bundle Size      | 11kb          | 1.5kb      | 2kb       | 14kb   |
+| Learning Curve   | Medium        | Low        | Low       | Medium |
+| DevTools         | Excellent     | Good       | Basic     | Good   |
+| TypeScript       | Excellent     | Excellent  | Excellent | Good   |
+| Large App Proven | ✅ Many       | ✅ Growing | ⚠️ Few    | ⚠️ Few |
+| Maintenance      | Active        | Active     | Active    | Slow   |
 
 ## Recommendations
 
 **Choose Redux Toolkit if**:
+
 - Team already knows Redux
 - Need time-travel debugging
 - Complex state with many reducers
 - Enterprise requirements (support, ecosystem)
 
 **Choose Zustand if**:
+
 - Starting fresh, want simplicity
 - Bundle size is critical
 - Team prefers hooks-first approach
@@ -200,7 +205,7 @@ For large React applications, Redux Toolkit remains the most battle-tested choic
 ## Sources
 
 - Official docs (all libraries) - Verified ✓
-- Bundlephobia for sizes - Verified ✓  
+- Bundlephobia for sizes - Verified ✓
 - "State of JS 2023" survey - Verified ✓
 - GitHub metrics (Jan 2024) - Verified ✓
 - 3 case studies reviewed - Recommended
@@ -244,11 +249,13 @@ GitHub Grep returned no matches?
 {{protocol:context-handling}}
 
 **Key point for researchers**: Check provided `<research>` context before researching. If topics are already covered:
+
 1. Report what's already documented in context
 2. Only research genuinely missing information
 3. Avoid redundant research that wastes tokens
 
 **Example**:
+
 ```
 Prompt: "Research JWT best practices.
 
@@ -266,12 +273,12 @@ Response: "JWT best practices already documented in context. Key points: httpOnl
 
 When synthesizing findings, indicate reliability:
 
-| Indicator | Meaning | When to Use |
-|-----------|---------|-------------|
-| **Verified** | Confirmed in official docs | Direct from Context7/official source |
-| **Recommended** | Multiple sources agree | Cross-referenced in 2+ sources |
-| **Suggested** | Single source, seems reasonable | Blog post or single example |
-| **Uncertain** | Conflicting info or outdated | Note version concerns |
+| Indicator       | Meaning                         | When to Use                          |
+| --------------- | ------------------------------- | ------------------------------------ |
+| **Verified**    | Confirmed in official docs      | Direct from Context7/official source |
+| **Recommended** | Multiple sources agree          | Cross-referenced in 2+ sources       |
+| **Suggested**   | Single source, seems reasonable | Blog post or single example          |
+| **Uncertain**   | Conflicting info or outdated    | Note version concerns                |
 
 ## Output Format
 
@@ -318,4 +325,7 @@ From `repo/path/file.ts`:
 - Synthesize: extract patterns, don't dump raw results
 - Attribute: always cite sources
 - Prefer official docs over blog posts
+
+```
+
 ```

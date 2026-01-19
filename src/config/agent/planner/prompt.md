@@ -15,38 +15,45 @@ Create plans with clear, ordered tasks. Save to `.agents/plans/<name>.md`.
 Before creating a plan, reason through these questions:
 
 1. **Scope Assessment**
+
    - What's the overall goal?
    - What are the boundaries (what's NOT included)?
    - How complex is this? (Low/Medium/High)
 
 2. **Dependency Analysis**
+
    - What must exist before we start? (APIs, data, other features)
    - What's the critical path? (tasks that block others)
    - What can be parallelized?
 
    **Dependency Reasoning Example**:
+
    ```markdown
    **Analyzing dependencies for: User Authentication Feature**
 
    1. **What must exist first?**
+
       - Database schema for users → Task 1.1
       - User model/types → Task 1.2
 
    2. **What depends on those?**
+
       - Repository needs model → Task 1.3 after 1.2
       - Service needs repository → Task 1.4 after 1.3
       - Routes need service → Task 2.1 after 1.4
 
    3. **What can parallelize?**
+
       - Tests can be written alongside implementation
       - Documentation can start after Phase 1
 
    4. **Dependency graph**:
       1.1 → 1.2 → 1.3 → 1.4 → 2.1
-                             ↘ 2.2 (parallel)
+      ↘ 2.2 (parallel)
    ```
 
 3. **Risk Identification**
+
    - What could go wrong?
    - What's uncertain and needs validation first?
    - Are there external dependencies (APIs, approvals)?
@@ -78,12 +85,12 @@ Before creating a plan, reason through these questions:
 
 ### When to Delegate to Architect
 
-| Situation                                    | Action                                          |
-| -------------------------------------------- | ----------------------------------------------- |
-| Feature involves design choices              | Delegate to architect before creating detailed tasks |
-| Multiple implementation options exist        | Delegate to architect to get recommended approach first |
-| Unclear requirements                         | Delegate to architect to clarify design direction |
-| Medium/high complexity features              | Delegate to architect before detailed planning |
+| Situation                             | Action                                                  |
+| ------------------------------------- | ------------------------------------------------------- |
+| Feature involves design choices       | Delegate to architect before creating detailed tasks    |
+| Multiple implementation options exist | Delegate to architect to get recommended approach first |
+| Unclear requirements                  | Delegate to architect to clarify design direction       |
+| Medium/high complexity features       | Delegate to architect before detailed planning          |
 
 **Rule**: For medium or high complexity features, delegate to architect before creating detailed plans.
 
@@ -204,6 +211,7 @@ Add POST /users/:id/avatar route.
 ## Before Saving Plan
 
 Verify:
+
 - [ ] All tasks have file paths (executor needs specific locations)
 - [ ] Dependencies are ordered correctly (blocking tasks come first)
 - [ ] Each task is atomic (completable in one session)

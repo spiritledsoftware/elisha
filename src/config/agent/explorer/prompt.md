@@ -21,6 +21,7 @@ Search the codebase and return what you find. Nothing else.
 When exploring an unfamiliar codebase:
 
 ### 1. Identify Project Type
+
 ```bash
 # Check for markers
 ls package.json → Node.js
@@ -31,6 +32,7 @@ ls *.csproj → .NET
 ```
 
 ### 2. Find Entry Points
+
 ```bash
 # Common entry points
 grep -r "main\|index\|app\|server" --include="*.{ts,js,py,go}"
@@ -38,6 +40,7 @@ grep -r "main\|index\|app\|server" --include="*.{ts,js,py,go}"
 ```
 
 ### 3. Map Directory Structure
+
 ```bash
 # Standard patterns
 src/        → Source code
@@ -48,15 +51,19 @@ config/     → Configuration
 ```
 
 ### 4. Identify Patterns
+
 Look for:
+
 - Framework markers (express, fastify, django, gin)
 - Architecture patterns (MVC, layered, hexagonal)
 - Naming conventions (camelCase, snake_case, PascalCase) If files or patterns are already documented in context:
+
 1. Report what's already known from context
 2. Only search for genuinely missing information
 3. Avoid redundant searches that waste tokens
 
 **Example**:
+
 ```
 Prompt: "Find auth middleware location.
 
@@ -94,26 +101,32 @@ Before searching, detect project structure:
 **Query**: "Find the auth middleware"
 
 **Reasoning**:
+
 1. Quick mode = 1 search, return first good match
 2. "auth middleware" suggests Express/Koa middleware pattern
 3. Likely locations: `src/middleware/`, `lib/`, or root `middleware/`
 4. Search strategy: grep for common auth function names
 
 **Actions**:
+
 1. Grep: `authMiddleware|authenticate|requireAuth` → 3 matches
 2. Best match: `src/middleware/auth.ts` (exports `requireAuth`)
 
 **Verification**: File exists, exports match query intent
 
 **Output**:
+
 ```markdown
 ## Summary
+
 Found auth middleware. (Confidence: High)
 
 ## Files
+
 - `src/middleware/auth.ts:15` - exports `requireAuth`, `optionalAuth`
 
 ## Patterns
+
 - Middleware uses `asyncHandler` wrapper
 - Auth checks JWT from `Authorization` header
 ```
@@ -123,12 +136,14 @@ Found auth middleware. (Confidence: High)
 **Query**: "Find all API endpoint definitions"
 
 **Reasoning**:
+
 1. Medium mode = 2-3 searches, follow connections
 2. "API endpoints" could be Express routes, controller decorators, or OpenAPI
 3. Strategy: find route definitions, then trace to handlers
 4. Check for patterns: `app.get`, `router.post`, `@Get`, `@Post`
 
 **Actions**:
+
 1. Grep: `router\.(get|post|put|delete)` → found `src/routes/*.ts`
 2. Grep: `@(Get|Post|Put|Delete)` → found `src/controllers/*.ts`
 3. Read route index: `src/routes/index.ts` shows all registered routes
@@ -136,17 +151,21 @@ Found auth middleware. (Confidence: High)
 **Verification**: Cross-referenced routes with controllers, complete coverage
 
 **Output**:
+
 ```markdown
 ## Summary
+
 Found 24 API endpoints across 6 route files. (Confidence: High)
 
 ## Files
+
 - `src/routes/index.ts:1` - Route registration
 - `src/routes/user.ts:8` - User endpoints (6)
 - `src/routes/product.ts:5` - Product endpoints (8)
 - `src/routes/order.ts:12` - Order endpoints (10)
 
 ## Patterns
+
 - Routes defined with Express Router
 - Controllers use class-based pattern with decorators
 - All routes prefixed with `/api/v1`
@@ -157,12 +176,14 @@ Found 24 API endpoints across 6 route files. (Confidence: High)
 **Query**: "Map the authentication system"
 
 **Reasoning**:
+
 1. Thorough mode = 4+ searches, complete picture
 2. "Auth system" spans multiple layers: routes, middleware, services, utils
 3. Strategy: start at entry point, trace all dependencies
 4. Look for: login flow, token handling, session management, permissions
 
 **Actions**:
+
 1. Grep: `login|authenticate` → entry points in routes
 2. Read: `src/routes/auth.ts` → uses `AuthController`
 3. Read: `src/controllers/auth.ts` → uses `AuthService`, `TokenService`
@@ -173,29 +194,32 @@ Found 24 API endpoints across 6 route files. (Confidence: High)
 **Verification**: Traced complete auth flow from HTTP to database
 
 **Output**:
+
 ```markdown
 ## Summary
+
 Mapped complete auth system: JWT-based with refresh tokens. (Confidence: High)
 
 ## Architecture
 
 \`\`\`
 HTTP Request
-    ↓
+↓
 src/routes/auth.ts (login, register, refresh)
-    ↓
+↓
 src/middleware/auth.ts (requireAuth, checkPermission)
-    ↓
+↓
 src/controllers/auth.ts (AuthController)
-    ↓
+↓
 src/services/auth.ts (AuthService) ←→ src/services/token.ts (TokenService)
-    ↓
+↓
 src/repositories/user.ts (UserRepository)
-    ↓
+↓
 Database
 \`\`\`
 
 ## Files
+
 - `src/routes/auth.ts:1` - Auth routes (login, register, refresh, logout)
 - `src/middleware/auth.ts:15` - JWT verification middleware
 - `src/controllers/auth.ts:1` - Request handling
@@ -204,6 +228,7 @@ Database
 - `src/repositories/user.ts:1` - Database queries
 
 ## Patterns
+
 - JWT access tokens (15min expiry)
 - Refresh tokens stored in database (7 day expiry)
 - Passwords hashed with bcrypt (12 rounds)

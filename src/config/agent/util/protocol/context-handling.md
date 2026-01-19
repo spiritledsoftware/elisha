@@ -126,8 +126,10 @@ When you have context, avoid redundant delegation:
 - ✅ Check context FIRST, delegate ONLY for gaps
 
 **Example**:
+
 ```markdown
 # Bad: Redundant delegation
+
 <context>
 <codebase>
 - `src/auth/login.ts:15` - login handler
@@ -137,5 +139,6 @@ When you have context, avoid redundant delegation:
 "I'll delegate to explorer to find the login handler..." ❌
 
 # Good: Use existing context
+
 "Context shows login handler at `src/auth/login.ts:15`, proceeding..." ✓
 ```

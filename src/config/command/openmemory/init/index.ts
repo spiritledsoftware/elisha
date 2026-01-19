@@ -2,7 +2,7 @@ import defu from 'defu';
 import type { ElishaConfigContext } from '../../..';
 import type { CommandConfig } from '../..';
 
-import PROMPT from './prompt.txt';
+import PROMPT from './prompt.md';
 
 export const COMMAND_OPENMEMORY_INIT_ID = 'openmemory-init';
 
