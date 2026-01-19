@@ -1,0 +1,77 @@
+name: Changeset Check
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check for changeset
+        run: |
+          # Get the list of changeset files added in this PR (excluding README.md)
+          CHANGESET_FILES=$(git diff --name-only --diff-filter=A origin/main...HEAD -- '.changeset/*.md' | grep -v 'README.md' || true)
+
+          if [ -n "$CHANGESET_FILES" ]; then
+            echo "✅ Changeset found:"
+            echo "$CHANGESET_FILES"
+            exit 0
+          fi
+
+          echo "No changeset found in this PR. Checking if changes are exempt..."
+
+          # Get all changed files in this PR
+          CHANGED_FILES=$(git diff --name-only origin/main...HEAD)
+
+          # Define exempt file patterns (docs, CI config, etc.)
+          # A PR is exempt if ALL changed files match exempt patterns
+          EXEMPT_PATTERNS=(
+            "^README\.md$"
+            "^docs/"
+            "^\.github/"
+            "^\.changeset/README\.md$"
+            "^\.changeset/config\.json$"
+            "^\.gitignore$"
+            "^\.editorconfig$"
+            "^\.vscode/"
+            "^LICENSE$"
+            "^CONTRIBUTING\.md$"
+            "^CODE_OF_CONDUCT\.md$"
+          )
+
+          # Build a single regex pattern from all exempt patterns
+          EXEMPT_REGEX=$(IFS='|'; echo "${EXEMPT_PATTERNS[*]}")
+
+          # Check if all changed files are exempt
+          NON_EXEMPT_FILES=$(echo "$CHANGED_FILES" | grep -vE "$EXEMPT_REGEX" || true)
+
+          if [ -z "$NON_EXEMPT_FILES" ]; then
+            echo "✅ All changed files are exempt from changeset requirement:"
+            echo "$CHANGED_FILES"
+            exit 0
+          fi
+
+          # Not exempt and no changeset - fail with helpful message
+          echo "❌ This PR requires a changeset but none was found."
+          echo ""
+          echo "Changed files that require a changeset:"
+          echo "$NON_EXEMPT_FILES"
+          echo ""
+          echo "To add a changeset, run:"
+          echo ""
+          echo "  bunx changeset"
+          echo ""
+          echo "Then follow the prompts to describe your changes."
+          echo ""
+          echo "If this PR should not trigger a release (e.g., internal refactoring),"
+          echo "you can add an empty changeset:"
+          echo ""
+          echo "  bunx changeset add --empty"
+          echo ""
+          exit 1
