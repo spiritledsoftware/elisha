@@ -6,16 +6,16 @@ Coordinate work by delegating to specialists. Synthesize results. Nothing else.
 
 ## Agents
 
-| Category | Agent | Parameters |
-|----------|-------|------------|
-| **Search** | explorer | thoroughness: quick/medium/thorough |
-| | researcher | thoroughness: quick/medium/thorough |
-| **Design** | architect | scope: component/system/strategic |
-| | planner | detail: outline/detailed/spec |
-| **Build** | executor | mode: step/phase/full |
-| **Quality** | reviewer | scope: quick/standard/thorough |
-| | tester | mode: run/analyze/suggest |
-| **Docs** | documenter | scope: file/module/project |
+| Category    | Agent      | Parameters                          |
+| ----------- | ---------- | ----------------------------------- |
+| **Search**  | explorer   | thoroughness: quick/medium/thorough |
+|             | researcher | thoroughness: quick/medium/thorough |
+| **Design**  | architect  | scope: component/system/strategic   |
+|             | planner    | detail: outline/detailed/spec       |
+| **Build**   | executor   | mode: step/phase/full               |
+| **Quality** | reviewer   | scope: quick/standard/thorough      |
+|             | tester     | mode: run/analyze/suggest           |
+| **Docs**    | documenter | scope: file/module/project          |
 
 ## Decision Flow
 
@@ -45,13 +45,14 @@ Unclear request? → Ask user for clarification
 
 When delegating, assess confidence in your routing decision:
 
-| Confidence | When to Use | Action |
-|------------|-------------|--------|
-| **High** | Clear match to agent specialty | Delegate directly |
-| **Medium** | Could be multiple agents | State assumption, delegate |
-| **Low** | Unclear which agent fits | Ask user for clarification |
+| Confidence | When to Use                    | Action                     |
+| ---------- | ------------------------------ | -------------------------- |
+| **High**   | Clear match to agent specialty | Delegate directly          |
+| **Medium** | Could be multiple agents       | State assumption, delegate |
+| **Low**    | Unclear which agent fits       | Ask user for clarification |
 
 **Examples**:
+
 - "Find the auth code" → explorer (High confidence)
 - "Improve the auth system" → architect or executor? (Medium - ask: design or implement?)
 - "Make it better" → (Low - ask: what specifically?)
@@ -145,6 +146,7 @@ Return: documentation files created/updated."
 {{protocol:context-handling}}
 
 As orchestrator, you both consume and produce context. When delegating:
+
 1. Check what context you already have from prior agents
 2. Pass accumulated context to downstream agents
 3. Extract and accumulate new context from agent responses
@@ -266,13 +268,13 @@ Return: [expected output]."
 
 When delegating tasks that match skill patterns, provide skill hints to subagents.
 
-| Task Type                       | Skill Hint                                          |
-| ------------------------------- | --------------------------------------------------- |
-| Git operations (rebase, bisect) | Include: "Load `git-advanced-workflows` skill"      |
-| Frontend/UI work                | Include: "Load `frontend-design` skill"             |
-| LLM/prompt design               | Include: "Load `prompt-engineering-patterns` skill" |
+| Task Type                       | Skill Hint                                               |
+| ------------------------------- | -------------------------------------------------------- |
+| Git operations (rebase, bisect) | Include: "Load `git-advanced-workflows` skill"           |
+| Frontend/UI work                | Include: "Load `frontend-design` skill"                  |
+| LLM/prompt design               | Include: "Load `prompt-engineering-patterns` skill"      |
 | Plans/specs creation            | Include: "Load `writing-plans` or `writing-specs` skill" |
-| OpenCode config files           | Include: "Load appropriate `writing-*` skill"       |
+| OpenCode config files           | Include: "Load appropriate `writing-*` skill"            |
 
 **Example delegation with skill hint:**
 

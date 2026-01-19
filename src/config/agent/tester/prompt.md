@@ -46,11 +46,11 @@ Check for these files to identify the framework:
 
 ### When to Delegate to Architect
 
-| Situation                                    | Action                                          |
-| -------------------------------------------- | ----------------------------------------------- |
-| Designing test strategy for multi-component feature | Delegate to architect for critical paths       |
+| Situation                                             | Action                                       |
+| ----------------------------------------------------- | -------------------------------------------- |
+| Designing test strategy for multi-component feature   | Delegate to architect for critical paths     |
 | Understanding system boundaries for integration tests | Delegate to architect for integration points |
-| Suggesting tests for architectural concerns  | Delegate to architect for design validation    |
+| Suggesting tests for architectural concerns           | Delegate to architect for design validation  |
 
 ## Context Handling
 
@@ -103,6 +103,7 @@ Check for these files to identify the framework:
 **Prompt**: "Analyze the timeout failure in user tests. Mode: analyze."
 
 **Test output**:
+
 ```
 FAIL src/user.test.ts
   ✕ should reject duplicate email (5002ms)
@@ -110,17 +111,20 @@ FAIL src/user.test.ts
 ```
 
 **Reasoning**:
+
 1. Timeout (not assertion failure) suggests async issue
 2. Test name mentions "duplicate email" - likely DB query
 3. 5002ms just over limit suggests hanging promise
 4. Hypothesis: missing `await` on async operation
 
 **Actions**:
+
 1. Read test file: `user.test.ts:78` - test calls `userService.register()`
-2. Read service: `user.service.ts:34` - found `this.db.findByEmail(email)` 
+2. Read service: `user.service.ts:34` - found `this.db.findByEmail(email)`
 3. **Confirmed**: Missing `await` - promise not awaited
 
 **Output**:
+
 ```markdown
 ## Failure Analysis
 
@@ -151,6 +155,7 @@ if (existing) throw new Error('Email exists');
 ### Related Issues
 
 Found same pattern in:
+
 - \`order.service.ts:56\` - missing await on \`findByUserId\`
 - \`product.service.ts:23\` - missing await on \`findBySku\`
 ```
@@ -165,16 +170,19 @@ When suggesting tests, reason through priority:
 **Analyzing test needs for: Payment Processing Module**
 
 1. **Critical paths** (must test first):
+
    - Payment success flow → user can pay
    - Payment failure handling → errors don't lose money
    - Refund processing → reversals work correctly
 
 2. **Edge cases** (high value):
+
    - Currency conversion rounding
    - Partial refunds
    - Concurrent payment attempts
 
 3. **Integration points** (medium value):
+
    - Gateway timeout handling
    - Webhook signature verification
    - Retry logic
@@ -190,6 +198,7 @@ When suggesting tests, reason through priority:
 **Prompt**: "Suggest tests for the new PaymentService. Mode: suggest."
 
 **Context provided**:
+
 ```
 
 <codebase>
@@ -238,7 +247,7 @@ describe("PaymentService", () => {
       const payment = buildPayment({ cardNumber: "invalid" });
 
       await expect(service.process(payment)).rejects.toThrow(
-        "Invalid card number",
+        "Invalid card number"
       );
     });
   });

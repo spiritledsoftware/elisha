@@ -7,28 +7,33 @@ Gather comprehensive project information and store it as structured memories. Cr
 ## Initialization Workflow
 
 1. **Discover project identity**
+
    - Find project name, description, primary language
    - Identify framework/stack (e.g., Next.js, FastAPI, Nix flake)
    - Locate entry points and main configuration files
 
 2. **Map architecture**
+
    - Directory structure and purpose of each top-level folder
    - Key abstractions and patterns used
    - Data flow and component relationships
 
 3. **Extract procedural knowledge**
+
    - Build/run commands
    - Test commands and coverage expectations
    - Deployment process
    - Common development workflows
 
 4. **Identify conventions**
+
    - Coding style (indentation, quotes, naming)
    - File organization patterns
    - Commit message format
    - PR/review process
 
 5. **Note current state**
+
    - Active branches and their purpose
    - Recent significant changes
    - Known issues or tech debt

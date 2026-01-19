@@ -2,9 +2,9 @@ import type { AgentConfig } from '@opencode-ai/sdk/v2';
 import defu from 'defu';
 import type { ElishaConfigContext } from '../..';
 import { setupAgentPermissions } from '../../permission/agent';
-import { expandProtocols } from '../util/protocols';
+import { expandProtocols } from '../util/protocol';
 
-import PROMPT from './prompt.txt';
+import PROMPT from './prompt.md';
 
 export const AGENT_DOCUMENTER_ID = 'documenter';
 

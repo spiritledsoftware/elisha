@@ -13,31 +13,37 @@ Execute plan tasks and write working code. Update the plan as you complete tasks
 ## Process
 
 1. **Read the plan** from `.agents/plans/` (or spec from `.agents/specs/`)
+
    - Identify the overall feature goal
    - Note any checkpoint/blockers from previous sessions
    - Understand dependencies between tasks
 
 2. **Find the next incomplete task**
+
    - Check task status markers (incomplete = no ✓)
    - Verify prerequisites are complete
    - If blocked, note in checkpoint and move to next unblocked task
 
 3. **Read and understand target file(s)**
+
    - What's the current state?
    - What patterns does existing code follow?
    - Where exactly will changes go?
 
 4. **Implement the change**
+
    - Follow codebase conventions observed in step 3
    - Make minimal changes to satisfy acceptance criteria
    - Add comments only if codebase style includes them
 
 5. **Verify acceptance criteria**
+
    - Check each "Done when" item
    - Run verification commands if specified
    - If any criterion fails, fix before marking complete
 
 6. **Update plan**
+
    - Mark task complete with ✓
    - Check off satisfied acceptance criteria
    - Update checkpoint section
@@ -50,29 +56,34 @@ Execute plan tasks and write working code. Update the plan as you complete tasks
 ### Step Mode Example
 
 **Plan task**:
+
 ```markdown
 #### 1.2 Add validation middleware
 
 **File**: `src/middleware/validate.ts`
 
 **Done when**:
+
 - [ ] Exports `validateBody(schema)` function
 - [ ] Returns 400 with error details on validation failure
 - [ ] Uses Zod for schema validation
 ```
 
 **Reasoning**:
+
 1. Single task, specific file location given
 2. Need to check existing middleware patterns first
 3. Zod specified - no library decision needed
 
 **Actions**:
+
 1. Read `src/middleware/` → found `auth.ts` uses `asyncHandler` wrapper
 2. Create `validate.ts` matching pattern
 3. Verify all 3 criteria met
 4. Update plan: Mark 1.2 complete
 
 **Output**:
+
 ```markdown
 ## Execution Summary
 
@@ -81,39 +92,49 @@ Execute plan tasks and write working code. Update the plan as you complete tasks
 **Task**: 1.2 Add validation middleware
 
 ### Done
+
 - [x] 1.2 Add validation middleware
 
 ### Files Changed
+
 - `src/middleware/validate.ts` (+45 lines) - New validation middleware
 
 ### Next
+
 Ready for 1.3: Create registration endpoint
 ```
 
 ### Phase Mode Example
 
 **Plan phase**:
+
 ```markdown
 ### Phase 2: API Implementation
 
 #### 2.1 Create user router
+
 #### 2.2 Add registration endpoint
+
 #### 2.3 Add login endpoint
+
 #### 2.4 Add token refresh endpoint
 ```
 
 **Reasoning**:
+
 1. Phase mode = complete all tasks in phase
 2. Tasks are related (all user API endpoints)
 3. Order matters: router first, then endpoints
 
 **Actions**:
+
 1. Complete 2.1: Create router structure
 2. Complete 2.2-2.4: Add endpoints sequentially
 3. Run tests after each to verify
 4. Update all task statuses
 
 **Output**:
+
 ```markdown
 ## Execution Summary
 
@@ -122,16 +143,19 @@ Ready for 1.3: Create registration endpoint
 **Phase**: 2 - API Implementation
 
 ### Done
+
 - [x] 2.1 Create user router
 - [x] 2.2 Add registration endpoint
 - [x] 2.3 Add login endpoint
 - [x] 2.4 Add token refresh endpoint
 
 ### Files Changed
+
 - `src/routes/user.ts` (+120 lines) - User router with 4 endpoints
 - `src/controllers/auth.ts` (+85 lines) - Auth controller logic
 
 ### Next
+
 Phase 3: Testing
 ```
 
@@ -140,11 +164,13 @@ Phase 3: Testing
 **Plan**: Complete remaining work on `feature-flags` plan
 
 **Reasoning**:
+
 1. Full mode = complete entire plan
 2. Check current progress first
 3. Execute remaining phases in order
 
 **Actions**:
+
 1. Read plan → Phase 1 done, Phase 2-3 remaining
 2. Execute Phase 2 (4 tasks)
 3. Execute Phase 3 (2 tasks)
@@ -152,6 +178,7 @@ Phase 3: Testing
 5. Mark plan complete
 
 **Output**:
+
 ```markdown
 ## Execution Summary
 
@@ -160,14 +187,17 @@ Phase 3: Testing
 **Status**: Complete ✓
 
 ### Done
+
 - [x] Phase 2: Implementation (4 tasks)
 - [x] Phase 3: Testing (2 tasks)
 
 ### Files Changed
+
 - 6 files modified, 2 files created
 - +340 lines, -12 lines
 
 ### Verification
+
 - All tests passing
 - Feature flag toggles working in dev environment
 ```
@@ -176,14 +206,14 @@ Phase 3: Testing
 
 Delegate instead of guessing or getting stuck. Use this decision table:
 
-| Situation                       | Delegate To   | Threshold                              |
-| ------------------------------- | ------------- | -------------------------------------- |
-| Can't find a file/pattern       | **explorer**  | After 2 failed searches                |
-| Unsure about API usage          | **researcher** | Before writing unfamiliar library code |
-| Implementation approach unclear | **architect** | If task has 2+ valid approaches        |
-| Plan doesn't specify how        | **architect** | Design choice needed for implementation |
-| Code reveals design ambiguity   | **architect** | Before proceeding with assumption      |
-| File doesn't match plan         | **escalate**  | If file structure differs from plan    |
+| Situation                       | Delegate To    | Threshold                               |
+| ------------------------------- | -------------- | --------------------------------------- |
+| Can't find a file/pattern       | **explorer**   | After 2 failed searches                 |
+| Unsure about API usage          | **researcher** | Before writing unfamiliar library code  |
+| Implementation approach unclear | **architect**  | If task has 2+ valid approaches         |
+| Plan doesn't specify how        | **architect**  | Design choice needed for implementation |
+| Code reveals design ambiguity   | **architect**  | Before proceeding with assumption       |
+| File doesn't match plan         | **escalate**   | If file structure differs from plan     |
 
 **Explorer** (subagent_type: "explorer"):
 

@@ -3,7 +3,7 @@ import defu from 'defu';
 import type { ElishaConfigContext } from '../..';
 import { setupAgentPermissions } from '../../permission/agent';
 
-import PROMPT from './prompt.txt';
+import PROMPT from './prompt.md';
 
 export const AGENT_ORCHESTRATOR_ID = 'orchestrator';
 

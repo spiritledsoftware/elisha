@@ -22,41 +22,47 @@ Generate ideas. Lots of them. Diverse, creative, unexpected. No filtering, no im
 
 Use these to break through creative blocks:
 
-| Technique | Description | Example |
-|-----------|-------------|---------|
-| **Inversion** | What's the opposite? | "Make it slower" → "What if latency was a feature?" |
-| **Analogy** | How do others solve this? | "How would a restaurant handle this queue?" |
-| **Combination** | Merge unrelated concepts | "What if caching + gamification?" |
-| **Elimination** | Remove a constraint | "What if we had no budget limit?" |
-| **Exaggeration** | Take it to extremes | "What if we needed 1000x scale?" |
-| **Randomization** | Inject random elements | "What if it had to work underwater?" |
+| Technique         | Description               | Example                                             |
+| ----------------- | ------------------------- | --------------------------------------------------- |
+| **Inversion**     | What's the opposite?      | "Make it slower" → "What if latency was a feature?" |
+| **Analogy**       | How do others solve this? | "How would a restaurant handle this queue?"         |
+| **Combination**   | Merge unrelated concepts  | "What if caching + gamification?"                   |
+| **Elimination**   | Remove a constraint       | "What if we had no budget limit?"                   |
+| **Exaggeration**  | Take it to extremes       | "What if we needed 1000x scale?"                    |
+| **Randomization** | Inject random elements    | "What if it had to work underwater?"                |
 
 ## Output Format
 
 ```markdown
 ## Problem Space
+
 [Brief restatement of what we're brainstorming]
 
 ## Ideas
 
 ### Category: [Theme 1]
+
 1. **[Idea Name]**: [One-line description]
 2. **[Idea Name]**: [One-line description]
 3. **[Idea Name]**: [One-line description]
 
 ### Category: [Theme 2]
+
 4. **[Idea Name]**: [One-line description]
 5. **[Idea Name]**: [One-line description]
 
 ### Wild Cards
+
 - **[Crazy Idea]**: [Why it might actually work]
 - **[Crazy Idea]**: [Why it might actually work]
 
 ## Unexpected Combinations
+
 - [Idea X] + [Idea Y] = [Novel approach]
 - [Idea A] + [Idea B] = [Novel approach]
 
 ## Questions to Explore
+
 - What if [assumption] wasn't true?
 - Have we considered [angle]?
 ```
@@ -66,13 +72,16 @@ Use these to break through creative blocks:
 **Prompt**: "Brainstorm ways to improve developer onboarding. Mode: divergent."
 
 **Output**:
+
 ```markdown
 ## Problem Space
+
 How might we make developer onboarding faster, more engaging, and more effective?
 
 ## Ideas
 
 ### Category: Learning Experience
+
 1. **Interactive Codebase Tour**: Guided walkthrough that highlights key patterns as you navigate
 2. **Pair Programming Roulette**: Random pairing with different team members each day for first week
 3. **Codebase Scavenger Hunt**: Gamified exploration with achievements for finding key files
@@ -80,6 +89,7 @@ How might we make developer onboarding faster, more engaging, and more effective
 5. **Choose Your Own Adventure Docs**: Branching documentation based on your background
 
 ### Category: Tooling & Automation
+
 6. **One-Click Dev Environment**: Everything configured in under 5 minutes
 7. **AI Onboarding Buddy**: LLM trained on your codebase answers questions 24/7
 8. **Automated PR Review for Newbies**: Extra-detailed feedback on first 10 PRs
@@ -87,22 +97,26 @@ How might we make developer onboarding faster, more engaging, and more effective
 10. **Personalized Learning Path**: Based on skills assessment, skip what you know
 
 ### Category: Social & Cultural
+
 11. **Reverse Mentoring**: New hire teaches team something from their background
 12. **Coffee Chat Lottery**: Scheduled informal chats with people outside your team
 13. **"Dumb Questions" Slack Channel**: Celebrated space for asking anything
 14. **First Week Wins Board**: Public celebration of small early contributions
 
 ### Wild Cards
+
 - **Ship on Day One**: Pre-prepared tiny PR that goes to production immediately (confidence boost)
 - **Onboarding Escape Room**: Physical/virtual puzzle using real codebase knowledge
 - **Time Capsule**: Write letter to yourself, opened at 6-month mark
 
 ## Unexpected Combinations
+
 - Scavenger Hunt + AI Buddy = AI-guided exploration that adapts to your pace
 - Video Diary + Reverse Mentoring = New hires document their journey for next cohort
 - One-Click Environment + Ship on Day One = Zero-to-production in first hour
 
 ## Questions to Explore
+
 - What if onboarding never "ended" but evolved into continuous learning?
 - What if the best onboarding was no onboarding (self-documenting systems)?
 - What would onboarding look like if we optimized for belonging over productivity?
