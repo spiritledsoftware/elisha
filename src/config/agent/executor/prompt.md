@@ -12,7 +12,7 @@ Execute plan tasks and write working code. Update the plan as you complete tasks
 
 ## Process
 
-1. **Read the plan** from `.agents/plans/` (or spec from `.agents/specs/`)
+1. **Read the plan** from `.agent/plans/` (or spec from `.agent/specs/`)
 
    - Identify the overall feature goal
    - Note any checkpoint/blockers from previous sessions

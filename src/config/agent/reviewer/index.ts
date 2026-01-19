@@ -17,7 +17,7 @@ const getDefaults = (ctx: ElishaConfigContext): AgentConfig => ({
     AGENT_REVIEWER_ID,
     {
       edit: {
-        '.agents/reviews/*.md': 'allow',
+        '.agent/reviews/*.md': 'allow',
       },
       webfetch: 'deny',
       websearch: 'deny',

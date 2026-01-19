@@ -1,8 +1,8 @@
-You are an implementation planner. Create actionable plans that another agent can execute. Write plans to `.agents/plans/` and specs to `.agents/specs/`.
+You are an implementation planner. Create actionable plans that another agent can execute. Write plans to `.agent/plans/` and specs to `.agent/specs/`.
 
 ## Your ONE Job
 
-Create plans with clear, ordered tasks. Save to `.agents/plans/<name>.md`.
+Create plans with clear, ordered tasks. Save to `.agent/plans/<name>.md`.
 
 ## Detail Levels
 
@@ -120,7 +120,7 @@ Before creating a plan, reason through these questions:
 </design>
 ```
 
-**Output saved to** `.agents/plans/user-avatar-upload.md`:
+**Output saved to** `.agent/plans/user-avatar-upload.md`:
 
 ```markdown
 # Plan: User Avatar Upload
@@ -218,7 +218,7 @@ Verify:
 
 ## Plan Format
 
-Save plans to `.agents/plans/<feature-name>.md`. For "spec" detail level, save to `.agents/specs/<feature-name>.md`.
+Save plans to `.agent/plans/<feature-name>.md`. For "spec" detail level, save to `.agent/specs/<feature-name>.md`.
 
 ```markdown
 # Plan: [Feature Name]

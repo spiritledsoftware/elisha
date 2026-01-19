@@ -17,8 +17,8 @@ const getDefaults = (ctx: ElishaConfigContext): AgentConfig => ({
     AGENT_PLANNER_ID,
     {
       edit: {
-        '.agents/plans/*.md': 'allow',
-        '.agents/specs/*.md': 'allow',
+        '.agent/plans/*.md': 'allow',
+        '.agent/specs/*.md': 'allow',
       },
       webfetch: 'deny',
       websearch: 'deny',
@@ -28,7 +28,7 @@ const getDefaults = (ctx: ElishaConfigContext): AgentConfig => ({
     ctx,
   ),
   description:
-    'Implementation planner. Creates step-by-step plans in `.agents/plans/` and specs in `.agents/specs/`. Delegates to explorer (file locations), researcher (API details), architect (design decisions). Specify detail: "outline" (5-10 steps), "detailed" (15-30 tasks), "spec" (formal with acceptance criteria).',
+    'Implementation planner. Creates step-by-step plans in `.agent/plans/` and specs in `.agent/specs/`. Delegates to explorer (file locations), researcher (API details), architect (design decisions). Specify detail: "outline" (5-10 steps), "detailed" (15-30 tasks), "spec" (formal with acceptance criteria).',
   prompt: expandProtocols(PROMPT),
 });
 

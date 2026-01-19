@@ -1,8 +1,8 @@
 import type { ElishaConfigContext } from '../types';
-import { setupOpenMemoryCommandConfig } from './openmemory';
+import { setupInitDeepCommandConfig } from './init-deep';
 
 export const setupCommandConfig = (ctx: ElishaConfigContext) => {
-  setupOpenMemoryCommandConfig(ctx);
+  setupInitDeepCommandConfig(ctx);
 };
 
 export type * from './types';

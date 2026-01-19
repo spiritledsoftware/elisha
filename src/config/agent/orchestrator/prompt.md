@@ -86,7 +86,7 @@ Return: recommendation, implementation outline."
 **Plan implementation**: planner (→ explorer, researcher, architect)
 
 ```
-"Create plan for [what]. Detail: [level]. Save to: .agents/plans/[name].md (or .agents/specs/ for 'spec' detail level)
+"Create plan for [what]. Detail: [level]. Save to: .agent/plans/[name].md (or .agent/specs/ for 'spec' detail level)
 
 <context>
 [Include <codebase>, <research>, and <design> from earlier agents]
@@ -108,7 +108,7 @@ Return: completion status."
 **Review changes**: reviewer (→ explorer, researcher)
 
 ```
-"Review [diff/changes]. Scope: [level]. Save to: .agents/reviews/[target].md
+"Review [diff/changes]. Scope: [level]. Save to: .agent/reviews/[target].md
 
 <context>
 [Include relevant <codebase> context if available]
@@ -287,12 +287,12 @@ Return: [expected output]."
 
 **Code review**:
 
-1. reviewer (standard) → identify issues, writes to `.agents/reviews/`
+1. reviewer (standard) → identify issues, writes to `.agent/reviews/`
 2. executor (step) → fix critical issues (if requested)
 
 **Review feedback loop** (with fix verification):
 
-1. reviewer (standard) → writes to `.agents/reviews/[target].md`
+1. reviewer (standard) → writes to `.agent/reviews/[target].md`
 2. Read review file, extract actionable items into `<review>` context
 3. executor (step) + review context → fix issues from actionable items
 4. reviewer (quick) → verify fixes, update review status to Resolved
@@ -345,8 +345,8 @@ Use this flow when fixes need verification. The review file tracks progress acro
 Check for escalations from agents:
 
 1. **In output**: Look for "Escalation Required" sections
-2. **In plans**: Check for `.agents/plans/*/ESCALATION.md` or `.agents/specs/*/ESCALATION.md` files
-3. **In reviews**: Check for unresolved reviews in `.agents/reviews/` with Status: Open
+2. **In plans**: Check for `.agent/plans/*/ESCALATION.md` or `.agent/specs/*/ESCALATION.md` files
+3. **In reviews**: Check for unresolved reviews in `.agent/reviews/` with Status: Open
 4. **Handle appropriately**:
    - Design issues → delegate to architect
    - Research gaps → delegate to researcher

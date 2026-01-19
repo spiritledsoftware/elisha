@@ -15,7 +15,7 @@ Add to your OpenCode config (`~/.config/opencode/opencode.json`):
 }
 ```
 
-Restart OpenCode and you're ready to go.
+Restart OpenCode and you're ready to go. **No additional configuration required**—all agents, MCP servers, and commands work out of the box.
 
 Optionally, pin to a specific version for stability:
 
@@ -50,7 +50,7 @@ Solution designer for analyzing requirements and recommending architecture. DESI
 
 ### planner
 
-Creates step-by-step implementation plans in `.agents/plans/` and specs in `.agents/specs/`. Specify detail: "outline", "detailed", or "spec".
+Creates step-by-step implementation plans in `.agent/plans/` and specs in `.agent/specs/`. Specify detail: "outline", "detailed", or "spec".
 
 ### executor
 
@@ -62,7 +62,7 @@ External research specialist for library docs, API examples, and GitHub code pat
 
 ### reviewer
 
-Code reviewer that analyzes diffs and writes reviews to `.agents/reviews/`. Specify scope: "quick", "standard", or "thorough".
+Code reviewer that analyzes diffs and writes reviews to `.agent/reviews/`. Specify scope: "quick", "standard", or "thorough".
 
 ### tester
 
@@ -91,6 +91,38 @@ Pre-configured MCP servers available to agents:
 ### /openmemory-init
 
 Initialize OpenMemory with structured memories for the current project. Sets up the memory context for persistent session awareness.
+
+## Configuration
+
+Elisha works with zero configuration, but you can customize behavior in your `opencode.json` if needed.
+
+### Agents
+
+```json
+{
+  "agent": {
+    "orchestrator": {
+      "disable": true
+      // Other OpenCode agent settings
+    }
+  }
+}
+```
+
+Agents will use your `model` and `small_model` settings from OpenCode config appropriately.
+
+### MCP Servers
+
+```json
+{
+  "mcp": {
+    "openmemory": {
+      "enabled": false
+      // Other OpenCode MCP settings
+    }
+  }
+}
+```
 
 ## Contributing
 

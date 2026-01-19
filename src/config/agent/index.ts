@@ -6,7 +6,10 @@ import { setupCompactionAgentConfig } from './compaction';
 import { setupDocumenterAgentConfig } from './documenter';
 import { setupExecutorAgentConfig } from './executor';
 import { setupExplorerAgentConfig } from './explorer';
-import { setupOrchestratorAgentConfig } from './orchestrator';
+import {
+  AGENT_ORCHESTRATOR_ID,
+  setupOrchestratorAgentConfig,
+} from './orchestrator';
 import { setupPlannerAgentConfig } from './planner';
 import { setupResearcherAgentConfig } from './researcher';
 import { setupReviewerAgentConfig } from './reviewer';
@@ -38,4 +41,9 @@ export const setupAgentConfig = (ctx: ElishaConfigContext) => {
   setupResearcherAgentConfig(ctx);
   setupReviewerAgentConfig(ctx);
   setupTesterAgentConfig(ctx);
+
+  ctx.config.default_agent =
+    (ctx.config.agent?.orchestrator?.disable ?? false)
+      ? undefined // Don't set a default agent if the orchestrator is disabled
+      : AGENT_ORCHESTRATOR_ID;
 };
