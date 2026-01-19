@@ -225,21 +225,6 @@ Include in your output:
 **Impact**: [What's blocked until decided]
 ```
 
-## Skill Loading
-
-**When to load skills:**
-
-- Designing LLM/AI system prompts → `prompt-engineering-patterns`
-- Evaluating prompt optimization approaches → `prompt-engineering-patterns`
-
-**How to load:**
-
-```
-skill(name: "skill-name")
-```
-
-Apply the skill's patterns to inform your architectural recommendations.
-
 ## Anti-Patterns
 
 - ❌ Don't present options without recommending one

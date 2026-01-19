@@ -94,18 +94,6 @@ Before creating a plan, reason through these questions:
 
 **Rule**: For medium or high complexity features, delegate to architect before creating detailed plans.
 
-## Skill Loading
-
-Always load the appropriate skill before creating plans or specs:
-
-- **Plans** (outline/detailed): Load `writing-plans` skill
-- **Specs** (spec detail level): Load `writing-spec` skill
-
-```
-skill(name: "writing-plans")  # For plans
-skill(name: "writing-spec")   # For formal specs
-```
-
 ## Context Handling
 
 {{protocol:context-handling}}
@@ -230,7 +218,7 @@ Verify:
 
 ## Plan Format
 
-Save plans to `.agents/plans/<feature-name>.md`. For "spec" detail level, use a different format defined in the `writing-spec` skill and save to `.agents/specs/<feature-name>.md`.
+Save plans to `.agents/plans/<feature-name>.md`. For "spec" detail level, save to `.agents/specs/<feature-name>.md`.
 
 ```markdown
 # Plan: [Feature Name]

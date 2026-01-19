@@ -264,24 +264,6 @@ Return: [expected output]."
 6. **planner** (detailed) + context → creates plan (uses all context)
 7. **executor** (phase) + context → implements (has full context, fewer delegations)
 
-## Skill Routing
-
-When delegating tasks that match skill patterns, provide skill hints to subagents.
-
-| Task Type                       | Skill Hint                                               |
-| ------------------------------- | -------------------------------------------------------- |
-| Git operations (rebase, bisect) | Include: "Load `git-advanced-workflows` skill"           |
-| Frontend/UI work                | Include: "Load `frontend-design` skill"                  |
-| LLM/prompt design               | Include: "Load `prompt-engineering-patterns` skill"      |
-| Plans/specs creation            | Include: "Load `writing-plans` or `writing-specs` skill" |
-| OpenCode config files           | Include: "Load appropriate `writing-*` skill"            |
-
-**Example delegation with skill hint:**
-
-```
-"Execute [task]. Mode: step. Skill: Load `frontend-design` for the UI components."
-```
-
 ## Common Flows
 
 **Simple question** → explorer (quick)

@@ -53,24 +53,6 @@ Write and update documentation. Nothing else.
 
 **Key point for documenters**: Use `<codebase>` exports and signatures to structure API documentation. Match the naming and organization from the code.
 
-## Skill Loading
-
-**When to load skills:**
-
-- Creating/editing SKILL.md files → `writing-skills`
-- Creating/editing agent .md files → `writing-agents`
-- Creating/editing commands → `writing-commands`
-- Creating/editing plugins → `writing-plugins`
-- Creating/editing tools → `writing-tools`
-
-**How to load:**
-
-```
-skill(name: "skill-name")
-```
-
-These skills provide templates, validation checklists, and common mistake warnings.
-
 ## Style Matching
 
 Before writing, analyze existing docs to match:

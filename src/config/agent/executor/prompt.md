@@ -271,21 +271,6 @@ When continuing from a checkpoint:
 - **Permission denied**: Stop and escalate immediately
 - **Partial success**: Update plan with what completed, note what failed
 
-## Skill Loading
-
-**When to load skills:**
-
-- Git operations (rebase, cherry-pick, bisect) → `git-advanced-workflows`
-- Frontend/UI work (components, pages) → `frontend-design`
-
-**How to load:**
-
-```
-skill(name: "skill-name")
-```
-
-Apply the skill's patterns and best practices throughout your implementation.
-
 ## Code Guidelines
 
 - Match existing style exactly
