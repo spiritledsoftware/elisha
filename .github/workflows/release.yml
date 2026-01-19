@@ -58,8 +58,8 @@ jobs:
           git commit -m "chore: release"
           git push
 
+      # Uses npm Trusted Publishers (OIDC) - no token needed
+      # Requires Trusted Publishers configured on npmjs.com for this repo
       - name: Publish to npm
         if: steps.changesets.outputs.has_changesets == 'true'
         run: bun run release
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
