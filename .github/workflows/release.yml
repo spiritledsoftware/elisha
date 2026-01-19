@@ -17,8 +17,11 @@ jobs:
   release:
     runs-on: ubuntu-latest
     steps:
+      # Deploy key allows pushing version commits to bypass branch protection
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ssh-key: ${{ secrets.DEPLOY_KEY }}
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
