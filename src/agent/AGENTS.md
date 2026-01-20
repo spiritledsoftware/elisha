@@ -145,6 +145,7 @@ Permission values: `'allow'`, `'deny'`, `'ask'`
 | `explorer` | `subagent` | Codebase search (read-only) |
 | `researcher` | `subagent` | External research |
 | `architect` | `subagent` | Solution design (no code) |
+| `designer` | `subagent` | Frontend/UX design specialist |
 | `tester` | `subagent` | Test execution and analysis |
 | `documenter` | `subagent` | Documentation writing |
 | `compaction` | `subagent` | Session compaction |

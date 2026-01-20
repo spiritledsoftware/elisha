@@ -3,6 +3,7 @@ import type { ElishaConfigContext } from '../types.ts';
 import { setupArchitectAgentConfig } from './architect/index.ts';
 import { setupBrainstormerAgentConfig } from './brainstormer/index.ts';
 import { setupCompactionAgentConfig } from './compaction/index.ts';
+import { setupDesignerAgentConfig } from './designer/index.ts';
 import { setupDocumenterAgentConfig } from './documenter/index.ts';
 import { setupExecutorAgentConfig } from './executor/index.ts';
 import { setupExplorerAgentConfig } from './explorer/index.ts';
@@ -33,6 +34,7 @@ export const setupAgentConfig = (ctx: ElishaConfigContext) => {
   // Elisha agents
   setupArchitectAgentConfig(ctx);
   setupBrainstormerAgentConfig(ctx);
+  setupDesignerAgentConfig(ctx);
   setupDocumenterAgentConfig(ctx);
   setupExecutorAgentConfig(ctx);
   setupExplorerAgentConfig(ctx);
