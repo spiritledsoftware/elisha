@@ -36,10 +36,11 @@
     "prepare": "husky"
   },
   "dependencies": {
-    "@opencode-ai/plugin": "1.1.25",
-    "@opencode-ai/sdk": "^1.1.25",
+    "@opencode-ai/plugin": "1.1.27",
+    "@opencode-ai/sdk": "^1.1.27",
     "dedent": "^1.7.1",
-    "defu": "^6.1.4"
+    "defu": "^6.1.4",
+    "nanoid": "^5.1.6"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.3.11",
