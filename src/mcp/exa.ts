@@ -14,6 +14,11 @@ export const getDefaults = (_ctx: ElishaConfigContext): McpConfig => ({
 });
 
 export const setupExaMcpConfig = (ctx: ElishaConfigContext) => {
+  if (!process.env.EXA_API_KEY) {
+    console.warn(
+      '[Elisha] EXA_API_KEY not set - Exa search will use public rate limits',
+    );
+  }
   ctx.config.mcp ??= {};
   ctx.config.mcp[MCP_EXA_ID] = defu(
     ctx.config.mcp?.[MCP_EXA_ID] ?? {},

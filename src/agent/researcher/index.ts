@@ -12,7 +12,7 @@ const getDefaults = (ctx: ElishaConfigContext): AgentConfig => ({
   mode: 'subagent',
   hidden: false,
   model: ctx.config.small_model,
-  temperature: 0.9,
+  temperature: 0.7,
   permission: setupAgentPermissions(
     AGENT_RESEARCHER_ID,
     {

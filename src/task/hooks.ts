@@ -4,8 +4,29 @@ import type { Hooks } from '../types.ts';
 
 import PROMPT from './prompt.md';
 
+const SESSION_TTL_MS = 24 * 60 * 60 * 1000;
+const MAX_SESSIONS = 1000;
+
 export const setupTaskHooks = (ctx: PluginInput): Hooks => {
-  const injectedSessions = new Set<string>();
+  const injectedSessions = new Map<string, number>();
+
+  const cleanupSessions = () => {
+    const now = Date.now();
+    for (const [id, timestamp] of injectedSessions.entries()) {
+      if (now - timestamp > SESSION_TTL_MS) {
+        injectedSessions.delete(id);
+      }
+    }
+    if (injectedSessions.size > MAX_SESSIONS) {
+      const keysToRemove = Array.from(injectedSessions.keys()).slice(
+        0,
+        injectedSessions.size - MAX_SESSIONS,
+      );
+      for (const key of keysToRemove) {
+        injectedSessions.delete(key);
+      }
+    }
+  };
 
   const getTaskList = async (sessionId: string): Promise<string | null> => {
     // Get child sessions (tasks) for this session
@@ -51,7 +72,8 @@ export const setupTaskHooks = (ctx: PluginInput): Hooks => {
             return { model: undefined, agent: undefined };
           });
 
-        injectedSessions.add(sessionId);
+        cleanupSessions();
+        injectedSessions.set(sessionId, Date.now());
 
         await ctx.client.session.prompt({
           path: { id: sessionId },

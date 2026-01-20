@@ -13,25 +13,22 @@ import { setupTaskHooks, setupTaskTools } from './task/index.ts';
 import type { ElishaConfigContext } from './types.ts';
 import { aggregateHooks } from './util/hooks.ts';
 
-export const ElishaPlugin: Plugin = async (input: PluginInput) => {
-  const hooks = aggregateHooks(
-    setupInstructionHooks(input),
-    setupMcpHooks(input),
-    setupTaskHooks(input),
-  );
-
+export const ElishaPlugin: Plugin = async (ctx: PluginInput) => {
   return {
     config: async (config: Config) => {
-      const ctx: ElishaConfigContext = { ...input, config };
+      const configCtx: ElishaConfigContext = { ...ctx, config };
       // MCP first - others may depend on it
-      setupMcpConfig(ctx);
-      setupAgentConfig(ctx);
-      setupPermissionConfig(ctx);
-      setupInstructionConfig(ctx);
-      setupCommandConfig(ctx);
-      setupSkillConfig(ctx);
+      setupMcpConfig(configCtx);
+      setupAgentConfig(configCtx);
+      setupPermissionConfig(configCtx);
+      setupInstructionConfig(configCtx);
+      setupCommandConfig(configCtx);
+      setupSkillConfig(configCtx);
     },
-    tool: await setupTaskTools(input),
-    ...hooks,
+    tool: await setupTaskTools(ctx),
+    ...aggregateHooks(
+      [setupInstructionHooks(ctx), setupMcpHooks(ctx), setupTaskHooks(ctx)],
+      ctx,
+    ),
   };
 };

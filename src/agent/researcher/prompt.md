@@ -325,7 +325,3 @@ From `repo/path/file.ts`:
 - Synthesize: extract patterns, don't dump raw results
 - Attribute: always cite sources
 - Prefer official docs over blog posts
-
-```
-
-```

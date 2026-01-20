@@ -14,6 +14,11 @@ export const getDefaults = (_ctx: ElishaConfigContext): McpConfig => ({
 });
 
 export const setupContext7McpConfig = (ctx: ElishaConfigContext) => {
+  if (!process.env.CONTEXT7_API_KEY) {
+    console.warn(
+      '[Elisha] CONTEXT7_API_KEY not set - Context7 will use public rate limits',
+    );
+  }
   ctx.config.mcp ??= {};
   ctx.config.mcp[MCP_CONTEXT7_ID] = defu(
     ctx.config.mcp?.[MCP_CONTEXT7_ID] ?? {},

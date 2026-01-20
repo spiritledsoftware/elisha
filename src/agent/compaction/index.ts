@@ -1,4 +1,4 @@
-import type { AgentConfig } from '@opencode-ai/sdk';
+import type { AgentConfig } from '@opencode-ai/sdk/v2';
 import defu from 'defu';
 import type { ElishaConfigContext } from '../../types.ts';
 

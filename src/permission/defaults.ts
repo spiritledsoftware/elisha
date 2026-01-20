@@ -16,6 +16,12 @@ export const getDefaultPermissions = (
       '*': 'allow',
       'rm * /': 'deny',
       'rm * ~': 'deny',
+      'rm -rf *': 'deny',
+      'chmod 777 *': 'deny',
+      'chown * /': 'deny',
+      'dd if=* of=/dev/*': 'deny',
+      'mkfs*': 'deny',
+      '> /dev/*': 'deny',
     },
     codesearch: 'ask', // Always ask before performing code searches
     doom_loop: 'ask',
