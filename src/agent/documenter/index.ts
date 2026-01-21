@@ -2,8 +2,7 @@ import type { AgentConfig } from '@opencode-ai/sdk/v2';
 import defu from 'defu';
 import { setupAgentPermissions } from '../../permission/agent.ts';
 import type { ElishaConfigContext } from '../../types.ts';
-import { expandProtocols } from '../util/protocol/index.ts';
-
+import { expandVariables } from '../util/index.ts';
 import PROMPT from './prompt.md';
 
 export const AGENT_DOCUMENTER_ID = 'documenter';
@@ -28,7 +27,7 @@ const getDefaults = (ctx: ElishaConfigContext): AgentConfig => ({
   ),
   description:
     'Documentation writer. Creates and updates docs. Delegates to explorer (code to document) and researcher (doc standards). Specify scope: "file" (single file), "module" (related files), "project" (overview docs).',
-  prompt: expandProtocols(PROMPT),
+  prompt: expandVariables(PROMPT, ctx),
 });
 
 export const setupDocumenterAgentConfig = (ctx: ElishaConfigContext) => {

@@ -33,18 +33,18 @@ agent/
 ### 2. Write the Configuration (`index.ts`)
 
 ```typescript
-import type { AgentConfig } from '@opencode-ai/sdk/v2';
-import defu from 'defu';
-import type { ElishaConfigContext } from '../..';
-import { setupAgentPermissions } from '../../permission/agent.ts';
-import { expandProtocols } from '../util/protocol/index.ts';
+import type { AgentConfig } from "@opencode-ai/sdk/v2";
+import defu from "defu";
+import type { ElishaConfigContext } from "../..";
+import { setupAgentPermissions } from "../../permission/agent.ts";
+import { expandProtocols } from "../util/protocol/index.ts";
 
-import PROMPT from './prompt.md';
+import PROMPT from "./prompt.md";
 
-export const AGENT_MY_AGENT_ID = 'my-agent';
+export const AGENT_MY_AGENT_ID = "my-agent";
 
 const getDefaults = (ctx: ElishaConfigContext): AgentConfig => ({
-  mode: 'subagent',               // 'primary', 'all', or 'subagent'
+  mode: "subagent", // 'primary', 'all', or 'subagent'
   hidden: false,
   model: ctx.config.model,
   temperature: 0.5,
@@ -52,12 +52,12 @@ const getDefaults = (ctx: ElishaConfigContext): AgentConfig => ({
     AGENT_MY_AGENT_ID,
     {
       // Agent-specific permission overrides
-      edit: 'deny',
-      webfetch: 'ask',
+      edit: "deny",
+      webfetch: "ask",
     },
-    ctx,
+    ctx
   ),
-  description: 'Brief description for Task tool selection...',
+  description: "Brief description for Task tool selection...",
   prompt: expandProtocols(PROMPT),
 });
 
@@ -65,7 +65,7 @@ export const setupMyAgentConfig = (ctx: ElishaConfigContext) => {
   ctx.config.agent ??= {};
   ctx.config.agent[AGENT_MY_AGENT_ID] = defu(
     ctx.config.agent?.[AGENT_MY_AGENT_ID] ?? {},
-    getDefaults(ctx),
+    getDefaults(ctx)
   );
 };
 ```
@@ -73,7 +73,7 @@ export const setupMyAgentConfig = (ctx: ElishaConfigContext) => {
 ### 3. Register in `index.ts`
 
 ```typescript
-import { setupMyAgentConfig } from './my-agent/index.ts';
+import { setupMyAgentConfig } from "./my-agent/index.ts";
 
 export const setupAgentConfig = (ctx: ElishaConfigContext) => {
   // ... existing agents
@@ -83,10 +83,10 @@ export const setupAgentConfig = (ctx: ElishaConfigContext) => {
 
 ## Agent Modes
 
-| Mode | Usage |
-|------|-------|
-| `primary` | Main agent (orchestrator). Set as `default_agent`. |
-| `all` | Core agents (planner, executor, reviewer) available via Task tool. |
+| Mode       | Usage                                                                               |
+| ---------- | ----------------------------------------------------------------------------------- |
+| `primary`  | Main agent (orchestrator). Set as `default_agent`.                                  |
+| `all`      | Core agents (planner, executor, reviewer) available via Task tool.                  |
 | `subagent` | Helper agents (explorer, researcher, architect, documenter) with specialized roles. |
 
 ## Protocol Expansion
@@ -95,6 +95,7 @@ Shared prompt sections live in `util/protocol/`. Use mustache syntax in prompts:
 
 ```markdown
 ## Error Handling
+
 {{protocol:error-handling}}
 ```
 
@@ -135,30 +136,30 @@ Permission values: `'allow'`, `'deny'`, `'ask'`
 
 ## Existing Agents
 
-| Agent | Mode | Purpose |
-|-------|------|---------|
-| `orchestrator` | `primary` | Task coordinator, delegates all work |
-| `planner` | `all` | Creates implementation plans |
-| `executor` | `all` | Implements plan tasks |
-| `reviewer` | `all` | Code review (read-only) |
-| `brainstormer` | `all` | Creative ideation |
-| `explorer` | `subagent` | Codebase search (read-only) |
-| `researcher` | `subagent` | External research |
-| `architect` | `subagent` | Expert consultant + solution design (call when stuck) |
-| `designer` | `subagent` | Frontend/UX design specialist |
-| `tester` | `subagent` | Test execution and analysis |
-| `documenter` | `subagent` | Documentation writing |
-| `compaction` | `subagent` | Session compaction |
+| Agent          | Mode       | Purpose                                               |
+| -------------- | ---------- | ----------------------------------------------------- |
+| `orchestrator` | `primary`  | Task coordinator, delegates all work                  |
+| `planner`      | `all`      | Creates implementation plans                          |
+| `executor`     | `all`      | Implements plan tasks                                 |
+| `reviewer`     | `all`      | Code review (read-only)                               |
+| `brainstormer` | `all`      | Creative ideation                                     |
+| `explorer`     | `subagent` | Codebase search (read-only)                           |
+| `researcher`   | `subagent` | External research                                     |
+| `architect`    | `subagent` | Expert consultant + solution design (call when stuck) |
+| `designer`     | `subagent` | Frontend/UX design specialist                         |
+| `tester`       | `subagent` | Test execution and analysis                           |
+| `documenter`   | `subagent` | Documentation writing                                 |
+| `compaction`   | `subagent` | Session compaction                                    |
 
 ## Disabling Built-in Agents
 
 The `index.ts` disables some default OpenCode agents to avoid conflicts:
 
 ```typescript
-disableAgent('build', ctx);
-disableAgent('plan', ctx);
-disableAgent('explore', ctx);
-disableAgent('general', ctx);
+disableAgent("build", ctx);
+disableAgent("plan", ctx);
+disableAgent("explore", ctx);
+disableAgent("general", ctx);
 ```
 
 ## Critical Rules
@@ -169,7 +170,7 @@ disableAgent('general', ctx);
 // Correct - preserves user overrides
 ctx.config.agent[AGENT_ID] = defu(
   ctx.config.agent?.[AGENT_ID] ?? {},
-  getDefaults(ctx),
+  getDefaults(ctx)
 );
 
 // Wrong - loses nested user config
@@ -183,10 +184,10 @@ ctx.config.agent[AGENT_ID] = {
 
 ```typescript
 // Correct
-import { expandProtocols } from '../util/protocol/index.ts';
+import { expandProtocols } from "../util/protocol/index.ts";
 
 // Wrong - will fail at runtime
-import { expandProtocols } from '../util/protocol';
+import { expandProtocols } from "../util/protocol";
 ```
 
 ### Export Agent ID Constant
@@ -194,7 +195,7 @@ import { expandProtocols } from '../util/protocol';
 Always export the agent ID for use elsewhere:
 
 ```typescript
-export const AGENT_MY_AGENT_ID = 'my-agent';
+export const AGENT_MY_AGENT_ID = "my-agent";
 ```
 
 ### Prompts as Markdown Files
@@ -202,7 +203,7 @@ export const AGENT_MY_AGENT_ID = 'my-agent';
 Long prompts go in `prompt.md`, imported as strings:
 
 ```typescript
-import PROMPT from './prompt.md';
+import PROMPT from "./prompt.md";
 ```
 
 This works via `globals.d.ts` type definitions.

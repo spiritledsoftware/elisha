@@ -2,8 +2,7 @@ import type { AgentConfig } from '@opencode-ai/sdk/v2';
 import defu from 'defu';
 import { setupAgentPermissions } from '../../permission/agent.ts';
 import type { ElishaConfigContext } from '../../types.ts';
-import { expandProtocols } from '../util/protocol/index.ts';
-
+import { expandVariables } from '../util/index.ts';
 import PROMPT from './prompt.md';
 
 export const AGENT_ARCHITECT_ID = 'architect';
@@ -25,7 +24,7 @@ const getDefaults = (ctx: ElishaConfigContext): AgentConfig => ({
   ),
   description:
     'Expert consultant and solution designer. Call when stuck on bugs, complex problems, or need architecture guidance. Analyzes problems, suggests debugging strategies, recommends solutions. Delegates to explorer (codebase) and researcher (research). Modes: "consult" (debugging/problem-solving), "design" (architecture). ADVISORY-ONLY, no code.',
-  prompt: expandProtocols(PROMPT),
+  prompt: expandVariables(PROMPT, ctx),
 });
 
 export const setupArchitectAgentConfig = (ctx: ElishaConfigContext) => {

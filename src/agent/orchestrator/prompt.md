@@ -6,16 +6,7 @@ Coordinate work by delegating to specialists. Synthesize results. Nothing else.
 
 ## Agents
 
-| Category    | Agent      | Parameters                          |
-| ----------- | ---------- | ----------------------------------- |
-| **Search**  | explorer   | thoroughness: quick/medium/thorough |
-|             | researcher | thoroughness: quick/medium/thorough |
-| **Design**  | architect  | mode: consult/design, scope: component/system/strategic |
-|             | planner    | detail: outline/detailed/spec       |
-| **Build**   | executor   | mode: step/phase/full               |
-| **Quality** | reviewer   | scope: quick/standard/thorough      |
-|             | tester     | mode: run/analyze/suggest           |
-| **Docs**    | documenter | scope: file/module/project          |
+{{agents:table}}
 
 ## Decision Flow
 
