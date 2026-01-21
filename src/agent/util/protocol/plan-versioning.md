@@ -1,10 +1,8 @@
-# Plan Versioning Protocol
+### Plan Versioning Protocol
 
-How to safely update plan files when multiple agents may access them.
+Safely update plan files when multiple agents may access them.
 
-## Version Header Format
-
-Every plan file should include a version header:
+#### Version Header
 
 ```markdown
 # Plan: [Feature Name]
@@ -15,98 +13,47 @@ Every plan file should include a version header:
 **Status**: In Progress
 ```
 
-## Version Incrementing
+#### Version Bumps
 
-| Change Type        | Version Bump | Example    |
-| ------------------ | ------------ | ---------- |
-| Task status update | +0.1         | 1.0 → 1.1  |
-| Add/remove task    | +0.1         | 1.1 → 1.2  |
-| Phase completion   | +0.1         | 1.2 → 1.3  |
-| Major restructure  | +1.0         | 1.3 → 2.0  |
-| Initial creation   | 1.0          | (new file) |
+- Task status update: +0.1 (1.0 → 1.1)
+- Add/remove task: +0.1
+- Phase completion: +0.1
+- Major restructure: +1.0 (1.3 → 2.0)
+- Initial creation: 1.0
 
-## Read-Modify-Write Workflow
+#### Workflow
 
-```
-1. READ: Fetch current plan, note version number
-2. MODIFY: Make your changes in memory
-3. VERIFY: Check that your changes are coherent
-4. WRITE: Save with incremented version and timestamp
-```
+1. **Read**: Fetch plan, note version
+2. **Modify**: Make changes in memory
+3. **Verify**: Check coherence
+4. **Write**: Save with incremented version and timestamp
 
-**Critical**: Always update `Last Updated` and `Last Agent` fields.
+Always update `Last Updated` and `Last Agent`.
 
-## Field Protection
+#### Field Protection
 
-### Protected Fields (manual change only)
+**Protected** (manual change only): Status, Complexity, Overview
 
-- `Status`: Draft → In Progress → Complete (only explicit request)
-- `Complexity`: Set at creation, rarely changed
-- `Overview`: Defines scope, change requires re-planning
+**Auto-mergeable**: Task checkboxes, Done-when criteria, timestamps, version
 
-### Auto-Mergeable Fields (safe to update)
+#### Conflict Handling
 
-- Task status checkboxes
-- `Done when` criteria checkmarks
-- `Last Updated` timestamp
-- `Last Agent` identifier
-- `Version` number
+Before writing:
 
-## Conflict Detection
+- Version unchanged → proceed
+- Version changed → re-read, merge, write
+- Status changed (e.g., paused) → stop and escalate
 
-Before writing, check if the plan changed since you read it:
+#### Session Handoff
 
-```
-1. If version hasn't changed: Proceed with write
-2. If version changed: Re-read, merge your changes, write
-3. If status changed (e.g., paused): Stop and escalate
-```
-
-## Merge Strategy
-
-When version conflict detected:
-
-1. Re-read the plan
-2. Identify what changed (likely another task completed)
-3. Apply your changes to the new state
-4. Increment version from the new base
-5. Write with merged content
-
-## Session Handoff
-
-When stopping mid-plan, leave a checkpoint:
+Leave a checkpoint when stopping mid-plan:
 
 ```markdown
 ## Checkpoint
 
 **Session**: [timestamp]
 **Completed**: Tasks 1.1-1.4
-**In Progress**: Task 2.1 (started, 50% done)
-**Notes**: [Any context the next session needs]
+**In Progress**: Task 2.1 (50% done)
+**Notes**: [Context for next session]
 **Blockers**: [If any]
-```
-
-## Example Plan Header
-
-```markdown
-# Plan: Add User Authentication
-
-**Version**: 2.1
-**Last Updated**: 2024-01-15T16:45:00Z
-**Last Agent**: executor
-**Status**: In Progress
-**Complexity**: Medium
-**Tasks**: 12
-
-## Checkpoint
-
-**Session**: 2024-01-15T16:45:00Z
-**Completed**: Tasks 1.1-1.4, 2.1-2.2
-**In Progress**: Task 2.3 (JWT validation)
-**Notes**: Using jose library per architect recommendation
-**Blockers**: None
-
-## Overview
-
-...
 ```

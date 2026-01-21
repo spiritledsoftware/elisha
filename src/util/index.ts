@@ -5,7 +5,7 @@ import type { LogLevel } from '@opencode-ai/sdk/v2';
 
 // Re-export from submodules
 export * from '../types.ts';
-export * from './hooks.ts';
+export * from './hook.ts';
 
 export const getCacheDir = () => {
   if (process.platform === 'win32') {

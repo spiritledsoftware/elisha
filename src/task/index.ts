@@ -1,4 +1,4 @@
 // Re-export hooks setup
-export { setupTaskHooks } from './hooks.ts';
+export { setupTaskHooks } from './hook.ts';
 // Re-export tools setup
-export { getActiveAgents, setupTaskTools, TOOL_TASK_ID } from './tools.ts';
+export { setupTaskTools, TOOL_TASK_ID } from './tool.ts';

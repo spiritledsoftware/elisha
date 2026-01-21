@@ -25,7 +25,7 @@ const getDefaults = (ctx: ElishaConfigContext): AgentConfig => ({
     ctx,
   ),
   description:
-    'Documentation writer. Creates and updates docs. Scope: file/module/project.',
+    'Creates and maintains documentation including READMEs, API references, and architecture docs. Use when: documenting new features, updating outdated docs, creating onboarding guides, or writing inline code comments. Scope: file (single file), module (directory), project (full codebase). Matches existing doc style.',
   prompt: PROMPT,
 });
 

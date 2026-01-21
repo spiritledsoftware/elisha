@@ -5,7 +5,7 @@ import { MCP_CONTEXT7_ID } from '../mcp/context7.ts';
 import { MCP_EXA_ID } from '../mcp/exa.ts';
 import { MCP_GREP_APP_ID } from '../mcp/grep-app.ts';
 import { MCP_OPENMEMORY_ID } from '../mcp/openmemory.ts';
-import { TOOL_TASK_ID } from '../task/tools.ts';
+import { TOOL_TASK_ID } from '../task/tool.ts';
 import type { ElishaConfigContext } from '../types.ts';
 
 export const getDefaultPermissions = (

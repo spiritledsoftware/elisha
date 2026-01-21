@@ -14,7 +14,9 @@ const getDefaults = (ctx: ElishaConfigContext): AgentConfig => ({
   permission: setupAgentPermissions(
     AGENT_ARCHITECT_ID,
     {
-      edit: 'deny',
+      edit: {
+        '.agent/specs/*.md': 'allow',
+      },
       webfetch: 'deny',
       websearch: 'deny',
       codesearch: 'deny',
@@ -22,7 +24,7 @@ const getDefaults = (ctx: ElishaConfigContext): AgentConfig => ({
     ctx,
   ),
   description:
-    'Expert consultant and solution designer. Helps when stuck, designs solutions. Modes: consult/design. ADVISORY-ONLY.',
+    'Expert consultant for debugging blockers and designing solutions. Use when: stuck on a problem, need architectural guidance, designing new systems, or evaluating tradeoffs between approaches. Modes: consult (get unstuck), design (create specs). ADVISORY-ONLY - produces recommendations, not code.',
   prompt: PROMPT,
 });
 

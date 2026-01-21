@@ -14,7 +14,6 @@ import {
 import { setupPlannerAgentConfig } from './planner/index.ts';
 import { setupResearcherAgentConfig } from './researcher/index.ts';
 import { setupReviewerAgentConfig } from './reviewer/index.ts';
-import { setupTesterAgentConfig } from './tester/index.ts';
 import { expandAgentPrompts } from './util/index.ts';
 
 const disableAgent = (name: string, ctx: ElishaConfigContext) => {
@@ -37,7 +36,6 @@ export const setupAgentConfig = (ctx: ElishaConfigContext) => {
   setupExplorerAgentConfig(ctx);
   setupResearcherAgentConfig(ctx);
   setupBrainstormerAgentConfig(ctx);
-  setupTesterAgentConfig(ctx);
   setupArchitectAgentConfig(ctx);
 
   // Executing agents
@@ -50,7 +48,7 @@ export const setupAgentConfig = (ctx: ElishaConfigContext) => {
   // Main orchestrator
   setupOrchestratorAgentConfig(ctx);
 
-  // Phase 2: Expand all agent prompts AFTER all agents are registered
+  // Expand all agent prompts AFTER all agents are registered
   // This ensures {{agents}} references see all agents, not just those set up before them
   expandAgentPrompts(ctx);
 

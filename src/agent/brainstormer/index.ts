@@ -10,7 +10,7 @@ const getDefaults = (ctx: ElishaConfigContext): AgentConfig => ({
   mode: 'all',
   hidden: false,
   model: ctx.config.model,
-  temperature: 1.2,
+  temperature: 1.0,
   permission: setupAgentPermissions(
     AGENT_BRAINSTORMER_ID,
     {
@@ -22,7 +22,7 @@ const getDefaults = (ctx: ElishaConfigContext): AgentConfig => ({
     ctx,
   ),
   description:
-    'Creative ideation specialist. Generates diverse ideas, explores unconventional approaches. Modes: divergent/convergent/wild. IDEATION-ONLY.',
+    "Generates creative ideas and explores unconventional solutions. Use when: stuck in conventional thinking, need fresh approaches, exploring design space, or want many options before deciding. Modes: divergent (many ideas), convergent (refine options), wild (no constraints). IDEATION-ONLY - generates ideas, doesn't implement.",
   prompt: PROMPT,
 });
 

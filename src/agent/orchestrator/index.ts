@@ -19,7 +19,7 @@ const getDefaults = (ctx: ElishaConfigContext): AgentConfig => ({
     ctx,
   ),
   description:
-    'Coordinates multi-agent workflows. Delegates tasks, synthesizes results. NEVER touches code directly.',
+    'Coordinates complex multi-step tasks requiring multiple specialists. Delegates to appropriate agents, synthesizes their outputs, and manages workflow dependencies. Use when: task spans multiple domains, requires parallel work, or needs result aggregation. NEVER writes code or reads files directly.',
   prompt: PROMPT,
 });
 

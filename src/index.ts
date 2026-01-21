@@ -11,7 +11,7 @@ import { setupPermissionConfig } from './permission/index.ts';
 import { setupSkillConfig } from './skill/index.ts';
 import { setupTaskHooks, setupTaskTools } from './task/index.ts';
 import type { ElishaConfigContext } from './types.ts';
-import { aggregateHooks } from './util/hooks.ts';
+import { aggregateHooks } from './util/hook.ts';
 
 export const ElishaPlugin: Plugin = async (ctx: PluginInput) => {
   return {

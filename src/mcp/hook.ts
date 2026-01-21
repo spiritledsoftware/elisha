@@ -1,19 +1,28 @@
 import type { PluginInput } from '@opencode-ai/plugin';
 import dedent from 'dedent';
+import { log } from '~/util/index.ts';
 import type { Hooks } from '../types.ts';
-
-import PROMPT from './memory-prompt.md';
+import PROMPT from './memory-hook-prompt.md';
 
 /**
  * Validates and sanitizes memory content to prevent poisoning attacks.
  * Wraps content in <untrusted-memory> tags with warnings.
  */
-export const validateMemoryContent = (content: string): string => {
+export const validateMemoryContent = (
+  content: string,
+  ctx: PluginInput,
+): string => {
   let sanitized = content;
 
   // Detect HTML comments that might contain hidden instructions
   if (/<!--[\s\S]*?-->/.test(sanitized)) {
-    console.warn('[Elisha] Suspicious HTML comment detected in memory content');
+    log(
+      {
+        level: 'warn',
+        message: '[Elisha] Suspicious HTML comment detected in memory content',
+      },
+      ctx,
+    );
     sanitized = sanitized.replace(/<!--[\s\S]*?-->/g, '');
   }
 
@@ -28,8 +37,12 @@ export const validateMemoryContent = (content: string): string => {
 
   for (const pattern of suspiciousPatterns) {
     if (pattern.test(sanitized)) {
-      console.warn(
-        `[Elisha] Suspicious imperative pattern detected: ${pattern}`,
+      log(
+        {
+          level: 'warn',
+          message: `[Elisha] Suspicious imperative pattern detected: ${pattern}`,
+        },
+        ctx,
       );
     }
   }
@@ -45,29 +58,8 @@ export const validateMemoryContent = (content: string): string => {
   `;
 };
 
-const SESSION_TTL_MS = 24 * 60 * 60 * 1000;
-const MAX_SESSIONS = 1000;
-
 export const setupMcpHooks = (ctx: PluginInput): Hooks => {
-  const injectedSessions = new Map<string, number>();
-
-  const cleanupSessions = () => {
-    const now = Date.now();
-    for (const [id, timestamp] of injectedSessions.entries()) {
-      if (now - timestamp > SESSION_TTL_MS) {
-        injectedSessions.delete(id);
-      }
-    }
-    if (injectedSessions.size > MAX_SESSIONS) {
-      const keysToRemove = Array.from(injectedSessions.keys()).slice(
-        0,
-        injectedSessions.size - MAX_SESSIONS,
-      );
-      for (const key of keysToRemove) {
-        injectedSessions.delete(key);
-      }
-    }
-  };
+  const injectedSessions = new Set<string>();
 
   return {
     'chat.message': async (_input, output) => {
@@ -92,13 +84,11 @@ export const setupMcpHooks = (ctx: PluginInput): Hooks => {
         );
       });
       if (hasMemoryCtx) {
-        cleanupSessions();
-        injectedSessions.set(sessionId, Date.now());
+        injectedSessions.add(sessionId);
         return;
       }
 
-      cleanupSessions();
-      injectedSessions.set(sessionId, Date.now());
+      injectedSessions.add(sessionId);
       await ctx.client.session.prompt({
         path: { id: sessionId },
         body: {
@@ -110,7 +100,7 @@ export const setupMcpHooks = (ctx: PluginInput): Hooks => {
               type: 'text',
               text: dedent`
               <memory-context>
-                ${validateMemoryContent(PROMPT)}
+                ${validateMemoryContent(PROMPT, ctx)}
               </memory-context>`,
               synthetic: true,
             },
@@ -120,7 +110,7 @@ export const setupMcpHooks = (ctx: PluginInput): Hooks => {
     },
     'tool.execute.after': async (input, output) => {
       if (input.tool === 'openmemory_openmemory_query') {
-        output.output = validateMemoryContent(output.output);
+        output.output = validateMemoryContent(output.output, ctx);
       }
     },
     event: async ({ event }) => {
@@ -141,8 +131,7 @@ export const setupMcpHooks = (ctx: PluginInput): Hooks => {
             return {};
           });
 
-        cleanupSessions();
-        injectedSessions.set(sessionId, Date.now());
+        injectedSessions.add(sessionId);
         await ctx.client.session.prompt({
           path: { id: sessionId },
           body: {
@@ -154,7 +143,7 @@ export const setupMcpHooks = (ctx: PluginInput): Hooks => {
                 type: 'text',
                 text: dedent`
                 <memory-context>
-                  ${validateMemoryContent(PROMPT)}
+                  ${validateMemoryContent(PROMPT, ctx)}
                 </memory-context>`,
                 synthetic: true,
               },

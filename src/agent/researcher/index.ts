@@ -1,6 +1,7 @@
 import type { AgentConfig } from '@opencode-ai/sdk/v2';
 import defu from 'defu';
 import { MCP_CHROME_DEVTOOLS_ID } from '~/mcp/chrome-devtools.ts';
+import { TOOL_TASK_ID } from '~/task/tool.ts';
 import { setupAgentPermissions } from '../../permission/agent.ts';
 import type { ElishaConfigContext } from '../../types.ts';
 import PROMPT from './prompt.md';
@@ -20,11 +21,12 @@ const getDefaults = (ctx: ElishaConfigContext): AgentConfig => ({
       websearch: 'allow',
       codesearch: 'allow',
       [`${MCP_CHROME_DEVTOOLS_ID}*`]: 'allow',
+      [`${TOOL_TASK_ID}*`]: 'deny', // Leaf node
     },
     ctx,
   ),
   description:
-    'External research specialist. Finds docs, examples, best practices. Thoroughness: quick/medium/thorough.',
+    'Researches external sources for documentation, examples, and best practices. Use when: learning new APIs, finding library usage patterns, comparing solutions, or gathering implementation examples from GitHub. Thoroughness: quick (first good result), medium (multiple sources), thorough (comprehensive survey).',
   prompt: PROMPT,
 });
 

@@ -21,7 +21,7 @@ const getDefaults = (ctx: ElishaConfigContext): AgentConfig => ({
     ctx,
   ),
   description:
-    'Implementation specialist. Reads plans, writes code, updates status. Modes: step/phase/full.',
+    'Implements code changes following plans or direct instructions. Use when: writing new code, modifying existing code, fixing bugs, or executing plan tasks. Modes: step (one task), phase (task group), full (entire plan). Writes production-quality code matching codebase patterns.',
   prompt: PROMPT,
 });
 

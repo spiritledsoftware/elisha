@@ -24,7 +24,7 @@ const getDefaults = (ctx: ElishaConfigContext): AgentConfig => ({
     ctx,
   ),
   description:
-    'Code review specialist. Analyzes diffs, identifies issues. Scope: quick/standard/thorough. READ-ONLY.',
+    "Reviews code changes for bugs, security issues, and style violations. Use when: validating implementation quality, checking for regressions, or before merging changes. Scope: quick (obvious issues), standard (comprehensive), thorough (security-focused). READ-ONLY - identifies issues, doesn't fix them.",
   prompt: PROMPT,
 });
 

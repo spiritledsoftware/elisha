@@ -1,7 +1,6 @@
 import type { PluginInput } from '@opencode-ai/plugin';
 import dedent from 'dedent';
 import type { Hooks } from '../types.ts';
-
 import PROMPT from './prompt.md';
 
 export const setupInstructionHooks = (ctx: PluginInput): Hooks => {

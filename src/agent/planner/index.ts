@@ -16,7 +16,6 @@ const getDefaults = (ctx: ElishaConfigContext): AgentConfig => ({
     {
       edit: {
         '.agent/plans/*.md': 'allow',
-        '.agent/specs/*.md': 'allow',
       },
       webfetch: 'deny',
       websearch: 'deny',
@@ -25,7 +24,7 @@ const getDefaults = (ctx: ElishaConfigContext): AgentConfig => ({
     ctx,
   ),
   description:
-    'Creates implementation plans. Analyzes requirements, breaks down tasks. Detail levels: outline/detailed/spec.',
+    'Creates structured implementation plans from requirements or specs. Use when: starting a new feature, breaking down complex work, or need ordered task lists with acceptance criteria. Detail: outline (quick overview), detailed (full breakdown with edge cases). Outputs PLAN.md files.',
   prompt: PROMPT,
 });
 

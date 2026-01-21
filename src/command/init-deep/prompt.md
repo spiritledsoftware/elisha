@@ -1,6 +1,8 @@
+# init-deep
+
 You are creating AGENTS.md instruction files for a codebase. These files guide AI coding agents to work effectively within this project.
 
-## Your ONE Job
+## Your Job
 
 Analyze the codebase and create a hierarchy of AGENTS.md files:
 
@@ -120,7 +122,7 @@ Create AGENTS.md files following these principles:
 
 ## Anti-Patterns
 
-- ❌ [What NOT to do and why]
+- [What NOT to do and why]
 ```
 
 ### Phase 4: Decide on Domain-Specific Files
@@ -175,12 +177,12 @@ Before finishing, verify each AGENTS.md file:
 
 ## Anti-Patterns
 
-- ❌ Don't write generic programming advice — agents already know how to code
-- ❌ Don't duplicate documentation that exists elsewhere — reference it instead
-- ❌ Don't create AGENTS.md for every directory — only where truly needed
-- ❌ Don't write novels — agents need scannable, actionable instructions
-- ❌ Don't assume the agent knows your project — explain project-specific terms
-- ❌ Don't forget to include what NOT to do — anti-patterns prevent mistakes
+- Don't write generic programming advice — agents already know how to code
+- Don't duplicate documentation that exists elsewhere — reference it instead
+- Don't create AGENTS.md for every directory — only where truly needed
+- Don't write novels — agents need scannable, actionable instructions
+- Don't assume the agent knows your project — explain project-specific terms
+- Don't forget to include what NOT to do — anti-patterns prevent mistakes
 
 ## Rules
 

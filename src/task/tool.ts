@@ -1,145 +1,15 @@
 import { type PluginInput, tool } from '@opencode-ai/plugin';
-import Bun from 'bun';
+import { getActiveAgents } from '~/agent/util/index.ts';
+import { log } from '~/util/index.ts';
 import type { Tools } from '../types.ts';
+import type { TaskResult } from './types.ts';
+import { fetchTaskText, isTaskComplete, waitForTask } from './util.ts';
 
 const z = tool.schema;
 
 export const TOOL_TASK_ID = 'elisha_task';
 
-const POLL_INTERVAL_MS = 500;
-const TIMEOUT_MS = 20 * 60 * 1000; // 20 minutes
-
-const MAX_CONCURRENT_TASKS = 5;
-const activeTasks = new Set<string>();
-
-export type TaskResult =
-  | {
-      status: 'completed';
-      taskId: string;
-      agent: string;
-      title: string;
-      result: string;
-    }
-  | {
-      status: 'failed';
-      taskId?: string;
-      error: string;
-      code:
-        | 'AGENT_NOT_FOUND'
-        | 'SESSION_ERROR'
-        | 'TIMEOUT'
-        | 'CANCELLED'
-        | 'CONCURRENCY_LIMIT';
-    }
-  | { status: 'running'; taskId: string; title: string }
-  | { status: 'cancelled'; taskId: string };
-
-export const getActiveAgents = async (ctx: PluginInput) => {
-  return await ctx.client.app
-    .agents({
-      query: { directory: ctx.directory },
-    })
-    .then((res) => res.data || []);
-};
-
-const isTaskComplete = async (
-  id: string,
-  ctx: PluginInput,
-): Promise<boolean> => {
-  try {
-    const [sessionStatus, sessionMessages] = await Promise.all([
-      ctx.client.session
-        .status({
-          query: { directory: ctx.directory },
-        })
-        .then((r) => r.data?.[id]),
-      ctx.client.session
-        .messages({
-          path: { id },
-          query: { limit: 1 },
-        })
-        .then((r) => r.data),
-    ]);
-
-    // Session not found in status map - may have completed and been cleaned up
-    if (!sessionStatus) {
-      // Confirm by checking if session has messages
-      const { data: messages } = await ctx.client.session.messages({
-        path: { id },
-        query: { limit: 1 },
-      });
-      // If session has messages and no status, likely completed
-      return !!(messages && messages.length > 0);
-    }
-
-    // No messages yet, session is still busy
-    if (!sessionMessages || sessionMessages.length === 0) {
-      return false;
-    }
-
-    // Session is idle (completed)
-    if (sessionStatus.type === 'idle') {
-      return true;
-    }
-
-    return false;
-  } catch {
-    // On transient API errors, return false to continue polling
-    return false;
-  }
-};
-
-const MAX_POLL_INTERVAL_MS = 5000;
-const BACKOFF_MULTIPLIER = 1.5;
-
-const waitForTask = async (
-  id: string,
-  timeoutMs = TIMEOUT_MS,
-  ctx: PluginInput,
-): Promise<boolean> => {
-  const effectiveTimeout = Math.max(timeoutMs, 1000);
-  const startTime = Date.now();
-  let pollInterval = POLL_INTERVAL_MS;
-  while (Date.now() - startTime < effectiveTimeout) {
-    const complete = await isTaskComplete(id, ctx);
-    if (complete) {
-      return true;
-    }
-    await Bun.sleep(pollInterval);
-    pollInterval = Math.min(
-      pollInterval * BACKOFF_MULTIPLIER,
-      MAX_POLL_INTERVAL_MS,
-    );
-  }
-
-  return false;
-};
-
-const fetchTaskText = async (id: string, ctx: PluginInput): Promise<string> => {
-  const { data: messages } = await ctx.client.session.messages({
-    path: { id: id },
-    query: { limit: 200 },
-  });
-  if (!messages) {
-    throw new Error('No messages were found.');
-  }
-
-  // Find the last assistant message
-  const lastAssistantMessage = [...messages]
-    .reverse()
-    .find((msg) => msg.info.role === 'assistant');
-  if (!lastAssistantMessage) {
-    throw new Error('No assistant response was found.');
-  }
-
-  // Extract text content from the message parts
-  return (
-    lastAssistantMessage.parts
-      .filter((part) => part.type === 'text')
-      .map((part) => part.text)
-      .join('\n') || '(No text content in response)'
-  );
-};
+export const ASYNC_TASK_PREFIX = '[async]';
 
 export const setupTaskTools = async (ctx: PluginInput): Promise<Tools> => {
   return {
@@ -159,14 +29,6 @@ export const setupTaskTools = async (ctx: PluginInput): Promise<Tools> => {
           ),
       },
       execute: async (args, context) => {
-        if (activeTasks.size >= MAX_CONCURRENT_TASKS) {
-          return JSON.stringify({
-            status: 'failed',
-            error: `Maximum concurrent tasks reached (${MAX_CONCURRENT_TASKS}). Please wait for other tasks to complete.`,
-            code: 'CONCURRENCY_LIMIT',
-          } satisfies TaskResult);
-        }
-
         const activeAgents = await getActiveAgents(ctx);
         if (!activeAgents?.find((agent) => agent.name === args.agent)) {
           return JSON.stringify({
@@ -181,7 +43,9 @@ export const setupTaskTools = async (ctx: PluginInput): Promise<Tools> => {
           const { data } = await ctx.client.session.create({
             body: {
               parentID: context.sessionID,
-              title: `Task: ${args.title}`,
+              title: args.async
+                ? `${ASYNC_TASK_PREFIX} Task: ${args.title}`
+                : `Task: ${args.title}`,
             },
             query: { directory: ctx.directory },
           });
@@ -212,19 +76,21 @@ export const setupTaskTools = async (ctx: PluginInput): Promise<Tools> => {
           query: { directory: ctx.directory },
         });
 
-        activeTasks.add(session.id);
-
         if (args.async) {
-          promise
-            .catch((error) => {
-              console.error(`Task(${session.id}) failed to start: ${error}`);
-            })
-            .finally(() => {
-              activeTasks.delete(session.id);
-            });
+          promise.catch((error) => {
+            log(
+              {
+                level: 'error',
+                message: `Task(${session.id}) failed to start: ${
+                  error instanceof Error ? error.message : 'Unknown error'
+                }`,
+              },
+              ctx,
+            );
+          });
           return JSON.stringify({
             status: 'running',
-            taskId: session.id,
+            task_id: session.id,
             title: args.title,
           } satisfies TaskResult);
         }
@@ -234,7 +100,7 @@ export const setupTaskTools = async (ctx: PluginInput): Promise<Tools> => {
           const result = await fetchTaskText(session.id, ctx);
           return JSON.stringify({
             status: 'completed',
-            taskId: session.id,
+            task_id: session.id,
             agent: args.agent,
             title: args.title,
             result,
@@ -242,12 +108,10 @@ export const setupTaskTools = async (ctx: PluginInput): Promise<Tools> => {
         } catch (error) {
           return JSON.stringify({
             status: 'failed',
-            taskId: session.id,
+            task_id: session.id,
             error: error instanceof Error ? error.message : 'Unknown error',
             code: 'SESSION_ERROR',
           } satisfies TaskResult);
-        } finally {
-          activeTasks.delete(session.id);
         }
       },
     }),
@@ -278,8 +142,8 @@ export const setupTaskTools = async (ctx: PluginInput): Promise<Tools> => {
         if (!task) {
           return JSON.stringify({
             status: 'failed',
-            taskId: args.task_id,
-            error: `Task(${args.task_id}) not found.`,
+            task_id: args.task_id,
+            error: `Task not found.`,
             code: 'SESSION_ERROR',
           } satisfies TaskResult);
         }
@@ -305,7 +169,7 @@ export const setupTaskTools = async (ctx: PluginInput): Promise<Tools> => {
             const agent = await getAgentName();
             return JSON.stringify({
               status: 'completed',
-              taskId: task.id,
+              task_id: task.id,
               agent,
               title: task.title,
               result,
@@ -313,7 +177,7 @@ export const setupTaskTools = async (ctx: PluginInput): Promise<Tools> => {
           } catch (error) {
             return JSON.stringify({
               status: 'failed',
-              taskId: task.id,
+              task_id: task.id,
               error: error instanceof Error ? error.message : 'Unknown error',
               code: 'SESSION_ERROR',
             } satisfies TaskResult);
@@ -325,8 +189,9 @@ export const setupTaskTools = async (ctx: PluginInput): Promise<Tools> => {
           if (!waitResult) {
             return JSON.stringify({
               status: 'failed',
-              taskId: task.id,
-              error: 'Reached timeout waiting for task completion.',
+              task_id: task.id,
+              error:
+                'Reached timeout waiting for task completion. Try again later or add a longer timeout.',
               code: 'TIMEOUT',
             } satisfies TaskResult);
           }
@@ -336,7 +201,7 @@ export const setupTaskTools = async (ctx: PluginInput): Promise<Tools> => {
             const agent = await getAgentName();
             return JSON.stringify({
               status: 'completed',
-              taskId: task.id,
+              task_id: task.id,
               agent,
               title: task.title,
               result,
@@ -344,7 +209,7 @@ export const setupTaskTools = async (ctx: PluginInput): Promise<Tools> => {
           } catch (error) {
             return JSON.stringify({
               status: 'failed',
-              taskId: task.id,
+              task_id: task.id,
               error: error instanceof Error ? error.message : 'Unknown error',
               code: 'SESSION_ERROR',
             } satisfies TaskResult);
@@ -353,7 +218,7 @@ export const setupTaskTools = async (ctx: PluginInput): Promise<Tools> => {
 
         return JSON.stringify({
           status: 'running',
-          taskId: task.id,
+          task_id: task.id,
           title: task.title,
         } satisfies TaskResult);
       },
@@ -373,8 +238,8 @@ export const setupTaskTools = async (ctx: PluginInput): Promise<Tools> => {
         if (!task) {
           return JSON.stringify({
             status: 'failed',
-            taskId: args.task_id,
-            error: `Task(${args.task_id}) not found.`,
+            task_id: args.task_id,
+            error: `Task not found.`,
             code: 'SESSION_ERROR',
           } satisfies TaskResult);
         }
@@ -383,8 +248,8 @@ export const setupTaskTools = async (ctx: PluginInput): Promise<Tools> => {
         if (completed) {
           return JSON.stringify({
             status: 'failed',
-            taskId: task.id,
-            error: `Task(${args.task_id}) already completed.`,
+            task_id: task.id,
+            error: `Task already completed.`,
             code: 'SESSION_ERROR',
           } satisfies TaskResult);
         }
@@ -399,15 +264,15 @@ export const setupTaskTools = async (ctx: PluginInput): Promise<Tools> => {
           if (nowCompleted) {
             return JSON.stringify({
               status: 'failed',
-              taskId: task.id,
-              error: `Task(${args.task_id}) completed before cancellation.`,
+              task_id: task.id,
+              error: `Task completed before cancellation.`,
               code: 'SESSION_ERROR',
             } satisfies TaskResult);
           }
           return JSON.stringify({
             status: 'failed',
-            taskId: task.id,
-            error: `Failed to cancel Task(${args.task_id}): ${
+            task_id: task.id,
+            error: `Failed to cancel task: ${
               error instanceof Error ? error.message : 'Unknown error'
             }`,
             code: 'SESSION_ERROR',
@@ -416,7 +281,7 @@ export const setupTaskTools = async (ctx: PluginInput): Promise<Tools> => {
 
         return JSON.stringify({
           status: 'cancelled',
-          taskId: task.id,
+          task_id: task.id,
         } satisfies TaskResult);
       },
     }),

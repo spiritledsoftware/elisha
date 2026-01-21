@@ -38,7 +38,6 @@ import defu from "defu";
 import type { ElishaConfigContext } from "../..";
 import { setupAgentPermissions } from "../../permission/agent.ts";
 import { expandProtocols } from "../util/protocol/index.ts";
-
 import PROMPT from "./prompt.md";
 
 export const AGENT_MY_AGENT_ID = "my-agent";
@@ -96,15 +95,15 @@ Shared prompt sections live in `util/protocol/`. Use mustache syntax in prompts:
 ```markdown
 ## Error Handling
 
-{{protocol:error-handling}}
+{{protocols:error-handling}
 ```
 
 Available protocols:
 
-- `{{protocol:context-handling}}` - How to handle provided context
-- `{{protocol:error-handling}}` - Error handling patterns
-- `{{protocol:escalation}}` - When/how to escalate
-- `{{protocol:plan-versioning}}` - Plan version management
+- `{{protocols:context-handling}` - How to handle provided context
+- `{{protocols:error-handling}` - Error handling patterns
+- `{{protocols:escalation}` - When/how to escalate
+- `{{protocols:plan-versioning}` - Plan version management
 
 Expand in `index.ts`:
 
