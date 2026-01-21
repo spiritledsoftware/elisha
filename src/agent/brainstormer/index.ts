@@ -22,7 +22,7 @@ const getDefaults = (ctx: ElishaConfigContext): AgentConfig => ({
     ctx,
   ),
   description:
-    'Creative ideation specialist. Generates diverse ideas, explores unconventional approaches, and brainstorms solutions. Specify mode: "divergent" (maximize variety), "convergent" (refine ideas), "wild" (no constraints). IDEATION-ONLY, no implementation.',
+    'Creative ideation specialist. Generates diverse ideas, explores unconventional approaches. Modes: divergent/convergent/wild. IDEATION-ONLY.',
   prompt: PROMPT,
 });
 

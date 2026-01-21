@@ -24,7 +24,7 @@ const getDefaults = (ctx: ElishaConfigContext): AgentConfig => ({
     ctx,
   ),
   description:
-    'External research specialist. Finds library docs, API examples, GitHub code patterns. Specify thoroughness: "quick" (1-2 queries), "medium" (3-4 queries), "thorough" (5+ queries). Returns synthesized findings with sources. No local codebase access.',
+    'External research specialist. Finds docs, examples, best practices. Thoroughness: quick/medium/thorough.',
   prompt: PROMPT,
 });
 

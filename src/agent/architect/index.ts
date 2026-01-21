@@ -22,7 +22,7 @@ const getDefaults = (ctx: ElishaConfigContext): AgentConfig => ({
     ctx,
   ),
   description:
-    'Expert consultant and solution designer. Call when stuck on bugs, complex problems, or need architecture guidance. Analyzes problems, suggests debugging strategies, recommends solutions. Delegates to explorer (codebase) and researcher (research). Modes: "consult" (debugging/problem-solving), "design" (architecture). ADVISORY-ONLY, no code.',
+    'Expert consultant and solution designer. Helps when stuck, designs solutions. Modes: consult/design. ADVISORY-ONLY.',
   prompt: PROMPT,
 });
 

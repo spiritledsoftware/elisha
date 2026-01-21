@@ -23,7 +23,7 @@ const getDefaults = (ctx: ElishaConfigContext): AgentConfig => ({
     ctx,
   ),
   description:
-    'UI/UX implementation specialist. Writes CSS, component styling, layouts, and motion code. Uses chrome-devtools to inspect and verify visual results. Follows bold aesthetic philosophy—no generic AI look.',
+    'UI/UX implementation specialist. Writes CSS, styling, layouts. Uses chrome-devtools for visual verification.',
   prompt: PROMPT,
 });
 

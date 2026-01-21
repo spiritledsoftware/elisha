@@ -21,7 +21,7 @@ const getDefaults = (ctx: ElishaConfigContext): AgentConfig => ({
     ctx,
   ),
   description:
-    'Implementation executor. Reads plans from `.agent/plans/` (or specs from `.agent/specs/`), writes code, updates plan status. Delegates to explorer (find patterns) and researcher (API docs) when stuck. Specify mode: "step" (one task), "phase" (one phase), "full" (entire plan).',
+    'Implementation specialist. Reads plans, writes code, updates status. Modes: step/phase/full.',
   prompt: PROMPT,
 });
 

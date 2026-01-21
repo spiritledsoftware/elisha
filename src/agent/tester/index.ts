@@ -24,7 +24,7 @@ const getDefaults = (ctx: ElishaConfigContext): AgentConfig => ({
     ctx,
   ),
   description:
-    'Test specialist. Runs tests, analyzes failures, suggests improvements. Delegates to explorer (patterns) and researcher (frameworks). Specify mode: "run" (execute tests), "analyze" (diagnose failures), "suggest" (recommend new tests).',
+    'Test specialist. Runs tests, analyzes failures, suggests fixes. Modes: run/analyze/suggest.',
   prompt: PROMPT,
 });
 

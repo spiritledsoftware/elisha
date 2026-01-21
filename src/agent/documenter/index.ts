@@ -25,7 +25,7 @@ const getDefaults = (ctx: ElishaConfigContext): AgentConfig => ({
     ctx,
   ),
   description:
-    'Documentation writer. Creates and updates docs. Delegates to explorer (code to document) and researcher (doc standards). Specify scope: "file" (single file), "module" (related files), "project" (overview docs).',
+    'Documentation writer. Creates and updates docs. Scope: file/module/project.',
   prompt: PROMPT,
 });
 

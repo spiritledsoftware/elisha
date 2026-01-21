@@ -22,7 +22,7 @@ const getDefaults = (ctx: ElishaConfigContext): AgentConfig => ({
     ctx,
   ),
   description:
-    'Codebase search specialist. Finds files, searches code, maps structure. Specify thoroughness: "quick" (1 search), "medium" (2-3 searches), "thorough" (4-6 searches). Returns file paths with line numbers and brief context. READ-ONLY.',
+    'Codebase search specialist. Finds files, searches code, maps structure. Thoroughness: quick/medium/thorough. READ-ONLY.',
   prompt: PROMPT,
 });
 

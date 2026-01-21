@@ -19,7 +19,7 @@ const getDefaults = (ctx: ElishaConfigContext): AgentConfig => ({
     ctx,
   ),
   description:
-    'Task coordinator. Delegates all work to specialized agents: explorer (search), researcher (research), architect (design), planner (plans), executor (code). Never touches code directly. Use for complex multi-step tasks or when unsure which agent to use.',
+    'Coordinates multi-agent workflows. Delegates tasks, synthesizes results. NEVER touches code directly.',
   prompt: PROMPT,
 });
 

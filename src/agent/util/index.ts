@@ -84,17 +84,12 @@ const expandAgents = (template: string, ctx: ElishaConfigContext): string => {
  */
 const expandVariables = (
   template: string,
-  ctx?: ElishaConfigContext,
+  ctx: ElishaConfigContext,
 ): string => {
   let result = template;
 
-  // Expand protocols first
   result = expandProtocols(result);
-
-  // Expand agents if context is provided
-  if (ctx) {
-    result = expandAgents(result, ctx);
-  }
+  result = expandAgents(result, ctx);
 
   return result;
 };
@@ -106,7 +101,6 @@ const expandVariables = (
  */
 export const expandAgentPrompts = (ctx: ElishaConfigContext): void => {
   const agents = ctx.config.agent ?? {};
-
   for (const [_, config] of Object.entries(agents)) {
     if (config?.prompt && typeof config.prompt === 'string') {
       config.prompt = expandVariables(config.prompt, ctx);

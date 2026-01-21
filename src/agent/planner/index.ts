@@ -25,7 +25,7 @@ const getDefaults = (ctx: ElishaConfigContext): AgentConfig => ({
     ctx,
   ),
   description:
-    'Implementation planner. Creates step-by-step plans in `.agent/plans/` and specs in `.agent/specs/`. Delegates to explorer (file locations), researcher (API details), architect (design decisions). Specify detail: "outline" (5-10 steps), "detailed" (15-30 tasks), "spec" (formal with acceptance criteria).',
+    'Creates implementation plans. Analyzes requirements, breaks down tasks. Detail levels: outline/detailed/spec.',
   prompt: PROMPT,
 });
 
