@@ -68,24 +68,21 @@ const formatAgentsList = (
  * Expands agent references in a prompt string.
  * Replaces {{agents}}, {{agents:table}}, or {{agents:list}} with formatted agent info.
  */
-export function expandAgents(
-  template: string,
-  ctx: ElishaConfigContext,
-): string {
+const expandAgents = (template: string, ctx: ElishaConfigContext): string => {
   const agents = getEnabledAgents(ctx);
 
   return template
     .replace(/\{\{agents:table\}\}/g, () => formatAgentsTable(agents))
     .replace(/\{\{agents:list\}\}/g, () => formatAgentsList(agents))
     .replace(/\{\{agents\}\}/g, () => formatAgentsTable(agents));
-}
+};
 
 /**
  * Expands all variable references in a prompt string.
  * - Protocol references: {{protocol:name}}
  * - Agent references: {{agents}}, {{agents:table}}, {{agents:list}}
  */
-export const expandVariables = (
+const expandVariables = (
   template: string,
   ctx?: ElishaConfigContext,
 ): string => {
@@ -102,5 +99,17 @@ export const expandVariables = (
   return result;
 };
 
-// Re-export expandProtocols for backwards compatibility
-export { expandProtocols } from './protocol/index.ts';
+/**
+ * Expands prompts for all registered agents.
+ * Call this AFTER all agents have been set up to ensure {{agents}} references
+ * see all agents, not just those registered before them.
+ */
+export const expandAgentPrompts = (ctx: ElishaConfigContext): void => {
+  const agents = ctx.config.agent ?? {};
+
+  for (const [_, config] of Object.entries(agents)) {
+    if (config?.prompt && typeof config.prompt === 'string') {
+      config.prompt = expandVariables(config.prompt, ctx);
+    }
+  }
+};

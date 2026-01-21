@@ -2,7 +2,6 @@ import type { AgentConfig } from '@opencode-ai/sdk/v2';
 import defu from 'defu';
 import { setupAgentPermissions } from '../../permission/agent.ts';
 import type { ElishaConfigContext } from '../../types.ts';
-import { expandVariables } from '../util/index.ts';
 import PROMPT from './prompt.md';
 
 export const AGENT_ORCHESTRATOR_ID = 'orchestrator';
@@ -21,7 +20,7 @@ const getDefaults = (ctx: ElishaConfigContext): AgentConfig => ({
   ),
   description:
     'Task coordinator. Delegates all work to specialized agents: explorer (search), researcher (research), architect (design), planner (plans), executor (code). Never touches code directly. Use for complex multi-step tasks or when unsure which agent to use.',
-  prompt: expandVariables(PROMPT, ctx),
+  prompt: PROMPT,
 });
 
 export const setupOrchestratorAgentConfig = (ctx: ElishaConfigContext) => {

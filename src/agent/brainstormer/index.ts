@@ -2,7 +2,6 @@ import type { AgentConfig } from '@opencode-ai/sdk/v2';
 import defu from 'defu';
 import { setupAgentPermissions } from '../../permission/agent.ts';
 import type { ElishaConfigContext } from '../../types.ts';
-import { expandVariables } from '../util/index.ts';
 import PROMPT from './prompt.md';
 
 export const AGENT_BRAINSTORMER_ID = 'brainstormer';
@@ -24,7 +23,7 @@ const getDefaults = (ctx: ElishaConfigContext): AgentConfig => ({
   ),
   description:
     'Creative ideation specialist. Generates diverse ideas, explores unconventional approaches, and brainstorms solutions. Specify mode: "divergent" (maximize variety), "convergent" (refine ideas), "wild" (no constraints). IDEATION-ONLY, no implementation.',
-  prompt: expandVariables(PROMPT, ctx),
+  prompt: PROMPT,
 });
 
 export const setupBrainstormerAgentConfig = (ctx: ElishaConfigContext) => {

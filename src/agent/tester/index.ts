@@ -3,7 +3,6 @@ import defu from 'defu';
 import { MCP_CHROME_DEVTOOLS_ID } from '~/mcp/chrome-devtools.ts';
 import { setupAgentPermissions } from '../../permission/agent.ts';
 import type { ElishaConfigContext } from '../../types.ts';
-import { expandVariables } from '../util/index.ts';
 import PROMPT from './prompt.md';
 
 export const AGENT_TESTER_ID = 'tester';
@@ -26,7 +25,7 @@ const getDefaults = (ctx: ElishaConfigContext): AgentConfig => ({
   ),
   description:
     'Test specialist. Runs tests, analyzes failures, suggests improvements. Delegates to explorer (patterns) and researcher (frameworks). Specify mode: "run" (execute tests), "analyze" (diagnose failures), "suggest" (recommend new tests).',
-  prompt: expandVariables(PROMPT, ctx),
+  prompt: PROMPT,
 });
 
 export const setupTesterAgentConfig = (ctx: ElishaConfigContext) => {
