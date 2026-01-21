@@ -9,24 +9,24 @@ import PROMPT from './prompt.md';
 export const AGENT_DESIGNER_ID = 'designer';
 
 const getDefaults = (ctx: ElishaConfigContext): AgentConfig => ({
-  mode: 'subagent',
+  mode: 'all',
   hidden: false,
   model: ctx.config.model,
   temperature: 0.7,
   permission: setupAgentPermissions(
     AGENT_DESIGNER_ID,
     {
-      edit: 'deny',
-      bash: 'deny',
+      edit: 'ask',
+      bash: 'ask',
       webfetch: 'allow',
       websearch: 'allow',
       codesearch: 'allow',
-      'chrome-devtools*': 'deny',
+      'chrome-devtools*': 'allow',
     },
     ctx,
   ),
   description:
-    'Frontend/UX design specialist. Creates visual design specifications: typography, color palettes, layout systems, motion design, component styling. Scope: component/page/system. DESIGN-ONLY, no code.',
+    'UI/UX implementation specialist. Writes CSS, component styling, layouts, and motion code. Uses chrome-devtools to inspect and verify visual results. Follows bold aesthetic philosophy—no generic AI look.',
   prompt: expandProtocols(PROMPT),
 });
 
