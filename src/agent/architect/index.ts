@@ -12,7 +12,7 @@ const getDefaults = (ctx: ElishaConfigContext): AgentConfig => ({
   mode: 'subagent',
   hidden: false,
   model: ctx.config.model,
-  temperature: 0.3,
+  temperature: 0.5,
   permission: setupAgentPermissions(
     AGENT_ARCHITECT_ID,
     {
@@ -20,12 +20,11 @@ const getDefaults = (ctx: ElishaConfigContext): AgentConfig => ({
       webfetch: 'deny',
       websearch: 'deny',
       codesearch: 'deny',
-      'chrome-devtools*': 'deny',
     },
     ctx,
   ),
   description:
-    'Solution designer. Analyzes requirements, evaluates approaches, recommends architecture. Delegates to explorer (codebase) and researcher (research). Specify scope: "component" (single feature), "system" (multi-component), "strategic" (large-scale). DESIGN-ONLY, no code.',
+    'Expert consultant and solution designer. Call when stuck on bugs, complex problems, or need architecture guidance. Analyzes problems, suggests debugging strategies, recommends solutions. Delegates to explorer (codebase) and researcher (research). Modes: "consult" (debugging/problem-solving), "design" (architecture). ADVISORY-ONLY, no code.',
   prompt: expandProtocols(PROMPT),
 });
 

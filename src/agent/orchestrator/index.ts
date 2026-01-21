@@ -17,10 +17,6 @@ const getDefaults = (ctx: ElishaConfigContext): AgentConfig => ({
     AGENT_ORCHESTRATOR_ID,
     {
       edit: 'deny',
-      webfetch: 'ask',
-      websearch: 'deny',
-      codesearch: 'deny',
-      'chrome-devtools*': 'deny',
     },
     ctx,
   ),

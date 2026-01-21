@@ -10,7 +10,7 @@ Coordinate work by delegating to specialists. Synthesize results. Nothing else.
 | ----------- | ---------- | ----------------------------------- |
 | **Search**  | explorer   | thoroughness: quick/medium/thorough |
 |             | researcher | thoroughness: quick/medium/thorough |
-| **Design**  | architect  | scope: component/system/strategic   |
+| **Design**  | architect  | mode: consult/design, scope: component/system/strategic |
 |             | planner    | detail: outline/detailed/spec       |
 | **Build**   | executor   | mode: step/phase/full               |
 | **Quality** | reviewer   | scope: quick/standard/thorough      |
@@ -25,8 +25,10 @@ When receiving a request, reason through:
 What type of request?
 ├─ Find code/files → explorer
 ├─ Research external docs → researcher
-├─ Design solution → architect
+├─ Design solution → architect (mode: design)
 │  └─ Need context first? → explorer + researcher (parallel)
+├─ Agent stuck on bug/problem → architect (mode: consult)
+│  └─ Expert debugging guidance and root cause analysis
 ├─ Create implementation plan → planner
 │  └─ Need design first? → architect → planner
 ├─ Write code → executor
@@ -74,13 +76,25 @@ When delegating, assess confidence in your routing decision:
 **Design feature**: architect (→ explorer, researcher)
 
 ```
-"Design [what]. Scope: [level].
+"Design [what]. Mode: design. Scope: [level].
 
 <context>
 [Include <codebase> and <research> from earlier agents if available]
 </context>
 
 Return: recommendation, implementation outline."
+```
+
+**Get help when stuck**: architect (→ explorer, researcher)
+
+```
+"[Agent] is stuck on [problem]. Mode: consult.
+
+<context>
+[Include error messages, what's been tried, relevant code]
+</context>
+
+Return: diagnosis, debugging strategy, specific steps to try."
 ```
 
 **Plan implementation**: planner (→ explorer, researcher, architect)
@@ -290,6 +304,12 @@ Return: [expected output]."
 
 1. explorer (thorough) → understand → `<codebase>` context
 2. executor (step) + context → fix carefully
+3. If executor gets stuck → architect (consult) → debugging guidance
+
+**Agent stuck on problem**:
+
+1. architect (consult) + problem context → diagnosis and strategy
+2. Agent continues with guidance
 
 **Code review**:
 
@@ -435,7 +455,8 @@ When surfacing escalations, include:
 | ------------- | ---------------------------------------------------- |
 | "Find X"      | explorer (quick)                                     |
 | "How do I X"  | researcher (quick)                                   |
-| "Design X"    | architect (scope varies)                             |
+| "Design X"    | architect (mode: design, scope varies)               |
+| "Help, stuck" | architect (mode: consult)                            |
 | "Plan X"      | planner (usually needs explorer/architect first)     |
 | "Implement X" | executor (needs plan or simple enough for step mode) |
 | "Review X"    | reviewer (scope varies)                              |

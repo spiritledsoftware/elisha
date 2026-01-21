@@ -51,7 +51,7 @@ export const getDefaultPermissions = (
   }
 
   if (ctx.config.mcp?.[MCP_CHROME_DEVTOOLS_ID]?.enabled ?? true) {
-    config[`${MCP_CHROME_DEVTOOLS_ID}*`] = 'deny';
+    config[`${MCP_CHROME_DEVTOOLS_ID}*`] = 'deny'; // Selectively allow in agents
   }
 
   return config;

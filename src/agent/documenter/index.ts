@@ -23,7 +23,6 @@ const getDefaults = (ctx: ElishaConfigContext): AgentConfig => ({
       webfetch: 'deny',
       websearch: 'deny',
       codesearch: 'deny',
-      'chrome-devtools*': 'deny',
     },
     ctx,
   ),

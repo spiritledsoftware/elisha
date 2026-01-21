@@ -16,11 +16,9 @@ const getDefaults = (ctx: ElishaConfigContext): AgentConfig => ({
   permission: setupAgentPermissions(
     AGENT_EXECUTOR_ID,
     {
-      edit: 'allow',
       webfetch: 'deny',
       websearch: 'deny',
       codesearch: 'deny',
-      'chrome-devtools*': 'deny',
     },
     ctx,
   ),

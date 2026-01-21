@@ -144,7 +144,7 @@ Permission values: `'allow'`, `'deny'`, `'ask'`
 | `brainstormer` | `all` | Creative ideation |
 | `explorer` | `subagent` | Codebase search (read-only) |
 | `researcher` | `subagent` | External research |
-| `architect` | `subagent` | Solution design (no code) |
+| `architect` | `subagent` | Expert consultant + solution design (call when stuck) |
 | `designer` | `subagent` | Frontend/UX design specialist |
 | `tester` | `subagent` | Test execution and analysis |
 | `documenter` | `subagent` | Documentation writing |

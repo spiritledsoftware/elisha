@@ -1,5 +1,6 @@
 import type { AgentConfig } from '@opencode-ai/sdk/v2';
 import defu from 'defu';
+import { MCP_CHROME_DEVTOOLS_ID } from '~/mcp/chrome-devtools.ts';
 import { setupAgentPermissions } from '../../permission/agent.ts';
 import type { ElishaConfigContext } from '../../util/index.ts';
 import { expandProtocols } from '../util/protocol/index.ts';
@@ -16,12 +17,10 @@ const getDefaults = (ctx: ElishaConfigContext): AgentConfig => ({
   permission: setupAgentPermissions(
     AGENT_DESIGNER_ID,
     {
-      edit: 'ask',
-      bash: 'ask',
-      webfetch: 'allow',
-      websearch: 'allow',
-      codesearch: 'allow',
-      'chrome-devtools*': 'allow',
+      webfetch: 'deny',
+      websearch: 'deny',
+      codesearch: 'deny',
+      [`${MCP_CHROME_DEVTOOLS_ID}*`]: 'allow',
     },
     ctx,
   ),
