@@ -2,8 +2,6 @@ import type { AgentConfig } from '@opencode-ai/sdk/v2';
 import defu from 'defu';
 import { setupAgentPermissions } from '../../permission/agent.ts';
 import type { ElishaConfigContext } from '../../types.ts';
-import { expandProtocols } from '../util/protocol/index.ts';
-
 import PROMPT from './prompt.md';
 
 export const AGENT_REVIEWER_ID = 'reviewer';
@@ -22,13 +20,12 @@ const getDefaults = (ctx: ElishaConfigContext): AgentConfig => ({
       webfetch: 'deny',
       websearch: 'deny',
       codesearch: 'deny',
-      'chrome-devtools*': 'deny',
     },
     ctx,
   ),
   description:
-    'Code reviewer. Analyzes diffs for issues. Delegates to explorer (context) and researcher (best practices). Specify scope: "quick" (obvious issues), "standard" (full review), "thorough" (deep analysis). READ-ONLY.',
-  prompt: expandProtocols(PROMPT),
+    "Reviews code changes for bugs, security issues, and style violations. Use when: validating implementation quality, checking for regressions, or before merging changes. Scope: quick (obvious issues), standard (comprehensive), thorough (security-focused). READ-ONLY - identifies issues, doesn't fix them.",
+  prompt: PROMPT,
 });
 
 export const setupReviewerAgentConfig = (ctx: ElishaConfigContext) => {

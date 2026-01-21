@@ -1,33 +1,30 @@
 import type { AgentConfig } from '@opencode-ai/sdk/v2';
 import defu from 'defu';
+import { MCP_CHROME_DEVTOOLS_ID } from '~/mcp/chrome-devtools.ts';
 import { setupAgentPermissions } from '../../permission/agent.ts';
 import type { ElishaConfigContext } from '../../util/index.ts';
-import { expandProtocols } from '../util/protocol/index.ts';
-
 import PROMPT from './prompt.md';
 
 export const AGENT_DESIGNER_ID = 'designer';
 
 const getDefaults = (ctx: ElishaConfigContext): AgentConfig => ({
-  mode: 'subagent',
+  mode: 'all',
   hidden: false,
   model: ctx.config.model,
   temperature: 0.7,
   permission: setupAgentPermissions(
     AGENT_DESIGNER_ID,
     {
-      edit: 'deny',
-      bash: 'deny',
-      webfetch: 'allow',
-      websearch: 'allow',
-      codesearch: 'allow',
-      'chrome-devtools*': 'deny',
+      webfetch: 'deny',
+      websearch: 'deny',
+      codesearch: 'deny',
+      [`${MCP_CHROME_DEVTOOLS_ID}*`]: 'allow',
     },
     ctx,
   ),
   description:
-    'Frontend/UX design specialist. Creates visual design specifications: typography, color palettes, layout systems, motion design, component styling. Scope: component/page/system. DESIGN-ONLY, no code.',
-  prompt: expandProtocols(PROMPT),
+    'Implements visual designs, CSS, and UI layouts with bold, distinctive aesthetics. Use when: building UI components, styling pages, fixing visual bugs, or implementing responsive layouts. Uses Chrome DevTools for live visual verification. Focuses on CSS/styling - not business logic.',
+  prompt: PROMPT,
 });
 
 export const setupDesignerAgentConfig = (ctx: ElishaConfigContext) => {

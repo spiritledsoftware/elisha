@@ -61,10 +61,10 @@ import PROMPT from "./prompt.md";
 
 Shared prompt sections use mustache syntax. Available protocols:
 
-- `{{protocol:context-handling}}`
-- `{{protocol:error-handling}}`
-- `{{protocol:escalation}}`
-- `{{protocol:plan-versioning}}`
+- `{{protocols:context-handling}`
+- `{{protocols:error-handling}`
+- `{{protocols:escalation}`
+- `{{protocols:plan-versioning}`
 
 ```typescript
 import { expandProtocols } from '../agent/util/protocol/index.ts';

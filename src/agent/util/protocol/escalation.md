@@ -1,96 +1,38 @@
-# Escalation Protocol
+### Escalation Protocol
 
 When to stop and ask for help instead of proceeding.
 
-## Escalation Triggers
+#### Triggers
 
-| Trigger                   | Description                                     | Example                                    |
-| ------------------------- | ----------------------------------------------- | ------------------------------------------ |
-| **Blocked**               | Cannot proceed without external input           | Missing credentials, locked resource       |
-| **Ambiguous Requirement** | Multiple valid interpretations, unclear intent  | "Make it faster" - which parts?            |
-| **Scope Creep**           | Task is growing beyond original bounds          | Bug fix becoming refactor                  |
-| **Design Flaw**           | Current approach won't work, need to reconsider | Architecture incompatible with requirement |
-| **Risk Threshold**        | Action could cause significant damage           | Destructive migration, data loss potential |
-| **Permission Denied**     | Tool/action blocked by policy                   | Write to protected path                    |
+- **Blocked**: Cannot proceed without external input
+- **Ambiguous**: Multiple valid interpretations
+- **Scope Creep**: Task growing beyond bounds
+- **Design Flaw**: Current approach won't work
+- **Risk**: Could cause significant damage
+- **Permission Denied**: Tool/action blocked
 
-## Escalation Channels
-
-### In-Plan Escalation (for executors)
-
-Create `ESCALATION.md` in the plan directory:
-
-```markdown
-# Escalation: [Brief Title]
-
-**Plan**: [plan-name.md]
-**Task**: [1.3 Task Name]
-**Agent**: [executor]
-**Time**: [ISO timestamp]
-
-## Issue
-
-[What went wrong or what's unclear]
-
-## Context
-
-[Relevant findings, what was tried]
-
-## Options (if known)
-
-1. [Option A] - [trade-off]
-2. [Option B] - [trade-off]
-
-## Blocking
-
-- [ ] Task 1.3 - [blocked task]
-- [ ] Task 1.4 - [dependent task]
-
-## Requested Action
-
-[What you need: decision, clarification, permission]
-```
-
-### Direct Escalation (to calling agent)
-
-Include in your output:
+#### Format
 
 ```markdown
 ### Escalation Required
 
-**Trigger**: [Blocked | Ambiguous | Scope Creep | Design Flaw | Risk | Permission]
-**Impact**: [What's blocked]
-**Need**: [Decision | Clarification | Permission | Guidance]
-
+**Trigger**: [type] | **Impact**: [blocked] | **Need**: [type]
 [Details...]
 ```
 
-## Escalation Information Checklist
+Include: What you tried → What went wrong → Options → What's blocked → What you need
 
-Always include:
+#### Handling
 
-- [ ] What you were trying to do
-- [ ] What went wrong (specific error or confusion)
-- [ ] What you already tried
-- [ ] What options exist (if known)
-- [ ] What's blocked by this issue
-- [ ] What decision or action you need
+When receiving escalations:
 
-## Orchestrator Handling
+1. **Check output** for "Escalation Required" sections
+2. **Route appropriately**
+3. **When surfacing**, include: what agent tried, why blocked, options, decision needed
 
-When an escalation is received:
+#### Anti-Patterns
 
-1. **Assess severity**: Can another agent help, or does user need to decide?
-2. **Route appropriately**:
-   - Design issues → architect
-   - Research gaps → researcher
-   - Codebase questions → explorer
-   - True blockers → user
-3. **Resolve or forward**: Either provide the answer or surface to user
-4. **Document resolution**: Update the escalation file with decision
-
-## Anti-Patterns
-
-- **Don't guess**: If you're unsure, escalate. Wrong assumptions cost more than questions.
-- **Don't retry forever**: After 2 attempts, escalate instead of looping.
-- **Don't expand scope**: If the fix requires changes beyond the task, escalate.
-- **Don't ignore risks**: If an action seems dangerous, escalate before proceeding.
+- Guessing (wrong assumptions cost more than questions)
+- Retrying forever (after 2 attempts, escalate)
+- Expanding scope (changes beyond task → escalate)
+- Ignoring risks (dangerous action → escalate first)

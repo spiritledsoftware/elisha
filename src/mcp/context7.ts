@@ -1,4 +1,5 @@
 import defu from 'defu';
+import { log } from '~/util/index.ts';
 import type { ElishaConfigContext } from '../types.ts';
 import type { McpConfig } from './types.ts';
 
@@ -15,8 +16,13 @@ export const getDefaults = (_ctx: ElishaConfigContext): McpConfig => ({
 
 export const setupContext7McpConfig = (ctx: ElishaConfigContext) => {
   if (!process.env.CONTEXT7_API_KEY) {
-    console.warn(
-      '[Elisha] CONTEXT7_API_KEY not set - Context7 will use public rate limits',
+    log(
+      {
+        level: 'warn',
+        message:
+          '[Elisha] CONTEXT7_API_KEY not set - Context7 will use public rate limits',
+      },
+      ctx,
     );
   }
   ctx.config.mcp ??= {};

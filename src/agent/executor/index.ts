@@ -2,8 +2,6 @@ import type { AgentConfig } from '@opencode-ai/sdk/v2';
 import defu from 'defu';
 import { setupAgentPermissions } from '../../permission/agent.ts';
 import type { ElishaConfigContext } from '../../types.ts';
-import { expandProtocols } from '../util/protocol/index.ts';
-
 import PROMPT from './prompt.md';
 
 export const AGENT_EXECUTOR_ID = 'executor';
@@ -16,17 +14,15 @@ const getDefaults = (ctx: ElishaConfigContext): AgentConfig => ({
   permission: setupAgentPermissions(
     AGENT_EXECUTOR_ID,
     {
-      edit: 'allow',
       webfetch: 'deny',
       websearch: 'deny',
       codesearch: 'deny',
-      'chrome-devtools*': 'deny',
     },
     ctx,
   ),
   description:
-    'Implementation executor. Reads plans from `.agent/plans/` (or specs from `.agent/specs/`), writes code, updates plan status. Delegates to explorer (find patterns) and researcher (API docs) when stuck. Specify mode: "step" (one task), "phase" (one phase), "full" (entire plan).',
-  prompt: expandProtocols(PROMPT),
+    'Implements code changes following plans or direct instructions. Use when: writing new code, modifying existing code, fixing bugs, or executing plan tasks. Modes: step (one task), phase (task group), full (entire plan). Writes production-quality code matching codebase patterns.',
+  prompt: PROMPT,
 });
 
 export const setupExecutorAgentConfig = (ctx: ElishaConfigContext) => {

@@ -2,8 +2,6 @@ import type { AgentConfig } from '@opencode-ai/sdk/v2';
 import defu from 'defu';
 import { setupAgentPermissions } from '../../permission/agent.ts';
 import type { ElishaConfigContext } from '../../types.ts';
-import { expandProtocols } from '../util/protocol/index.ts';
-
 import PROMPT from './prompt.md';
 
 export const AGENT_DOCUMENTER_ID = 'documenter';
@@ -23,13 +21,12 @@ const getDefaults = (ctx: ElishaConfigContext): AgentConfig => ({
       webfetch: 'deny',
       websearch: 'deny',
       codesearch: 'deny',
-      'chrome-devtools*': 'deny',
     },
     ctx,
   ),
   description:
-    'Documentation writer. Creates and updates docs. Delegates to explorer (code to document) and researcher (doc standards). Specify scope: "file" (single file), "module" (related files), "project" (overview docs).',
-  prompt: expandProtocols(PROMPT),
+    'Creates and maintains documentation including READMEs, API references, and architecture docs. Use when: documenting new features, updating outdated docs, creating onboarding guides, or writing inline code comments. Scope: file (single file), module (directory), project (full codebase). Matches existing doc style.',
+  prompt: PROMPT,
 });
 
 export const setupDocumenterAgentConfig = (ctx: ElishaConfigContext) => {

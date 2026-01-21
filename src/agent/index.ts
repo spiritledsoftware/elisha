@@ -14,7 +14,7 @@ import {
 import { setupPlannerAgentConfig } from './planner/index.ts';
 import { setupResearcherAgentConfig } from './researcher/index.ts';
 import { setupReviewerAgentConfig } from './reviewer/index.ts';
-import { setupTesterAgentConfig } from './tester/index.ts';
+import { expandAgentPrompts } from './util/index.ts';
 
 const disableAgent = (name: string, ctx: ElishaConfigContext) => {
   ctx.config.agent ??= {};
@@ -31,18 +31,26 @@ export const setupAgentConfig = (ctx: ElishaConfigContext) => {
 
   setupCompactionAgentConfig(ctx);
 
-  // Elisha agents
-  setupArchitectAgentConfig(ctx);
-  setupBrainstormerAgentConfig(ctx);
-  setupDesignerAgentConfig(ctx);
-  setupDocumenterAgentConfig(ctx);
-  setupExecutorAgentConfig(ctx);
+  // --Elisha agents--
+  // Read-only agents
   setupExplorerAgentConfig(ctx);
-  setupOrchestratorAgentConfig(ctx);
-  setupPlannerAgentConfig(ctx);
   setupResearcherAgentConfig(ctx);
+  setupBrainstormerAgentConfig(ctx);
+  setupArchitectAgentConfig(ctx);
+
+  // Executing agents
+  setupPlannerAgentConfig(ctx);
   setupReviewerAgentConfig(ctx);
-  setupTesterAgentConfig(ctx);
+  setupDocumenterAgentConfig(ctx);
+  setupDesignerAgentConfig(ctx);
+  setupExecutorAgentConfig(ctx);
+
+  // Main orchestrator
+  setupOrchestratorAgentConfig(ctx);
+
+  // Expand all agent prompts AFTER all agents are registered
+  // This ensures {{agents}} references see all agents, not just those set up before them
+  expandAgentPrompts(ctx);
 
   ctx.config.default_agent =
     (ctx.config.agent?.orchestrator?.disable ?? false)

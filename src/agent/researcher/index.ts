@@ -1,9 +1,9 @@
 import type { AgentConfig } from '@opencode-ai/sdk/v2';
 import defu from 'defu';
+import { MCP_CHROME_DEVTOOLS_ID } from '~/mcp/chrome-devtools.ts';
+import { TOOL_TASK_ID } from '~/task/tool.ts';
 import { setupAgentPermissions } from '../../permission/agent.ts';
 import type { ElishaConfigContext } from '../../types.ts';
-import { expandProtocols } from '../util/protocol/index.ts';
-
 import PROMPT from './prompt.md';
 
 export const AGENT_RESEARCHER_ID = 'researcher';
@@ -20,13 +20,14 @@ const getDefaults = (ctx: ElishaConfigContext): AgentConfig => ({
       webfetch: 'allow',
       websearch: 'allow',
       codesearch: 'allow',
-      'chrome-devtools*': 'deny',
+      [`${MCP_CHROME_DEVTOOLS_ID}*`]: 'allow',
+      [`${TOOL_TASK_ID}*`]: 'deny', // Leaf node
     },
     ctx,
   ),
   description:
-    'External research specialist. Finds library docs, API examples, GitHub code patterns. Specify thoroughness: "quick" (1-2 queries), "medium" (3-4 queries), "thorough" (5+ queries). Returns synthesized findings with sources. No local codebase access.',
-  prompt: expandProtocols(PROMPT),
+    'Researches external sources for documentation, examples, and best practices. Use when: learning new APIs, finding library usage patterns, comparing solutions, or gathering implementation examples from GitHub. Thoroughness: quick (first good result), medium (multiple sources), thorough (comprehensive survey).',
+  prompt: PROMPT,
 });
 
 export const setupResearcherAgentConfig = (ctx: ElishaConfigContext) => {
