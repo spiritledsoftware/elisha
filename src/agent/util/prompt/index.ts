@@ -11,7 +11,7 @@ export namespace Prompt {
     condition: boolean,
     tContent: string,
     fContent?: string,
-  ): string => (condition ? tContent : (fContent ?? ''));
+  ): string => dedent(condition ? tContent : (fContent ?? ''));
 
   /**
    * Formats a code block with optional language for syntax highlighting.
@@ -22,7 +22,7 @@ export namespace Prompt {
    * ```
    */
   export const code = (code: string, language = ''): string =>
-    `\`\`\`${language}\n${code}\n\`\`\``;
+    dedent(`\`\`\`${language}\n${code}\n\`\`\``);
 
   /**
    * Tagged template literal for composing prompts with embedded expressions.

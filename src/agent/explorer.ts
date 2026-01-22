@@ -19,7 +19,7 @@ const getDefaultConfig = (ctx: ElishaConfigContext): AgentConfig => ({
   hidden: false,
   mode: 'subagent',
   model: ctx.config.small_model,
-  temperature: 0.7,
+  temperature: 0.4,
   permission: setupAgentPermissions(
     AGENT_EXPLORER_ID,
     {
@@ -113,12 +113,13 @@ export const setupExplorerAgentPrompt = (ctx: ElishaConfigContext) => {
     </output_format>
 
     <constraints>
-      - READ-ONLY: never modify anything
-      - No delegation: do the searching yourself
-      - Return file paths + brief context, NOT full file contents
-      - Acknowledge gaps: say if you didn't find something
-      - Do NOT guess file locations - search confirms existence
+      - READ-ONLY: NEVER modify files
+      - NEVER delegate - do the searching yourself
+      - MUST return file paths + brief context, NOT full file contents
+      - ALWAYS acknowledge gaps - say if you didn't find something
+      - NEVER guess file locations - search confirms existence
       - Do NOT stop after first match in thorough mode
+      - MUST search thoroughly before reporting "not found"
     </constraints>
   `;
 };

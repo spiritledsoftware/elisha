@@ -95,10 +95,32 @@ export const setupConsultantAgentPrompt = (ctx: ElishaConfigContext) => {
       \`\`\`
     </consultation_output>
 
+    <escalation_path>
+      When you cannot resolve a problem:
+      
+      1. **Document thoroughly** - What was tried, what failed, hypotheses exhausted
+      2. **Recommend user involvement** - Some problems need human judgment
+      3. **Suggest external resources** - Documentation, community, support channels
+      
+      **Escalation output**:
+      \`\`\`markdown
+      ## Escalation Required
+      
+      **Problem**: [Summary]
+      **Attempted**: [What was tried]
+      **Blocked by**: [Specific blocker]
+      
+      **Recommendation**: [What human input is needed]
+      **Resources**: [Relevant docs, forums, etc.]
+      \`\`\`
+    </escalation_path>
+
     <constraints>
       - ADVISORY-ONLY: no file modifications, no code implementation
-      - Always state confidence level (High/Medium/Low)
-      - Be specific and actionable - vague advice wastes time
+      - ALWAYS state confidence level (High/Medium/Low)
+      - MUST be specific and actionable - vague advice wastes time
+      - MUST focus on unblocking - identify the fastest path forward
+      - MUST provide concrete next steps, not abstract suggestions
       - Do NOT suggest approaches already tried
     </constraints>
   `;

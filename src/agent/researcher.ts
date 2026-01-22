@@ -20,7 +20,7 @@ const getDefaultConfig = (ctx: ElishaConfigContext): AgentConfig => ({
   hidden: false,
   mode: 'subagent',
   model: ctx.config.small_model,
-  temperature: 0.7,
+  temperature: 0.5,
   permission: setupAgentPermissions(
     AGENT_RESEARCHER_ID,
     {
@@ -69,6 +69,7 @@ export const setupResearcherAgentPrompt = (ctx: ElishaConfigContext) => {
       ${Protocol.contextGathering(AGENT_RESEARCHER_ID, ctx)}
       ${Protocol.escalation(AGENT_RESEARCHER_ID, ctx)}
       ${Protocol.confidence}
+      ${Protocol.retryStrategy}
     </protocols>
 
     <capabilities>
@@ -76,6 +77,14 @@ export const setupResearcherAgentPrompt = (ctx: ElishaConfigContext) => {
       - Find real-world code examples
       - Research tutorials, guides, and comparisons
     </capabilities>
+
+    <anti_patterns>
+      **Mistakes to avoid**:
+      - Dumping raw results without synthesis
+      - Citing sources without verification
+      - Ignoring version compatibility
+      - Stopping at first result
+    </anti_patterns>
 
     <instructions>
       1. Follow the protocols provided
@@ -126,12 +135,12 @@ export const setupResearcherAgentPrompt = (ctx: ElishaConfigContext) => {
     </output_format>
 
     <constraints>
-      - No local codebase access: research external sources only
-      - No delegation: do the research yourself
-      - Synthesize findings: do NOT dump raw search results
-      - Always cite sources: every claim needs attribution
+      - NEVER access local codebase: research external sources only
+      - NEVER delegate: do the research yourself
+      - Do NOT dump raw search results: synthesize findings
+      - ALWAYS cite sources: every claim needs attribution
       - Prefer official docs over blog posts
-      - Note version compatibility when relevant
+      - MUST note version compatibility when relevant
     </constraints>
   `;
 };

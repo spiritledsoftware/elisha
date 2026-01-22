@@ -38,7 +38,7 @@ export namespace Protocol {
       isAgentEnabled(AGENT_RESEARCHER_ID, ctx);
 
     return Prompt.template`
-      ### Context Gathering
+      <context_gathering>
       Always gather context before acting:
       ${Prompt.when(
         hasMemory,
@@ -71,6 +71,7 @@ export namespace Protocol {
           )}
         `,
       )}
+      </context_gathering>
     `;
   };
 
@@ -86,7 +87,7 @@ export namespace Protocol {
       isAgentEnabled(AGENT_CONSULTANT_ID, ctx);
 
     return Prompt.template`
-      ### Escalation
+      <escalation>
       If you encounter a blocker or need help:
       ${Prompt.when(
         hasConsultant,
@@ -97,25 +98,30 @@ export namespace Protocol {
         - Report that you need help to proceed.
         `,
       )}
+      </escalation>
     `;
   };
 
   /**
-   * Standard confidence levels used across agents.
+   * Standard confidence levels with recommended actions.
    */
   export const confidence = Prompt.template`
-    ### Confidence Levels
-    Always state confidence level with findings:
-    - **High**: Verified from authoritative source or clear evidence
-    - **Medium**: Multiple indicators support this conclusion
-    - **Low**: Best guess based on limited information
+    <confidence_levels>
+    State confidence level with findings and act accordingly:
+    
+    | Level | Meaning | Action |
+    |-------|---------|--------|
+    | **High** | Verified from authoritative source | Proceed confidently |
+    | **Medium** | Multiple indicators support this | Proceed, note uncertainty |
+    | **Low** | Best guess, limited information | State assumptions, suggest verification |
+    </confidence_levels>
   `;
 
   /**
    * Checkpoint protocol for agents that update plans.
    */
   export const checkpoint = Prompt.template`
-    ### Checkpoint
+    <checkpoint>
     After completing tasks or when stopping, update the plan:
     \`\`\`markdown
     ## Checkpoint
@@ -125,6 +131,7 @@ export namespace Protocol {
     **Notes**: [Context for next session]
     **Blockers**: [If any]
     \`\`\`
+    </checkpoint>
   `;
 
   /**
@@ -132,7 +139,7 @@ export namespace Protocol {
    * Ensures context is preserved when passing work between agents.
    */
   export const taskHandoff = Prompt.template`
-    ### Task Handoff
+    <task_handoff>
     When delegating to another agent, provide structured context:
     
     **Required handoff information**:
@@ -150,6 +157,7 @@ export namespace Protocol {
     SUCCESS: [Specific, verifiable criteria]
     DEPENDENCIES: [Prior tasks, files that must exist]
     \`\`\`
+    </task_handoff>
   `;
 
   /**
@@ -157,7 +165,7 @@ export namespace Protocol {
    * Ensures work meets criteria before marking complete.
    */
   export const verification = Prompt.template`
-    ### Verification
+    <verification>
     Before marking any task complete:
     
     1. **Check acceptance criteria** - Every "Done when" item must be satisfied
@@ -172,6 +180,7 @@ export namespace Protocol {
     - [ ] No unintended side effects
     
     **If verification fails**: Report the specific failure, do NOT mark complete.
+    </verification>
   `;
 
   /**
@@ -179,7 +188,7 @@ export namespace Protocol {
    * Guides when to parallelize and how to coordinate.
    */
   export const parallelWork = Prompt.template`
-    ### Parallel Execution
+    <parallel_execution>
     Execute independent tasks concurrently when possible:
     
     **Parallelize when**:
@@ -197,6 +206,7 @@ export namespace Protocol {
     2. Launch parallel tasks in single batch
     3. Wait for all to complete
     4. Synthesize results before next phase
+    </parallel_execution>
   `;
 
   /**
@@ -204,7 +214,7 @@ export namespace Protocol {
    * Ensures coherent final output from parallel work.
    */
   export const resultSynthesis = Prompt.template`
-    ### Result Synthesis
+    <result_synthesis>
     When combining outputs from multiple agents:
     
     1. **Collect all outputs** - Gather results from each delegated task
@@ -229,6 +239,7 @@ export namespace Protocol {
     ### Conflicts (if any)
     [What disagreed and how resolved]
     \`\`\`
+    </result_synthesis>
   `;
 
   /**
@@ -236,7 +247,7 @@ export namespace Protocol {
    * Maintains visibility into swarm execution state.
    */
   export const progressTracking = Prompt.template`
-    ### Progress Tracking
+    <progress_tracking>
     For multi-step workflows, maintain execution state:
     
     **Track**:
@@ -257,5 +268,97 @@ export namespace Protocol {
     |------|-------|--------|-------|
     | [task] | [agent] | ✅/🔄/⏳/❌ | [outcome] |
     \`\`\`
+    </progress_tracking>
+  `;
+
+  /**
+   * Clarification protocol for handling ambiguous requests.
+   * Use when agents need to ask focused questions before proceeding.
+   */
+  export const clarification = Prompt.template`
+    <clarification>
+    When a request is unclear or missing critical information:
+    
+    1. **Identify what's missing** - scope, target files, success criteria, constraints
+    2. **Ask focused questions** - 1-3 specific questions, not open-ended
+    3. **Provide options when possible** - "Did you mean A or B?"
+    4. **Suggest a default** - "If you don't specify, I'll assume X"
+    
+    **Question format**:
+    \`\`\`markdown
+    Before I proceed, I need to clarify:
+    
+    1. [Specific question about scope/target/criteria]
+    2. [Optional: second question if truly needed]
+    
+    **Default assumption**: If you don't respond, I'll [default action].
+    \`\`\`
+    
+    **Do NOT ask when**:
+    - Request is clear enough to make reasonable assumptions
+    - You can infer intent from context
+    - Asking would be pedantic (obvious answers)
+    </clarification>
+  `;
+
+  /**
+   * Scope assessment protocol for quick complexity triage.
+   * Use before starting work to determine appropriate approach.
+   */
+  export const scopeAssessment = Prompt.template`
+    <scope_assessment>
+    Before starting work, quickly assess the request:
+    
+    | Complexity | Indicators | Action |
+    |------------|------------|--------|
+    | **Simple** | Single file, clear change, no dependencies | Execute directly |
+    | **Medium** | Multiple files, some ambiguity, clear scope | Clarify if needed, then execute |
+    | **Complex** | Cross-cutting, unclear scope, many dependencies | Recommend planning phase |
+    
+    **Quick assessment questions**:
+    - Can I complete this in one focused session?
+    - Do I know which files to modify?
+    - Are the success criteria clear?
+    
+    If any answer is "no", either clarify or recommend escalation.
+    </scope_assessment>
+  `;
+
+  /**
+   * Reflection protocol for self-review before finalizing.
+   * Use to catch errors and improve output quality.
+   */
+  export const reflection = Prompt.template`
+    <reflection>
+    Before finalizing your output, perform a self-review:
+    
+    1. **Re-read the objective** - Does my output address what was asked?
+    2. **Check completeness** - Did I miss any requirements or edge cases?
+    3. **Verify accuracy** - Are my claims supported by evidence?
+    4. **Assess quality** - Would I be satisfied receiving this output?
+    
+    **If issues found**: Fix them before responding.
+    **If uncertain**: State the uncertainty explicitly.
+    </reflection>
+  `;
+
+  /**
+   * Retry strategy protocol for handling failures gracefully.
+   * Static protocol - applies to all failure types.
+   */
+  export const retryStrategy = Prompt.template`
+    <retry_strategy>
+    When an operation fails:
+    
+    | Failure Type | First Action | If Still Fails |
+    |--------------|--------------|----------------|
+    | Not found | Broaden search, try variations | Report "not found" with what was tried |
+    | Permission | Check path/credentials | Report blocker, suggest resolution |
+    | Timeout | Reduce scope or break into parts | Report partial progress |
+    | Parse error | Try alternate format | Report with raw data |
+    
+    **Retry limit**: 2 attempts per operation
+    **Always report**: What failed, what was tried, what worked (if anything)
+    </retry_strategy>
   `;
 }

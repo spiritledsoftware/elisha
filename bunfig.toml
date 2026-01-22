@@ -1,2 +1,7 @@
 [loader]
 ".md" = "text"
+
+[test]
+root = "./src"
+preload = ["./src/test-setup.ts"]
+coverage = true
