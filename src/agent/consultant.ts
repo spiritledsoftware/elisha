@@ -2,13 +2,19 @@ import type { AgentConfig } from '@opencode-ai/sdk/v2';
 import defu from 'defu';
 import { setupAgentPermissions } from '~/permission/agent/index.ts';
 import type { ElishaConfigContext } from '~/types.ts';
+import type { AgentCapabilities } from './types.ts';
 import { canAgentDelegate, formatAgentsList } from './util/index.ts';
 import { Prompt } from './util/prompt/index.ts';
 import { Protocol } from './util/prompt/protocols.ts';
 
 export const AGENT_CONSULTANT_ID = 'Ahithopel (consultant)';
 
-const getDefaults = (ctx: ElishaConfigContext): AgentConfig => ({
+export const AGENT_CONSULTANT_CAPABILITIES: AgentCapabilities = {
+  task: 'Debugging help',
+  description: 'When stuck, need expert guidance',
+};
+
+const getDefaultConfig = (ctx: ElishaConfigContext): AgentConfig => ({
   hidden: false,
   mode: 'subagent',
   model: ctx.config.model,
@@ -31,7 +37,7 @@ export const setupConsultantAgentConfig = (ctx: ElishaConfigContext) => {
   ctx.config.agent ??= {};
   ctx.config.agent[AGENT_CONSULTANT_ID] = defu(
     ctx.config.agent?.[AGENT_CONSULTANT_ID] ?? {},
-    getDefaults(ctx),
+    getDefaultConfig(ctx),
   );
 };
 

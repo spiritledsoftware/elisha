@@ -3,6 +3,32 @@ import type { AgentConfig } from '@opencode-ai/sdk/v2';
 import { agentHasPermission } from '~/permission/agent/util.ts';
 import { TOOL_TASK_ID } from '~/task/tool.ts';
 import type { ElishaConfigContext } from '../../types.ts';
+import {
+  AGENT_ARCHITECT_CAPABILITIES,
+  AGENT_ARCHITECT_ID,
+} from '../architect.ts';
+import {
+  AGENT_BRAINSTORMER_CAPABILITIES,
+  AGENT_BRAINSTORMER_ID,
+} from '../brainstormer.ts';
+import {
+  AGENT_CONSULTANT_CAPABILITIES,
+  AGENT_CONSULTANT_ID,
+} from '../consultant.ts';
+import { AGENT_DESIGNER_CAPABILITIES, AGENT_DESIGNER_ID } from '../designer.ts';
+import {
+  AGENT_DOCUMENTER_CAPABILITIES,
+  AGENT_DOCUMENTER_ID,
+} from '../documenter.ts';
+import { AGENT_EXECUTOR_CAPABILITIES, AGENT_EXECUTOR_ID } from '../executor.ts';
+import { AGENT_EXPLORER_CAPABILITIES, AGENT_EXPLORER_ID } from '../explorer.ts';
+import { AGENT_PLANNER_CAPABILITIES, AGENT_PLANNER_ID } from '../planner.ts';
+import {
+  AGENT_RESEARCHER_CAPABILITIES,
+  AGENT_RESEARCHER_ID,
+} from '../researcher.ts';
+import { AGENT_REVIEWER_CAPABILITIES, AGENT_REVIEWER_ID } from '../reviewer.ts';
+import type { AgentCapabilities } from '../types.ts';
 
 // Re-export MCP utilities for convenience
 export { getEnabledMcps, isMcpEnabled } from '../../mcp/util.ts';
@@ -120,4 +146,73 @@ export const formatAgentsList = (ctx: ElishaConfigContext): string => {
   return delegatableAgents
     .map((agent) => `- **${agent.name}**: ${agent.description}`)
     .join('\n');
+};
+
+/**
+ * Agent capability definitions for task matching.
+ * Built from individual agent capability exports for easier maintenance.
+ */
+const AGENT_CAPABILITIES: Record<string, AgentCapabilities> = {
+  [AGENT_EXPLORER_ID]: AGENT_EXPLORER_CAPABILITIES,
+  [AGENT_RESEARCHER_ID]: AGENT_RESEARCHER_CAPABILITIES,
+  [AGENT_ARCHITECT_ID]: AGENT_ARCHITECT_CAPABILITIES,
+  [AGENT_PLANNER_ID]: AGENT_PLANNER_CAPABILITIES,
+  [AGENT_EXECUTOR_ID]: AGENT_EXECUTOR_CAPABILITIES,
+  [AGENT_REVIEWER_ID]: AGENT_REVIEWER_CAPABILITIES,
+  [AGENT_DESIGNER_ID]: AGENT_DESIGNER_CAPABILITIES,
+  [AGENT_DOCUMENTER_ID]: AGENT_DOCUMENTER_CAPABILITIES,
+  [AGENT_BRAINSTORMER_ID]: AGENT_BRAINSTORMER_CAPABILITIES,
+  [AGENT_CONSULTANT_ID]: AGENT_CONSULTANT_CAPABILITIES,
+};
+
+/**
+ * Formats a task matching table showing only enabled agents.
+ * Used by orchestrator for task delegation guidance.
+ */
+export const formatTaskMatchingTable = (ctx: ElishaConfigContext): string => {
+  const enabledAgents = getEnabledAgents(ctx);
+  const rows: string[] = [];
+
+  for (const agent of enabledAgents) {
+    const cap = AGENT_CAPABILITIES[agent.name];
+    if (cap) {
+      rows.push(`| ${cap.task} | ${agent.name} | ${cap.description} |`);
+    }
+  }
+
+  if (rows.length === 0) {
+    return '';
+  }
+
+  return [
+    '| Task Type | Specialist | When to Use |',
+    '|-----------|------------|-------------|',
+    ...rows,
+  ].join('\n');
+};
+
+/**
+ * Formats a simplified task assignment guide showing only enabled agents.
+ * Used by planner for task assignment guidance.
+ */
+export const formatTaskAssignmentGuide = (ctx: ElishaConfigContext): string => {
+  const enabledAgents = getEnabledAgents(ctx);
+  const rows: string[] = [];
+
+  for (const agent of enabledAgents) {
+    const cap = AGENT_CAPABILITIES[agent.name];
+    if (cap) {
+      rows.push(`| ${cap.task} | ${agent.name} | ${cap.description} |`);
+    }
+  }
+
+  if (rows.length === 0) {
+    return '';
+  }
+
+  return [
+    '| Task Type | Assign To | Notes |',
+    '|-----------|-----------|-------|',
+    ...rows,
+  ].join('\n');
 };

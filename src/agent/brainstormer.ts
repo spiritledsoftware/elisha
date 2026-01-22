@@ -2,13 +2,19 @@ import type { AgentConfig } from '@opencode-ai/sdk/v2';
 import defu from 'defu';
 import { setupAgentPermissions } from '~/permission/agent/index.ts';
 import type { ElishaConfigContext } from '~/types.ts';
+import type { AgentCapabilities } from './types.ts';
 import { canAgentDelegate, formatAgentsList } from './util/index.ts';
 import { Prompt } from './util/prompt/index.ts';
 import { Protocol } from './util/prompt/protocols.ts';
 
 export const AGENT_BRAINSTORMER_ID = 'Jubal (brainstormer)';
 
-const getDefaults = (ctx: ElishaConfigContext): AgentConfig => ({
+export const AGENT_BRAINSTORMER_CAPABILITIES: AgentCapabilities = {
+  task: 'Creative ideation',
+  description: 'Exploring options, fresh approaches',
+};
+
+const getDefaultConfig = (ctx: ElishaConfigContext): AgentConfig => ({
   hidden: false,
   mode: 'all',
   model: ctx.config.model,
@@ -31,7 +37,7 @@ export const setupBrainstormerAgentConfig = (ctx: ElishaConfigContext) => {
   ctx.config.agent ??= {};
   ctx.config.agent[AGENT_BRAINSTORMER_ID] = defu(
     ctx.config.agent?.[AGENT_BRAINSTORMER_ID] ?? {},
-    getDefaults(ctx),
+    getDefaultConfig(ctx),
   );
 };
 

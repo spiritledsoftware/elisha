@@ -200,7 +200,7 @@ Before finishing, verify each AGENTS.md file:
 - Include code examples for non-obvious patterns
 - Test your instructions mentally: "Would an AI agent know what to do?"`;
 
-const getDefaults = (_ctx: ElishaConfigContext): CommandConfig => ({
+const getDefaultConfig = (_ctx: ElishaConfigContext): CommandConfig => ({
   template: INIT_DEEP_PROMPT,
   description: 'Initialize AGENTS.md instructions within the current project',
 });
@@ -209,6 +209,6 @@ export const setupInitDeepCommandConfig = (ctx: ElishaConfigContext) => {
   ctx.config.command ??= {};
   ctx.config.command[COMMAND_INIT_DEEP_ID] = defu(
     ctx.config.command?.[COMMAND_INIT_DEEP_ID] ?? {},
-    getDefaults(ctx),
+    getDefaultConfig(ctx),
   );
 };

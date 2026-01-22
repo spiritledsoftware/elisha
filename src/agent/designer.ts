@@ -3,6 +3,7 @@ import defu from 'defu';
 import { MCP_CHROME_DEVTOOLS_ID } from '~/mcp/chrome-devtools.ts';
 import { setupAgentPermissions } from '~/permission/agent/index.ts';
 import type { ElishaConfigContext } from '../util/index.ts';
+import type { AgentCapabilities } from './types.ts';
 import {
   canAgentDelegate,
   formatAgentsList,
@@ -13,7 +14,12 @@ import { Protocol } from './util/prompt/protocols.ts';
 
 export const AGENT_DESIGNER_ID = 'Oholiab (designer)';
 
-const getDefaults = (ctx: ElishaConfigContext): AgentConfig => ({
+export const AGENT_DESIGNER_CAPABILITIES: AgentCapabilities = {
+  task: 'UI/styling',
+  description: 'CSS, layouts, visual design',
+};
+
+const getDefaultConfig = (ctx: ElishaConfigContext): AgentConfig => ({
   hidden: false,
   mode: 'all',
   model: ctx.config.model,
@@ -36,7 +42,7 @@ export const setupDesignerAgentConfig = (ctx: ElishaConfigContext) => {
   ctx.config.agent ??= {};
   ctx.config.agent[AGENT_DESIGNER_ID] = defu(
     ctx.config.agent?.[AGENT_DESIGNER_ID] ?? {},
-    getDefaults(ctx),
+    getDefaultConfig(ctx),
   );
 };
 

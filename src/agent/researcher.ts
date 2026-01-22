@@ -4,13 +4,19 @@ import { MCP_CHROME_DEVTOOLS_ID } from '~/mcp/chrome-devtools.ts';
 import { TOOL_TASK_ID } from '~/task/tool.ts';
 import { setupAgentPermissions } from '../permission/agent/index.ts';
 import type { ElishaConfigContext } from '../types.ts';
+import type { AgentCapabilities } from './types.ts';
+import { canAgentDelegate, formatAgentsList } from './util/index.ts';
 import { Prompt } from './util/prompt/index.ts';
 import { Protocol } from './util/prompt/protocols.ts';
-import { canAgentDelegate, formatAgentsList } from './util/index.ts';
 
 export const AGENT_RESEARCHER_ID = 'Berean (researcher)';
 
-const getDefaults = (ctx: ElishaConfigContext): AgentConfig => ({
+export const AGENT_RESEARCHER_CAPABILITIES: AgentCapabilities = {
+  task: 'External research',
+  description: 'API docs, library usage, best practices',
+};
+
+const getDefaultConfig = (ctx: ElishaConfigContext): AgentConfig => ({
   hidden: false,
   mode: 'subagent',
   model: ctx.config.small_model,
@@ -35,7 +41,7 @@ export const setupResearcherAgentConfig = (ctx: ElishaConfigContext) => {
   ctx.config.agent ??= {};
   ctx.config.agent[AGENT_RESEARCHER_ID] = defu(
     ctx.config.agent?.[AGENT_RESEARCHER_ID] ?? {},
-    getDefaults(ctx),
+    getDefaultConfig(ctx),
   );
 };
 

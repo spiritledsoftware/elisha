@@ -3,13 +3,19 @@ import defu from 'defu';
 import { TOOL_TASK_ID } from '~/task/tool.ts';
 import { setupAgentPermissions } from '../permission/agent/index.ts';
 import type { ElishaConfigContext } from '../types.ts';
+import type { AgentCapabilities } from './types.ts';
+import { canAgentDelegate, formatAgentsList } from './util/index.ts';
 import { Prompt } from './util/prompt/index.ts';
 import { Protocol } from './util/prompt/protocols.ts';
-import { canAgentDelegate, formatAgentsList } from './util/index.ts';
 
 export const AGENT_EXPLORER_ID = 'Caleb (explorer)';
 
-const getDefaults = (ctx: ElishaConfigContext): AgentConfig => ({
+export const AGENT_EXPLORER_CAPABILITIES: AgentCapabilities = {
+  task: 'Find code/files',
+  description: 'Locating code, understanding structure',
+};
+
+const getDefaultConfig = (ctx: ElishaConfigContext): AgentConfig => ({
   hidden: false,
   mode: 'subagent',
   model: ctx.config.small_model,
@@ -33,7 +39,7 @@ export const setupExplorerAgentConfig = (ctx: ElishaConfigContext) => {
   ctx.config.agent ??= {};
   ctx.config.agent[AGENT_EXPLORER_ID] = defu(
     ctx.config.agent?.[AGENT_EXPLORER_ID] ?? {},
-    getDefaults(ctx),
+    getDefaultConfig(ctx),
   );
 };
 

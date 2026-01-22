@@ -2,13 +2,19 @@ import type { AgentConfig } from '@opencode-ai/sdk/v2';
 import defu from 'defu';
 import { setupAgentPermissions } from '~/permission/agent/index.ts';
 import type { ElishaConfigContext } from '~/types.ts';
+import type { AgentCapabilities } from './types.ts';
 import { canAgentDelegate, formatAgentsList } from './util/index.ts';
 import { Prompt } from './util/prompt/index.ts';
 import { Protocol } from './util/prompt/protocols.ts';
 
 export const AGENT_ARCHITECT_ID = 'Bezalel (architect)';
 
-const getDefaults = (ctx: ElishaConfigContext): AgentConfig => ({
+export const AGENT_ARCHITECT_CAPABILITIES: AgentCapabilities = {
+  task: 'Architecture design',
+  description: 'System design, tradeoffs, specs',
+};
+
+const getDefaultConfig = (ctx: ElishaConfigContext): AgentConfig => ({
   hidden: false,
   mode: 'all',
   model: ctx.config.model,
@@ -34,7 +40,7 @@ export const setupArchitectAgentConfig = (ctx: ElishaConfigContext) => {
   ctx.config.agent ??= {};
   ctx.config.agent[AGENT_ARCHITECT_ID] = defu(
     ctx.config.agent?.[AGENT_ARCHITECT_ID] ?? {},
-    getDefaults(ctx),
+    getDefaultConfig(ctx),
   );
 };
 

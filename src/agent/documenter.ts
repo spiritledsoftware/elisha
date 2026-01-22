@@ -3,6 +3,7 @@ import defu from 'defu';
 import { setupAgentPermissions } from '../permission/agent/index.ts';
 import type { ElishaConfigContext } from '../types.ts';
 import { AGENT_EXPLORER_ID } from './explorer.ts';
+import type { AgentCapabilities } from './types.ts';
 import {
   canAgentDelegate,
   formatAgentsList,
@@ -13,9 +14,14 @@ import { Protocol } from './util/prompt/protocols.ts';
 
 export const AGENT_DOCUMENTER_ID = 'Luke (documenter)';
 
-const getDefaults = (ctx: ElishaConfigContext): AgentConfig => ({
+export const AGENT_DOCUMENTER_CAPABILITIES: AgentCapabilities = {
+  task: 'Documentation',
+  description: 'READMEs, API docs, comments',
+};
+
+const getDefaultConfig = (ctx: ElishaConfigContext): AgentConfig => ({
   hidden: false,
-  mode: 'subagent',
+  mode: 'all',
   model: ctx.config.model,
   temperature: 0.2,
   permission: setupAgentPermissions(
@@ -40,7 +46,7 @@ export const setupDocumenterAgentConfig = (ctx: ElishaConfigContext) => {
   ctx.config.agent ??= {};
   ctx.config.agent[AGENT_DOCUMENTER_ID] = defu(
     ctx.config.agent?.[AGENT_DOCUMENTER_ID] ?? {},
-    getDefaults(ctx),
+    getDefaultConfig(ctx),
   );
 };
 

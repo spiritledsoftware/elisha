@@ -1,6 +1,6 @@
 # Elisha - AI Agent Guidelines
 
-OpenCode plugin providing 12 specialized agents, persistent memory via OpenMemory, and pre-configured MCP servers.
+OpenCode plugin providing 11 specialized agents, persistent memory via OpenMemory, and pre-configured MCP servers.
 
 ## Quick Reference
 
@@ -24,6 +24,16 @@ import { setupAgentConfig } from "../agent/index.ts";
 
 // Wrong - will fail at runtime
 import { foo } from "./foo";
+```
+
+### Path Aliases
+
+The codebase supports `~/` as an alias for `src/`:
+
+```typescript
+// Both are valid
+import { log } from "~/util/index.ts";
+import { log } from "../util/index.ts";
 ```
 
 ### Build System
@@ -66,59 +76,75 @@ return {
 
 ```
 src/
-├── index.ts              # Plugin entry point (direct domain wiring)
+├── index.ts              # Plugin entry point
+├── types.ts              # Shared types (ElishaConfigContext, Hooks, Tools)
 ├── globals.d.ts          # Type definitions for .md imports
 ├── util/                 # General utilities
-│   ├── index.ts          # Barrel export
-│   ├── types.ts          # ElishaConfigContext type
-│   └── hooks.ts          # aggregateHooks() utility
-├── agent/                # Agent domain (12 agents)
-│   ├── index.ts          # setupAgentConfig()
-│   ├── util/
-│   │   ├── index.ts      # Permission helpers
-│   │   └── prompt/       # Prompt.template utility
-│   └── [agent]/          # Each agent has index.ts only
+│   ├── index.ts          # Barrel export (getCacheDir, getDataDir, log)
+│   └── hook.ts           # aggregateHooks() utility
+├── agent/                # Agent domain (11 agents)
+│   ├── index.ts          # setupAgentConfig() - registers all agents
+│   ├── types.ts          # AgentCapabilities type
+│   ├── [agent].ts        # Each agent as flat file (executor.ts, planner.ts, etc.)
+│   └── util/
+│       ├── index.ts      # Agent helpers (canAgentDelegate, formatAgentsList, etc.)
+│       └── prompt/
+│           ├── index.ts  # Prompt.template, Prompt.when, Prompt.code
+│           └── protocols.ts # Protocol namespace (reusable prompt sections)
 ├── command/              # Command domain
-│   ├── index.ts          # setupCommandConfig()
+│   ├── index.ts          # Barrel export
+│   ├── config.ts         # setupCommandConfig()
 │   └── init-deep/        # Custom slash commands
 ├── instruction/          # Instruction domain
-│   ├── index.ts          # setupInstructionConfig() + setupInstructionHooks()
-│   └── hooks.ts          # Instruction injection hook
+│   ├── index.ts          # Barrel export
+│   ├── config.ts         # setupInstructionConfig()
+│   └── hook.ts           # setupInstructionHooks()
 ├── mcp/                  # MCP domain
-│   ├── index.ts          # setupMcpConfig() + setupMcpHooks()
-│   ├── hooks.ts          # Memory context injection hook
-│   └── [server]/         # MCP server configs
+│   ├── index.ts          # Barrel export + MCP ID constants
+│   ├── config.ts         # setupMcpConfig()
+│   ├── hook.ts           # setupMcpHooks()
+│   ├── util.ts           # MCP utilities
+│   ├── types.ts          # MCP-related types
+│   ├── [server].ts       # Most servers as flat files (exa.ts, context7.ts, etc.)
+│   └── openmemory/       # OpenMemory has subdirectory (config + hook)
 ├── permission/           # Permission domain
-│   ├── index.ts          # setupPermissionConfig()
-│   └── agent.ts          # setupAgentPermissions()
+│   ├── index.ts          # setupPermissionConfig() + getGlobalPermissions()
+│   ├── util.ts           # Permission utilities
+│   └── agent/
+│       ├── index.ts      # setupAgentPermissions()
+│       └── util.ts       # agentHasPermission()
 ├── skill/                # Skill domain
-│   └── index.ts          # setupSkillConfig()
+│   ├── index.ts          # Barrel export
+│   └── config.ts         # setupSkillConfig()
 └── task/                 # Task domain
-    ├── index.ts          # setupTaskTools() + setupTaskHooks()
-    ├── tools.ts          # Task tools (elisha_task, etc.)
-    └── hooks.ts          # Task context injection hook
+    ├── index.ts          # Barrel export
+    ├── tool.ts           # Task tools (elisha_task, etc.)
+    ├── hook.ts           # setupTaskHooks()
+    ├── util.ts           # Task utilities
+    └── types.ts          # TaskResult type
 ```
 
-### Config Setup Pattern
+### Two-Phase Agent Setup
 
-Each config module exports a `setup*Config` function:
+Agents use a two-phase setup pattern to allow config to be finalized before prompts are generated:
 
 ```typescript
-// src/agent/executor/index.ts
-export const AGENT_EXECUTOR_ID = "executor";
-
-const getDefaults = (ctx: ElishaConfigContext): AgentConfig => ({
-  mode: "all",
-  model: ctx.config.model,
-  // ...
-});
-
+// Phase 1: Config setup (permissions, model, mode)
 export const setupExecutorAgentConfig = (ctx: ElishaConfigContext) => {
   ctx.config.agent ??= {};
   ctx.config.agent[AGENT_EXECUTOR_ID] = defu(
     ctx.config.agent?.[AGENT_EXECUTOR_ID] ?? {},
-    getDefaults(ctx)
+    getDefaultConfig(ctx)
   );
+};
+
+// Phase 2: Prompt setup (uses finalized config for permission-aware prompts)
+export const setupExecutorAgentPrompt = (ctx: ElishaConfigContext) => {
+  const agentConfig = ctx.config.agent?.[AGENT_EXECUTOR_ID];
+  if (!agentConfig || agentConfig.disable) return;
+
+  const canDelegate = canAgentDelegate(AGENT_EXECUTOR_ID, ctx);
+  agentConfig.prompt = Prompt.template`...`;
 };
 ```
 
@@ -131,35 +157,37 @@ Every directory uses `index.ts` for exports. Import from the directory, not indi
 import { setupAgentConfig } from "./agent/index.ts";
 
 // Avoid (unless importing specific non-exported item)
-import { setupExecutorAgentConfig } from "./agent/executor/index.ts";
+import { setupExecutorAgentConfig } from "./agent/executor.ts";
 ```
 
 ## Agents
 
-| Agent        | Purpose                           | Key Tools           |
-| ------------ | --------------------------------- | ------------------- |
-| orchestrator | Coordinates multi-agent workflows | All                 |
-| explorer     | Codebase search (read-only)       | Glob, Grep, Read    |
-| architect    | Writes architectural specs        | Read, Write, Task   |
-| consultant   | Expert debugging helper           | Read, Task          |
-| planner      | Creates implementation plans      | Read, Write, Task   |
-| executor     | Implements plan tasks             | Edit, Write, Bash   |
-| researcher   | External research                 | WebFetch, WebSearch |
-| reviewer     | Code review (read-only)           | Read, Grep          |
-| tester       | Test execution and analysis       | Bash, Read          |
-| documenter   | Documentation writing             | Read, Write         |
-| brainstormer | Creative ideation                 | Read, Task          |
-| compaction   | Session compaction                | Read                |
+| Agent        | Mode       | Purpose                           | Key Tools           |
+| ------------ | ---------- | --------------------------------- | ------------------- |
+| orchestrator | primary    | Coordinates multi-agent workflows | All                 |
+| explorer     | subagent   | Codebase search (read-only)       | Glob, Grep, Read    |
+| architect    | subagent   | Writes architectural specs        | Read, Write, Task   |
+| consultant   | subagent   | Expert debugging helper           | Read, Task          |
+| planner      | all        | Creates implementation plans      | Read, Write, Task   |
+| executor     | all        | Implements plan tasks             | Edit, Write, Bash   |
+| researcher   | subagent   | External research                 | WebFetch, WebSearch |
+| reviewer     | all        | Code review (read-only)           | Read, Grep          |
+| designer     | all        | Frontend/UX design specialist     | Edit, Chrome DevTools |
+| documenter   | subagent   | Documentation writing             | Read, Write         |
+| brainstormer | all        | Creative ideation                 | Read, Task          |
+| compaction   | subagent   | Session compaction                | Read                |
+
+Agent names include descriptive prefixes (e.g., `'Baruch (executor)'`). See `src/agent/AGENTS.md` for details.
 
 ## MCP Servers
 
 Configured in `src/mcp/`:
 
-- **OpenMemory** - Persistent memory storage
-- **Exa** - Web search
-- **Context7** - Library documentation
-- **Grep.app** - GitHub code search
-- **Chrome DevTools** - Browser automation
+- **OpenMemory** (`openmemory/`) - Persistent memory storage
+- **Exa** (`exa.ts`) - Web search
+- **Context7** (`context7.ts`) - Library documentation
+- **Grep.app** (`grep-app.ts`) - GitHub code search
+- **Chrome DevTools** (`chrome-devtools.ts`) - Browser automation
 
 ## Code Style
 
@@ -179,6 +207,7 @@ Enforced by Biome:
 | Use spread for config merging                 | Use `defu`                         |
 | Forget `synthetic: true` on injected messages | Always mark synthetic              |
 | Import from deep paths                        | Use barrel exports from `index.ts` |
+| Put agents in subdirectories                  | Use flat files (`executor.ts`)     |
 
 ## Security Considerations
 
