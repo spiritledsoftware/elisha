@@ -8,8 +8,7 @@ MCP (Model Context Protocol) server configurations and memory context injection.
 mcp/
 ├── index.ts              # setupMcpConfig() + setupMcpHooks() exports
 ├── config.ts             # MCP server configuration setup
-├── hooks.ts              # Memory context injection hook
-├── memory-prompt.md      # Memory injection prompt template
+├── hooks.ts              # Memory context injection hook (includes inline prompt)
 ├── types.ts              # MCP-related types
 ├── chrome-devtools/      # Chrome DevTools MCP server
 ├── context7/             # Context7 library docs server

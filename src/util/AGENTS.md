@@ -73,4 +73,4 @@ import { log } from '../util';
 2. Export from `src/util/index.ts`
 3. Use consistent patterns from existing utilities
 
-Only add utilities here if they are truly cross-cutting (used by multiple domains). Domain-specific utilities should stay in their domain (e.g., `agent/util/protocol/`).
+Only add utilities here if they are truly cross-cutting (used by multiple domains). Domain-specific utilities should stay in their domain (e.g., `agent/util/prompt/`).

@@ -1,8 +1,33 @@
 import type { PluginInput } from '@opencode-ai/plugin';
+import type { AgentConfig } from '@opencode-ai/sdk/v2';
+import { agentHasPermission } from '~/permission/agent/util.ts';
+import { TOOL_TASK_ID } from '~/task/tool.ts';
 import type { ElishaConfigContext } from '../../types.ts';
-import { expandProtocols } from './protocol/index.ts';
 
-const MAX_DESCRIPTION_LENGTH = 80;
+// Re-export MCP utilities for convenience
+export { getEnabledMcps, isMcpEnabled } from '../../mcp/util.ts';
+
+/**
+ * Checks if an MCP is both enabled and allowed for a specific agent.
+ *
+ * @param mcpName - The MCP ID (e.g., 'chrome-devtools', 'openmemory')
+ * @param agentName - The agent ID to check permissions for
+ * @param ctx - The Elisha config context
+ * @returns true if the MCP is enabled and not denied for the agent
+ */
+export const isMcpAvailableForAgent = (
+  mcpName: string,
+  agentName: string,
+  ctx: ElishaConfigContext,
+): boolean => {
+  // Check if MCP is enabled
+  const mcpConfig = ctx.config.mcp?.[mcpName];
+  const isEnabled = mcpConfig?.enabled ?? true;
+  if (!isEnabled) return false;
+
+  // Check if agent has permission to use it
+  return agentHasPermission(`${mcpName}*`, agentName, ctx);
+};
 
 export const getActiveAgents = async (ctx: PluginInput) => {
   return await ctx.client.app
@@ -10,7 +35,7 @@ export const getActiveAgents = async (ctx: PluginInput) => {
     .then(({ data = [] }) => data);
 };
 
-export const getSessionModelAndAgent = async (
+export const getSessionAgentAndModel = async (
   sessionID: string,
   ctx: PluginInput,
 ) => {
@@ -30,107 +55,69 @@ export const getSessionModelAndAgent = async (
 };
 
 /**
- * Truncates a description to the max length, adding ellipsis if needed.
- */
-const truncateDescription = (description: string): string => {
-  if (description.length <= MAX_DESCRIPTION_LENGTH) {
-    return description;
-  }
-  return `${description.slice(0, MAX_DESCRIPTION_LENGTH - 3)}...`;
-};
-
-/**
  * Gets enabled agents from config, filtering out disabled ones.
  */
-const getEnabledAgentsFromConfig = (
+export const getEnabledAgents = (
   ctx: ElishaConfigContext,
-): Array<{ name: string; description: string }> => {
+): Array<AgentConfig & { name: string }> => {
   const agents = ctx.config.agent ?? {};
   return Object.entries(agents)
     .filter(([_, config]) => config?.disable !== true)
     .map(([name, config]) => ({
       name,
-      description: config?.description ?? '',
-    }))
-    .filter((agent) => agent.description) // Only include agents with descriptions
-    .sort((a, b) => a.name.localeCompare(b.name));
+      ...config,
+    }));
 };
 
 /**
- * Formats agents as a markdown table.
+ * Gets enabled agents that are suitable for delegation (have descriptions).
  */
-const formatAgentsTable = (
-  agents: Array<{ name: string; description: string }>,
-): string => {
-  if (agents.length === 0) {
-    return '*No agents available*';
-  }
-
-  const lines = ['| Agent | Description |', '|-------|-------------|'];
-  for (const agent of agents) {
-    lines.push(`| ${agent.name} | ${truncateDescription(agent.description)} |`);
-  }
-  return lines.join('\n');
-};
-
-/**
- * Formats agents as a markdown bullet list.
- */
-const formatAgentsList = (
-  agents: Array<{ name: string; description: string }>,
-): string => {
-  if (agents.length === 0) {
-    return '*No agents available*';
-  }
-
-  return agents
-    .map(
-      (agent) =>
-        `- **${agent.name}**: ${truncateDescription(agent.description)}`,
-    )
-    .join('\n');
-};
-
-/**
- * Expands agent references in a prompt string.
- * Replaces {{agents}}, {{agents:table}}, or {{agents:list}} with formatted agent info.
- */
-const expandAgents = (template: string, ctx: ElishaConfigContext): string => {
-  const agents = getEnabledAgentsFromConfig(ctx);
-
-  return template
-    .replace(/\{\{agents:table\}\}/g, () => formatAgentsTable(agents))
-    .replace(/\{\{agents:list\}\}/g, () => formatAgentsList(agents))
-    .replace(/\{\{agents\}\}/g, () => formatAgentsTable(agents));
-};
-
-/**
- * Expands all variable references in a prompt string.
- * - Protocol references: {{protocol:name}}
- * - Agent references: {{agents}}, {{agents:table}}, {{agents:list}}
- */
-const expandVariables = (
-  template: string,
+export const getSubAgents = (
   ctx: ElishaConfigContext,
-): string => {
-  let result = template;
-
-  result = expandProtocols(result);
-  result = expandAgents(result, ctx);
-
-  return result;
+): Array<AgentConfig & { name: string }> => {
+  return getEnabledAgents(ctx).filter(
+    (agent) => agent.mode !== 'primary' && Boolean(agent.description),
+  );
 };
 
 /**
- * Expands prompts for all registered agents.
- * Call this AFTER all agents have been set up to ensure {{agents}} references
- * see all agents, not just those registered before them.
+ * Checks if there are any agents available for delegation.
  */
-export const expandAgentPrompts = (ctx: ElishaConfigContext): void => {
-  ctx.config.agent ??= {};
-  for (const [_, config] of Object.entries(ctx.config.agent)) {
-    if (config?.prompt && typeof config.prompt === 'string') {
-      config.prompt = expandVariables(config.prompt, ctx);
-    }
+export const hasSubAgents = (ctx: ElishaConfigContext): boolean => {
+  return getSubAgents(ctx).length > 0;
+};
+
+/**
+ * Checks if an agent can delegate to other agents.
+ * Requires both: agents available AND permission to use task tools.
+ */
+export const canAgentDelegate = (
+  agentId: string,
+  ctx: ElishaConfigContext,
+): boolean => {
+  // Must have agents to delegate to
+  if (!hasSubAgents(ctx)) return false;
+
+  // Must have permission to use task tools
+  return (
+    agentHasPermission(`${TOOL_TASK_ID}*`, agentId, ctx) ||
+    agentHasPermission(`task`, agentId, ctx)
+  );
+};
+
+export const isAgentEnabled = (
+  agentName: string,
+  ctx: ElishaConfigContext,
+): boolean => {
+  return getEnabledAgents(ctx).some((agent) => agent.name === agentName);
+};
+
+export const formatAgentsList = (ctx: ElishaConfigContext): string => {
+  const delegatableAgents = getSubAgents(ctx);
+  if (delegatableAgents.length === 0) {
+    return '';
   }
+  return delegatableAgents
+    .map((agent) => `- **${agent.name}**: ${agent.description}`)
+    .join('\n');
 };

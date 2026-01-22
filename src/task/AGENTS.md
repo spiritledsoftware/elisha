@@ -8,8 +8,7 @@ Task tools for multi-agent orchestration and context injection after session com
 task/
 ├── index.ts          # setupTaskTools() + setupTaskHooks() exports
 ├── tools.ts          # Task tool definitions
-├── hooks.ts          # Task context injection hook
-└── prompt.md         # Task context prompt template
+└── hooks.ts          # Task context injection hook (includes inline prompt)
 ```
 
 ## Key Exports

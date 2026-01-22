@@ -1,6 +1,6 @@
 # Elisha - AI Agent Guidelines
 
-OpenCode plugin providing 11 specialized agents, persistent memory via OpenMemory, and pre-configured MCP servers.
+OpenCode plugin providing 12 specialized agents, persistent memory via OpenMemory, and pre-configured MCP servers.
 
 ## Quick Reference
 
@@ -48,29 +48,6 @@ ctx.config.agent[id] = {
 };
 ```
 
-### Prompts as Markdown Files
-
-Long prompts go in `.md` files, imported as strings via `globals.d.ts`:
-
-```typescript
-import PROMPT from "./prompt.md";
-// PROMPT is a string containing the file contents
-```
-
-### Protocol Expansion
-
-Shared prompt sections use mustache syntax. Available protocols:
-
-- `{{protocols:context-handling}`
-- `{{protocols:error-handling}`
-- `{{protocols:escalation}`
-- `{{protocols:plan-versioning}`
-
-```typescript
-import { expandProtocols } from '../agent/util/protocol/index.ts';
-prompt: expandProtocols(PROMPT),
-```
-
 ### Synthetic Messages in Hooks
 
 Hooks that inject messages must mark them as synthetic:
@@ -95,10 +72,12 @@ src/
 │   ├── index.ts          # Barrel export
 │   ├── types.ts          # ElishaConfigContext type
 │   └── hooks.ts          # aggregateHooks() utility
-├── agent/                # Agent domain (11 agents)
+├── agent/                # Agent domain (12 agents)
 │   ├── index.ts          # setupAgentConfig()
-│   ├── util/protocol/    # Shared protocol .md files
-│   └── [agent]/          # Each agent has index.ts + prompt.md
+│   ├── util/
+│   │   ├── index.ts      # Permission helpers
+│   │   └── prompt/       # Prompt.template utility
+│   └── [agent]/          # Each agent has index.ts only
 ├── command/              # Command domain
 │   ├── index.ts          # setupCommandConfig()
 │   └── init-deep/        # Custom slash commands
@@ -161,7 +140,8 @@ import { setupExecutorAgentConfig } from "./agent/executor/index.ts";
 | ------------ | --------------------------------- | ------------------- |
 | orchestrator | Coordinates multi-agent workflows | All                 |
 | explorer     | Codebase search (read-only)       | Glob, Grep, Read    |
-| architect    | Solution design (no code)         | Read, Task          |
+| architect    | Writes architectural specs        | Read, Write, Task   |
+| consultant   | Expert debugging helper           | Read, Task          |
 | planner      | Creates implementation plans      | Read, Write, Task   |
 | executor     | Implements plan tasks             | Edit, Write, Bash   |
 | researcher   | External research                 | WebFetch, WebSearch |
@@ -197,7 +177,6 @@ Enforced by Biome:
 | Use tsc for building                          | `bun run build`                    |
 | Omit .ts extensions                           | Include `.ts` in all imports       |
 | Use spread for config merging                 | Use `defu`                         |
-| Put long prompts inline                       | Use `.md` files                    |
 | Forget `synthetic: true` on injected messages | Always mark synthetic              |
 | Import from deep paths                        | Use barrel exports from `index.ts` |
 

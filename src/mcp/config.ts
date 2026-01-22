@@ -3,7 +3,7 @@ import { setupChromeDevtoolsMcpConfig } from './chrome-devtools.ts';
 import { setupContext7McpConfig } from './context7.ts';
 import { setupExaMcpConfig } from './exa.ts';
 import { setupGrepAppMcpConfig } from './grep-app.ts';
-import { setupOpenMemoryMcpConfig } from './openmemory.ts';
+import { setupOpenMemoryMcpConfig } from './openmemory/index.ts';
 
 export const setupMcpConfig = (ctx: ElishaConfigContext) => {
   setupOpenMemoryMcpConfig(ctx);
