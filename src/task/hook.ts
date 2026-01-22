@@ -1,11 +1,17 @@
 import type { PluginInput } from '@opencode-ai/plugin';
-import dedent from 'dedent';
-import { getSessionModelAndAgent } from '~/agent/util/index.ts';
+import { getSessionAgentAndModel } from '~/agent/util/index.ts';
+import { Prompt } from '~/agent/util/prompt/index.ts';
 import { log } from '~/util/index.ts';
 import type { Hooks } from '../types.ts';
-import PROMPT from './prompt.md';
 import { ASYNC_TASK_PREFIX } from './tool.ts';
 import { getTaskList, isTaskComplete } from './util.ts';
+
+const TASK_CONTEXT_PROMPT = `## Active Tasks
+
+The following task session IDs were created in this conversation. You can use these with the task tools:
+
+- \`elisha_task_output\` - Get the result of a completed or running task
+- \`elisha_task_cancel\` - Cancel a running task`;
 
 export const setupTaskHooks = (ctx: PluginInput): Hooks => {
   const injectedSessions = new Set<string>();
@@ -25,14 +31,14 @@ export const setupTaskHooks = (ctx: PluginInput): Hooks => {
           const title = session?.title;
           const parentID = session?.parentID;
           if (title?.startsWith(ASYNC_TASK_PREFIX) && parentID) {
-            const { model, agent: parentAgent } = await getSessionModelAndAgent(
+            const { model, agent: parentAgent } = await getSessionAgentAndModel(
               parentID,
               ctx,
             );
 
             let taskAgent = 'unknown';
             try {
-              const { agent } = await getSessionModelAndAgent(sessionID, ctx);
+              const { agent } = await getSessionAgentAndModel(sessionID, ctx);
               taskAgent = agent || 'unknown';
             } catch (error) {
               log(
@@ -95,7 +101,7 @@ export const setupTaskHooks = (ctx: PluginInput): Hooks => {
         const taskList = await getTaskList(sessionID, ctx);
         if (taskList) {
           // Get model/agent from recent messages
-          const { model, agent } = await getSessionModelAndAgent(
+          const { model, agent } = await getSessionAgentAndModel(
             sessionID,
             ctx,
           );
@@ -111,13 +117,13 @@ export const setupTaskHooks = (ctx: PluginInput): Hooks => {
               parts: [
                 {
                   type: 'text',
-                  text: dedent`
-                  <task-context>
-                  ${PROMPT}
+                  text: Prompt.template`
+                    <task-context>
+                      ${TASK_CONTEXT_PROMPT}
 
-                  ${taskList}
-                  </task-context>
-                `,
+                      ${taskList}
+                    </task-context>
+                  `,
                   synthetic: true,
                 },
               ],

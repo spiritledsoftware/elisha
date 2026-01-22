@@ -6,16 +6,18 @@ MCP (Model Context Protocol) server configurations and memory context injection.
 
 ```
 mcp/
-├── index.ts              # setupMcpConfig() + setupMcpHooks() exports
-├── config.ts             # MCP server configuration setup
-├── hooks.ts              # Memory context injection hook
-├── memory-prompt.md      # Memory injection prompt template
+├── index.ts              # Barrel export + MCP ID constants
+├── config.ts             # setupMcpConfig() - registers all servers
+├── hook.ts               # setupMcpHooks() - memory context injection
+├── util.ts               # MCP utilities (isMcpEnabled, getEnabledMcps)
 ├── types.ts              # MCP-related types
-├── chrome-devtools/      # Chrome DevTools MCP server
-├── context7/             # Context7 library docs server
-├── exa/                  # Exa web search server
-├── grep-app/             # Grep.app GitHub code search
-└── openmemory/           # OpenMemory persistent storage
+├── chrome-devtools.ts    # Chrome DevTools MCP server
+├── context7.ts           # Context7 library docs server
+├── exa.ts                # Exa web search server
+├── grep-app.ts           # Grep.app GitHub code search
+└── openmemory/           # OpenMemory (has subdirectory for config + hook)
+    ├── index.ts          # Config and MCP ID export
+    └── hook.ts           # Memory-specific hooks
 ```
 
 ## Key Exports
@@ -44,58 +46,80 @@ The memory hook injects `<memory-context>` guidance into the first message and a
 
 ### MCP Server IDs
 
-Each server exports its ID constant:
+Each server exports its ID constant from the barrel:
 
 ```typescript
-import { MCP_OPENMEMORY_ID } from './mcp/openmemory/index.ts';
-import { MCP_EXA_ID } from './mcp/exa/index.ts';
-import { MCP_CONTEXT7_ID } from './mcp/context7/index.ts';
-import { MCP_GREP_APP_ID } from './mcp/grep-app/index.ts';
-import { MCP_CHROME_DEVTOOLS_ID } from './mcp/chrome-devtools/index.ts';
+import {
+  MCP_OPENMEMORY_ID,
+  MCP_EXA_ID,
+  MCP_CONTEXT7_ID,
+  MCP_GREP_APP_ID,
+  MCP_CHROME_DEVTOOLS_ID,
+} from './mcp/index.ts';
 ```
 
 ## Adding a New MCP Server
 
-### 1. Create Server Directory
+### For Simple Servers (Flat File)
 
-```
-mcp/
-└── my-server/
-    └── index.ts
-```
-
-### 2. Write the Configuration
+Create a flat file in `mcp/`:
 
 ```typescript
+// mcp/my-server.ts
 import type { McpServer } from '@opencode-ai/sdk/v2';
-import type { ElishaConfigContext } from '../../util/index.ts';
+import defu from 'defu';
+import type { ElishaConfigContext } from '../types.ts';
 
 export const MCP_MY_SERVER_ID = 'my-server';
 
-export const getMyServerConfig = (ctx: ElishaConfigContext): McpServer => ({
+const getDefaultConfig = (): McpServer => ({
   command: 'npx',
   args: ['-y', 'my-server-package'],
   env: {
     MY_API_KEY: process.env.MY_API_KEY ?? '',
   },
 });
+
+export const setupMyServerMcpConfig = (ctx: ElishaConfigContext) => {
+  ctx.config.mcp ??= {};
+  ctx.config.mcp[MCP_MY_SERVER_ID] = defu(
+    ctx.config.mcp?.[MCP_MY_SERVER_ID] ?? {},
+    getDefaultConfig(),
+  );
+};
 ```
 
-### 3. Register in `config.ts`
+### For Complex Servers (Subdirectory)
+
+If the server needs hooks or multiple files, use a subdirectory:
+
+```
+mcp/
+└── my-server/
+    ├── index.ts    # Config and ID export
+    └── hook.ts     # Server-specific hooks
+```
+
+### Register in `config.ts`
 
 ```typescript
-import { getMyServerConfig, MCP_MY_SERVER_ID } from './my-server/index.ts';
+import { setupMyServerMcpConfig } from './my-server.ts';
 
-// In setupMcpServers():
-ctx.config.mcp[MCP_MY_SERVER_ID] = defu(
-  ctx.config.mcp?.[MCP_MY_SERVER_ID] ?? {},
-  getMyServerConfig(ctx),
-);
+export const setupMcpConfig = (ctx: ElishaConfigContext) => {
+  // ... existing servers
+  setupMyServerMcpConfig(ctx);
+};
+```
+
+### Export ID from `index.ts`
+
+```typescript
+export { MCP_MY_SERVER_ID } from './my-server.ts';
 ```
 
 ## Memory Hook
 
-The memory hook (`hooks.ts`) injects guidance for using OpenMemory:
+The memory hook (`hook.ts`) injects guidance for using OpenMemory:
 
 - **Query**: When to search memories (session start, user references past work)
 - **Store**: When to persist memories (user preferences, project context)
@@ -103,7 +127,31 @@ The memory hook (`hooks.ts`) injects guidance for using OpenMemory:
 
 The hook only activates if OpenMemory is enabled in the config.
 
+## MCP Utilities
+
+```typescript
+import { isMcpEnabled, getEnabledMcps } from './mcp/util.ts';
+
+// Check if a specific MCP is enabled
+const hasMemory = isMcpEnabled(MCP_OPENMEMORY_ID, ctx);
+
+// Get all enabled MCPs
+const enabledMcps = getEnabledMcps(ctx);
+```
+
 ## Critical Rules
+
+### Use Flat Files for Simple Servers
+
+```
+# Correct - simple server
+mcp/exa.ts
+
+# Only use subdirectory when needed (hooks, multiple files)
+mcp/openmemory/
+├── index.ts
+└── hook.ts
+```
 
 ### Export Server ID Constants
 
@@ -118,7 +166,7 @@ export const MCP_MY_SERVER_ID = 'my-server';
 Before using server-specific features in hooks:
 
 ```typescript
-const isEnabled = input.config.mcp?.[MCP_OPENMEMORY_ID]?.enabled !== false;
+const isEnabled = ctx.config.mcp?.[MCP_OPENMEMORY_ID]?.enabled !== false;
 if (!isEnabled) return;
 ```
 
@@ -126,8 +174,17 @@ if (!isEnabled) return;
 
 ```typescript
 // Correct
-import { MCP_OPENMEMORY_ID } from '../mcp/openmemory/index.ts';
+import { MCP_OPENMEMORY_ID } from './mcp/index.ts';
 
 // Wrong - will fail at runtime
-import { MCP_OPENMEMORY_ID } from '../mcp/openmemory';
+import { MCP_OPENMEMORY_ID } from './mcp';
+```
+
+### Use `defu` for Config Merging
+
+```typescript
+ctx.config.mcp[MCP_MY_SERVER_ID] = defu(
+  ctx.config.mcp?.[MCP_MY_SERVER_ID] ?? {},
+  getDefaultConfig(),
+);
 ```

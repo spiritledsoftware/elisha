@@ -8,6 +8,6 @@ export { MCP_EXA_ID } from './exa.ts';
 export { MCP_GREP_APP_ID } from './grep-app.ts';
 // Re-export hooks setup
 export { setupMcpHooks } from './hook.ts';
-export { MCP_OPENMEMORY_ID } from './openmemory.ts';
+export { MCP_OPENMEMORY_ID } from './openmemory/index.ts';
 // Re-export types
 export * from './types.ts';

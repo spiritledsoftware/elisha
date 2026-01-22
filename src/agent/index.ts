@@ -1,20 +1,48 @@
 import defu from 'defu';
 import type { ElishaConfigContext } from '../types.ts';
-import { setupArchitectAgentConfig } from './architect/index.ts';
-import { setupBrainstormerAgentConfig } from './brainstormer/index.ts';
-import { setupCompactionAgentConfig } from './compaction/index.ts';
-import { setupDesignerAgentConfig } from './designer/index.ts';
-import { setupDocumenterAgentConfig } from './documenter/index.ts';
-import { setupExecutorAgentConfig } from './executor/index.ts';
-import { setupExplorerAgentConfig } from './explorer/index.ts';
+import {
+  setupArchitectAgentConfig,
+  setupArchitectAgentPrompt,
+} from './architect.ts';
+import {
+  setupBrainstormerAgentConfig,
+  setupBrainstormerAgentPrompt,
+} from './brainstormer.ts';
+import { setupCompactionAgentConfig } from './compaction.ts';
+import {
+  setupConsultantAgentConfig,
+  setupConsultantAgentPrompt,
+} from './consultant.ts';
+import {
+  setupDesignerAgentConfig,
+  setupDesignerAgentPrompt,
+} from './designer.ts';
+import {
+  setupDocumenterAgentConfig,
+  setupDocumenterAgentPrompt,
+} from './documenter.ts';
+import {
+  setupExecutorAgentConfig,
+  setupExecutorAgentPrompt,
+} from './executor.ts';
+import {
+  setupExplorerAgentConfig,
+  setupExplorerAgentPrompt,
+} from './explorer.ts';
 import {
   AGENT_ORCHESTRATOR_ID,
   setupOrchestratorAgentConfig,
-} from './orchestrator/index.ts';
-import { setupPlannerAgentConfig } from './planner/index.ts';
-import { setupResearcherAgentConfig } from './researcher/index.ts';
-import { setupReviewerAgentConfig } from './reviewer/index.ts';
-import { expandAgentPrompts } from './util/index.ts';
+  setupOrchestratorAgentPrompt,
+} from './orchestrator.ts';
+import { setupPlannerAgentConfig, setupPlannerAgentPrompt } from './planner.ts';
+import {
+  setupResearcherAgentConfig,
+  setupResearcherAgentPrompt,
+} from './researcher.ts';
+import {
+  setupReviewerAgentConfig,
+  setupReviewerAgentPrompt,
+} from './reviewer.ts';
 
 const disableAgent = (name: string, ctx: ElishaConfigContext) => {
   ctx.config.agent ??= {};
@@ -31,26 +59,31 @@ export const setupAgentConfig = (ctx: ElishaConfigContext) => {
 
   setupCompactionAgentConfig(ctx);
 
-  // --Elisha agents--
-  // Read-only agents
+  // Elisha agents
   setupExplorerAgentConfig(ctx);
   setupResearcherAgentConfig(ctx);
   setupBrainstormerAgentConfig(ctx);
+  setupConsultantAgentConfig(ctx);
   setupArchitectAgentConfig(ctx);
-
-  // Executing agents
   setupPlannerAgentConfig(ctx);
   setupReviewerAgentConfig(ctx);
   setupDocumenterAgentConfig(ctx);
   setupDesignerAgentConfig(ctx);
   setupExecutorAgentConfig(ctx);
-
-  // Main orchestrator
   setupOrchestratorAgentConfig(ctx);
 
-  // Expand all agent prompts AFTER all agents are registered
-  // This ensures {{agents}} references see all agents, not just those set up before them
-  expandAgentPrompts(ctx);
+  // Add Prompts
+  setupExplorerAgentPrompt(ctx);
+  setupResearcherAgentPrompt(ctx);
+  setupBrainstormerAgentPrompt(ctx);
+  setupConsultantAgentPrompt(ctx);
+  setupArchitectAgentPrompt(ctx);
+  setupPlannerAgentPrompt(ctx);
+  setupReviewerAgentPrompt(ctx);
+  setupDocumenterAgentPrompt(ctx);
+  setupDesignerAgentPrompt(ctx);
+  setupExecutorAgentPrompt(ctx);
+  setupOrchestratorAgentPrompt(ctx);
 
   ctx.config.default_agent =
     (ctx.config.agent?.orchestrator?.disable ?? false)

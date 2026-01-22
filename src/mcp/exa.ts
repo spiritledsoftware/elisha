@@ -5,7 +5,7 @@ import type { McpConfig } from './types.ts';
 
 export const MCP_EXA_ID = 'exa';
 
-export const getDefaults = (_ctx: ElishaConfigContext): McpConfig => ({
+export const getDefaultConfig = (_ctx: ElishaConfigContext): McpConfig => ({
   enabled: true,
   type: 'remote',
   url: 'https://mcp.exa.ai/mcp?tools=web_search_exa,deep_search_exa',
@@ -28,6 +28,6 @@ export const setupExaMcpConfig = (ctx: ElishaConfigContext) => {
   ctx.config.mcp ??= {};
   ctx.config.mcp[MCP_EXA_ID] = defu(
     ctx.config.mcp?.[MCP_EXA_ID] ?? {},
-    getDefaults(ctx),
+    getDefaultConfig(ctx),
   ) as McpConfig;
 };

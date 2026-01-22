@@ -1,8 +1,59 @@
 import type { PluginInput } from '@opencode-ai/plugin';
+import type { AgentConfig } from '@opencode-ai/sdk/v2';
+import { agentHasPermission } from '~/permission/agent/util.ts';
+import { TOOL_TASK_ID } from '~/task/tool.ts';
 import type { ElishaConfigContext } from '../../types.ts';
-import { expandProtocols } from './protocol/index.ts';
+import {
+  AGENT_ARCHITECT_CAPABILITIES,
+  AGENT_ARCHITECT_ID,
+} from '../architect.ts';
+import {
+  AGENT_BRAINSTORMER_CAPABILITIES,
+  AGENT_BRAINSTORMER_ID,
+} from '../brainstormer.ts';
+import {
+  AGENT_CONSULTANT_CAPABILITIES,
+  AGENT_CONSULTANT_ID,
+} from '../consultant.ts';
+import { AGENT_DESIGNER_CAPABILITIES, AGENT_DESIGNER_ID } from '../designer.ts';
+import {
+  AGENT_DOCUMENTER_CAPABILITIES,
+  AGENT_DOCUMENTER_ID,
+} from '../documenter.ts';
+import { AGENT_EXECUTOR_CAPABILITIES, AGENT_EXECUTOR_ID } from '../executor.ts';
+import { AGENT_EXPLORER_CAPABILITIES, AGENT_EXPLORER_ID } from '../explorer.ts';
+import { AGENT_PLANNER_CAPABILITIES, AGENT_PLANNER_ID } from '../planner.ts';
+import {
+  AGENT_RESEARCHER_CAPABILITIES,
+  AGENT_RESEARCHER_ID,
+} from '../researcher.ts';
+import { AGENT_REVIEWER_CAPABILITIES, AGENT_REVIEWER_ID } from '../reviewer.ts';
+import type { AgentCapabilities } from '../types.ts';
 
-const MAX_DESCRIPTION_LENGTH = 80;
+// Re-export MCP utilities for convenience
+export { getEnabledMcps, isMcpEnabled } from '../../mcp/util.ts';
+
+/**
+ * Checks if an MCP is both enabled and allowed for a specific agent.
+ *
+ * @param mcpName - The MCP ID (e.g., 'chrome-devtools', 'openmemory')
+ * @param agentName - The agent ID to check permissions for
+ * @param ctx - The Elisha config context
+ * @returns true if the MCP is enabled and not denied for the agent
+ */
+export const isMcpAvailableForAgent = (
+  mcpName: string,
+  agentName: string,
+  ctx: ElishaConfigContext,
+): boolean => {
+  // Check if MCP is enabled
+  const mcpConfig = ctx.config.mcp?.[mcpName];
+  const isEnabled = mcpConfig?.enabled ?? true;
+  if (!isEnabled) return false;
+
+  // Check if agent has permission to use it
+  return agentHasPermission(`${mcpName}*`, agentName, ctx);
+};
 
 export const getActiveAgents = async (ctx: PluginInput) => {
   return await ctx.client.app
@@ -10,7 +61,7 @@ export const getActiveAgents = async (ctx: PluginInput) => {
     .then(({ data = [] }) => data);
 };
 
-export const getSessionModelAndAgent = async (
+export const getSessionAgentAndModel = async (
   sessionID: string,
   ctx: PluginInput,
 ) => {
@@ -30,107 +81,138 @@ export const getSessionModelAndAgent = async (
 };
 
 /**
- * Truncates a description to the max length, adding ellipsis if needed.
- */
-const truncateDescription = (description: string): string => {
-  if (description.length <= MAX_DESCRIPTION_LENGTH) {
-    return description;
-  }
-  return `${description.slice(0, MAX_DESCRIPTION_LENGTH - 3)}...`;
-};
-
-/**
  * Gets enabled agents from config, filtering out disabled ones.
  */
-const getEnabledAgentsFromConfig = (
+export const getEnabledAgents = (
   ctx: ElishaConfigContext,
-): Array<{ name: string; description: string }> => {
+): Array<AgentConfig & { name: string }> => {
   const agents = ctx.config.agent ?? {};
   return Object.entries(agents)
     .filter(([_, config]) => config?.disable !== true)
     .map(([name, config]) => ({
       name,
-      description: config?.description ?? '',
-    }))
-    .filter((agent) => agent.description) // Only include agents with descriptions
-    .sort((a, b) => a.name.localeCompare(b.name));
+      ...config,
+    }));
 };
 
 /**
- * Formats agents as a markdown table.
+ * Gets enabled agents that are suitable for delegation (have descriptions).
  */
-const formatAgentsTable = (
-  agents: Array<{ name: string; description: string }>,
-): string => {
-  if (agents.length === 0) {
-    return '*No agents available*';
-  }
-
-  const lines = ['| Agent | Description |', '|-------|-------------|'];
-  for (const agent of agents) {
-    lines.push(`| ${agent.name} | ${truncateDescription(agent.description)} |`);
-  }
-  return lines.join('\n');
+export const getSubAgents = (
+  ctx: ElishaConfigContext,
+): Array<AgentConfig & { name: string }> => {
+  return getEnabledAgents(ctx).filter(
+    (agent) => agent.mode !== 'primary' && Boolean(agent.description),
+  );
 };
 
 /**
- * Formats agents as a markdown bullet list.
+ * Checks if there are any agents available for delegation.
  */
-const formatAgentsList = (
-  agents: Array<{ name: string; description: string }>,
-): string => {
-  if (agents.length === 0) {
-    return '*No agents available*';
-  }
+export const hasSubAgents = (ctx: ElishaConfigContext): boolean => {
+  return getSubAgents(ctx).length > 0;
+};
 
-  return agents
-    .map(
-      (agent) =>
-        `- **${agent.name}**: ${truncateDescription(agent.description)}`,
-    )
+/**
+ * Checks if an agent can delegate to other agents.
+ * Requires both: agents available AND permission to use task tools.
+ */
+export const canAgentDelegate = (
+  agentId: string,
+  ctx: ElishaConfigContext,
+): boolean => {
+  // Must have agents to delegate to
+  if (!hasSubAgents(ctx)) return false;
+
+  // Must have permission to use task tools
+  return (
+    agentHasPermission(`${TOOL_TASK_ID}*`, agentId, ctx) ||
+    agentHasPermission(`task`, agentId, ctx)
+  );
+};
+
+export const isAgentEnabled = (
+  agentName: string,
+  ctx: ElishaConfigContext,
+): boolean => {
+  return getEnabledAgents(ctx).some((agent) => agent.name === agentName);
+};
+
+export const formatAgentsList = (ctx: ElishaConfigContext): string => {
+  const delegatableAgents = getSubAgents(ctx);
+  if (delegatableAgents.length === 0) {
+    return '';
+  }
+  return delegatableAgents
+    .map((agent) => `- **${agent.name}**: ${agent.description}`)
     .join('\n');
 };
 
 /**
- * Expands agent references in a prompt string.
- * Replaces {{agents}}, {{agents:table}}, or {{agents:list}} with formatted agent info.
+ * Agent capability definitions for task matching.
+ * Built from individual agent capability exports for easier maintenance.
  */
-const expandAgents = (template: string, ctx: ElishaConfigContext): string => {
-  const agents = getEnabledAgentsFromConfig(ctx);
-
-  return template
-    .replace(/\{\{agents:table\}\}/g, () => formatAgentsTable(agents))
-    .replace(/\{\{agents:list\}\}/g, () => formatAgentsList(agents))
-    .replace(/\{\{agents\}\}/g, () => formatAgentsTable(agents));
+const AGENT_CAPABILITIES: Record<string, AgentCapabilities> = {
+  [AGENT_EXPLORER_ID]: AGENT_EXPLORER_CAPABILITIES,
+  [AGENT_RESEARCHER_ID]: AGENT_RESEARCHER_CAPABILITIES,
+  [AGENT_ARCHITECT_ID]: AGENT_ARCHITECT_CAPABILITIES,
+  [AGENT_PLANNER_ID]: AGENT_PLANNER_CAPABILITIES,
+  [AGENT_EXECUTOR_ID]: AGENT_EXECUTOR_CAPABILITIES,
+  [AGENT_REVIEWER_ID]: AGENT_REVIEWER_CAPABILITIES,
+  [AGENT_DESIGNER_ID]: AGENT_DESIGNER_CAPABILITIES,
+  [AGENT_DOCUMENTER_ID]: AGENT_DOCUMENTER_CAPABILITIES,
+  [AGENT_BRAINSTORMER_ID]: AGENT_BRAINSTORMER_CAPABILITIES,
+  [AGENT_CONSULTANT_ID]: AGENT_CONSULTANT_CAPABILITIES,
 };
 
 /**
- * Expands all variable references in a prompt string.
- * - Protocol references: {{protocol:name}}
- * - Agent references: {{agents}}, {{agents:table}}, {{agents:list}}
+ * Formats a task matching table showing only enabled agents.
+ * Used by orchestrator for task delegation guidance.
  */
-const expandVariables = (
-  template: string,
-  ctx: ElishaConfigContext,
-): string => {
-  let result = template;
+export const formatTaskMatchingTable = (ctx: ElishaConfigContext): string => {
+  const enabledAgents = getEnabledAgents(ctx);
+  const rows: string[] = [];
 
-  result = expandProtocols(result);
-  result = expandAgents(result, ctx);
-
-  return result;
-};
-
-/**
- * Expands prompts for all registered agents.
- * Call this AFTER all agents have been set up to ensure {{agents}} references
- * see all agents, not just those registered before them.
- */
-export const expandAgentPrompts = (ctx: ElishaConfigContext): void => {
-  ctx.config.agent ??= {};
-  for (const [_, config] of Object.entries(ctx.config.agent)) {
-    if (config?.prompt && typeof config.prompt === 'string') {
-      config.prompt = expandVariables(config.prompt, ctx);
+  for (const agent of enabledAgents) {
+    const cap = AGENT_CAPABILITIES[agent.name];
+    if (cap) {
+      rows.push(`| ${cap.task} | ${agent.name} | ${cap.description} |`);
     }
   }
+
+  if (rows.length === 0) {
+    return '';
+  }
+
+  return [
+    '| Task Type | Specialist | When to Use |',
+    '|-----------|------------|-------------|',
+    ...rows,
+  ].join('\n');
+};
+
+/**
+ * Formats a simplified task assignment guide showing only enabled agents.
+ * Used by planner for task assignment guidance.
+ */
+export const formatTaskAssignmentGuide = (ctx: ElishaConfigContext): string => {
+  const enabledAgents = getEnabledAgents(ctx);
+  const rows: string[] = [];
+
+  for (const agent of enabledAgents) {
+    const cap = AGENT_CAPABILITIES[agent.name];
+    if (cap) {
+      rows.push(`| ${cap.task} | ${agent.name} | ${cap.description} |`);
+    }
+  }
+
+  if (rows.length === 0) {
+    return '';
+  }
+
+  return [
+    '| Task Type | Assign To | Notes |',
+    '|-----------|-----------|-------|',
+    ...rows,
+  ].join('\n');
 };
