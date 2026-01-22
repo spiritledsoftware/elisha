@@ -1,5 +1,11 @@
 # @spiritledsoftware/elisha
 
+## 0.4.0
+
+### Minor Changes
+
+- 59c7913: Large refactor of agent prompts and protocols. Tests added.
+
 ## 0.3.0
 
 ### Minor Changes
