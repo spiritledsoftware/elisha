@@ -30,49 +30,53 @@ OpenCode fetches unpinned plugins from npm on each startup; pinned versions are 
 ## Features
 
 - **Persistent Memory** - Integrates OpenMemory to maintain context across sessions via automatic `<memory-context>` injection
-- **Agent Swarm** - 10 specialized agents for different development tasks with clear separation of concerns
+- **Agent Swarm** - 11 specialized agents for different development tasks with clear separation of concerns
+- **Instruction System** - Smart `<instructions-context>` injection to guide agents on project-specific patterns via `AGENTS.md` files
 - **MCP Tool Integration** - Pre-configured MCP servers for memory, search, and debugging
-- **Custom Commands** - Memory initialization command for project setup
 
 ## Agents
 
-### orchestrator
+### Jethro (orchestrator)
 
 Task coordinator that delegates work to specialized agents. Never touches code directly—focuses on breaking down complex requests and routing to the right specialists.
 
-### explorer
+### Caleb (explorer)
 
 Codebase search specialist for finding files and mapping structure. READ-ONLY access. Specify thoroughness: "quick" (1 search), "medium" (2-3 searches), "thorough" (4-6 searches).
 
-### architect
+### Bezalel (architect)
 
 Solution designer for analyzing requirements and recommending architecture. DESIGN-ONLY, no code. Specify scope: "component", "system", or "strategic".
 
-### planner
+### Ahithopel (consultant)
+
+Expert consultant for debugging blockers and solving complex problems. ADVISORY-ONLY—provides recommendations and actionable guidance, not code. Use when stuck or need expert evaluation.
+
+### Ezra (planner)
 
 Creates step-by-step implementation plans in `.agent/plans/` and specs in `.agent/specs/`. Specify detail: "outline", "detailed", or "spec".
 
-### executor
+### Baruch (executor)
 
 Reads plans and writes code. Executes precisely what the plan says. Specify mode: "step" (one task), "phase" (one phase), or "full" (entire plan).
 
-### researcher
+### Oholiab (designer)
+
+Frontend/UX design specialist for implementing visual designs, CSS, and UI layouts. Uses Chrome DevTools for live visual verification. Focuses on CSS/styling—not business logic.
+
+### Berean (researcher)
 
 External research specialist for library docs, API examples, and GitHub code patterns. Specify thoroughness: "quick", "medium", or "thorough".
 
-### reviewer
+### Elihu (reviewer)
 
 Code reviewer that analyzes diffs and writes reviews to `.agent/reviews/`. Specify scope: "quick", "standard", or "thorough".
 
-### tester
-
-Test specialist for running tests and analyzing failures. Specify mode: "run", "analyze", or "suggest".
-
-### documenter
+### Luke (documenter)
 
 Documentation writer for creating and updating docs. Specify scope: "file", "module", or "project".
 
-### brainstormer
+### Jubal (brainstormer)
 
 Creative ideation specialist for generating diverse ideas. Specify mode: "divergent", "convergent", or "wild".
 
@@ -88,9 +92,9 @@ Pre-configured MCP servers available to agents:
 
 ## Commands
 
-### /openmemory-init
+### /init-deep
 
-Initialize OpenMemory with structured memories for the current project. Sets up the memory context for persistent session awareness.
+Initialize `AGENTS.md` instructions within the current project. Analyzes the codebase to create a hierarchy of instruction files that guide AI agents on project patterns, conventions, and constraints.
 
 ## Configuration
 
@@ -98,10 +102,10 @@ Elisha works with zero configuration, but you can customize behavior in your `op
 
 ### Agents
 
-```json
+```jsonc
 {
   "agent": {
-    "orchestrator": {
+    "Jethro (orchestrator)": {
       "disable": true
       // Other OpenCode agent settings
     }
@@ -113,7 +117,7 @@ Agents will use your `model` and `small_model` settings from OpenCode config app
 
 ### MCP Servers
 
-```json
+```jsonc
 {
   "mcp": {
     "openmemory": {
