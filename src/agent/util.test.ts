@@ -6,7 +6,7 @@ import {
   hasSubAgents,
 } from '~/agent/util';
 import { ConfigContext } from '~/context';
-import { createMockConfig } from '../../test-setup';
+import { createMockConfig } from '../test-setup';
 
 describe('getEnabledAgents', () => {
   it('returns all agents when none disabled', () => {

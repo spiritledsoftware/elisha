@@ -1,9 +1,9 @@
+import { defineAgent } from '~/agent';
+import { formatAgentsList } from '~/agent/util';
 import { ConfigContext } from '~/context';
-import { taskToolSet } from '~/task/tool';
+import { taskToolSet } from '~/features/tasks/tool';
 import { Prompt } from '~/util/prompt';
 import { Protocol } from '~/util/prompt/protocols';
-import { defineAgent } from './agent';
-import { formatAgentsList } from './util';
 
 export const explorerAgent = defineAgent({
   id: 'Caleb (explorer)',

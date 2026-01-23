@@ -1,4 +1,4 @@
-import { taskToolSet } from '~/task/tool';
+import { taskToolSet } from '~/features/tasks/tool';
 import type { ToolSet } from './types';
 
 const elishaToolSets = [taskToolSet];

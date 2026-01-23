@@ -5,12 +5,12 @@ import type {
 } from '@opencode-ai/sdk/v2';
 import defu from 'defu';
 import { ConfigContext } from '~/context';
-import { chromeDevtoolsMcp } from '~/mcp/chrome-devtools';
-import { context7Mcp } from '~/mcp/context7';
-import { exaMcp } from '~/mcp/exa';
-import { grepAppMcp } from '~/mcp/grep-app';
-import { openmemoryMcp } from '~/mcp/openmemory';
-import { taskToolSet } from '~/task/tool';
+import { chromeDevtoolsMcp } from '~/features/mcps/chrome-devtools';
+import { context7Mcp } from '~/features/mcps/context7';
+import { exaMcp } from '~/features/mcps/exa';
+import { grepAppMcp } from '~/features/mcps/grep-app';
+import { openmemoryMcp } from '~/features/mcps/openmemory';
+import { taskToolSet } from '~/features/tasks/tool';
 
 function getDefaultPermissions(): PermissionConfig {
   const config = ConfigContext.use();

@@ -1,12 +1,12 @@
 import type { AgentConfig } from '@opencode-ai/sdk/v2';
 import defu from 'defu';
 import { ConfigContext } from '~/context';
+import { taskToolSet } from '~/features/tasks/tool';
 import {
   cleanupPermissions,
   getGlobalPermissions,
   hasPermission,
 } from '~/permission/util';
-import { taskToolSet } from '~/task/tool';
 import { getEnabledAgents, hasSubAgents } from './util';
 
 export type ElishaAgentOptions = {
@@ -33,7 +33,7 @@ export const defineAgent = ({
   prompt,
   ...options
 }: ElishaAgentOptions): ElishaAgent => {
-  return {
+  const agent: ElishaAgent = {
     ...options,
     async setupConfig() {
       if (typeof agentConfig === 'function') {
@@ -119,4 +119,5 @@ export const defineAgent = ({
       );
     },
   };
+  return agent;
 };

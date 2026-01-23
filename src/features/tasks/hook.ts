@@ -1,9 +1,12 @@
 import { PluginContext } from '~/context';
+import type { Hooks } from '~/types';
 import { log } from '~/util';
 import { Prompt } from '~/util/prompt';
-import { getSessionAgentAndModel } from '~/util/session';
-import type { Hooks } from '../types';
-import { formatChildSessionList, isSessionComplete } from '../util/session';
+import {
+  formatChildSessionList,
+  getSessionAgentAndModel,
+  isSessionComplete,
+} from '~/util/session';
 import { ASYNC_TASK_PREFIX } from './tool';
 
 const TASK_CONTEXT_PROMPT = `## Active Tasks

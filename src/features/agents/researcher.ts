@@ -1,10 +1,10 @@
+import { defineAgent } from '~/agent';
+import { formatAgentsList } from '~/agent/util';
 import { ConfigContext } from '~/context';
-import { chromeDevtoolsMcp } from '~/mcp/chrome-devtools';
-import { taskToolSet } from '~/task/tool';
+import { chromeDevtoolsMcp } from '~/features/mcps/chrome-devtools';
+import { taskToolSet } from '~/features/tasks/tool';
 import { Prompt } from '~/util/prompt';
 import { Protocol } from '~/util/prompt/protocols';
-import { defineAgent } from './agent';
-import { formatAgentsList } from './util';
 
 export const researcherAgent = defineAgent({
   id: 'Berean (researcher)',

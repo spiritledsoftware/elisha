@@ -1,6 +1,6 @@
 import path from 'node:path';
-import { getDataDir } from '../../util';
-import { defineMcp } from '../mcp';
+import { defineMcp } from '~/mcp';
+import { getDataDir } from '~/util';
 
 export const openmemoryMcp = defineMcp({
   id: 'openmemory',

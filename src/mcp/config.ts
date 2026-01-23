@@ -1,8 +1,8 @@
-import { chromeDevtoolsMcp } from './chrome-devtools';
-import { context7Mcp } from './context7';
-import { exaMcp } from './exa';
-import { grepAppMcp } from './grep-app';
-import { openmemoryMcp } from './openmemory';
+import { openmemoryMcp } from '~/features/mcps/openmemory';
+import { chromeDevtoolsMcp } from '../features/mcps/chrome-devtools';
+import { context7Mcp } from '../features/mcps/context7';
+import { exaMcp } from '../features/mcps/exa';
+import { grepAppMcp } from '../features/mcps/grep-app';
 
 const elishaMcps = [
   chromeDevtoolsMcp,

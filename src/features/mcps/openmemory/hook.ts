@@ -1,8 +1,8 @@
 import { PluginContext } from '~/context';
+import type { Hooks } from '~/types';
 import { log } from '~/util';
 import { Prompt } from '~/util/prompt';
 import { getSessionAgentAndModel } from '~/util/session';
-import type { Hooks } from '../../types';
 
 const MEMORY_PROMPT = `## Memory Operations
 

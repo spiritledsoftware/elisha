@@ -1,9 +1,9 @@
 import { ConfigContext } from '~/context';
 import { Prompt } from '~/util/prompt';
 import { Protocol } from '~/util/prompt/protocols';
-import { defineAgent } from './agent';
+import { defineAgent } from '../../agent/agent';
+import { formatAgentsList } from '../../agent/util';
 import { explorerAgent } from './explorer';
-import { formatAgentsList } from './util';
 
 export const plannerAgent = defineAgent({
   id: 'Ezra (planner)',

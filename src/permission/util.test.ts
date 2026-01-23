@@ -14,9 +14,9 @@ import type {
   PermissionObjectConfig,
 } from '@opencode-ai/sdk/v2';
 import { ConfigContext } from '~/context';
-import { context7Mcp } from '~/mcp/context7';
-import { exaMcp } from '~/mcp/exa';
-import { grepAppMcp } from '~/mcp/grep-app';
+import { context7Mcp } from '~/features/mcps/context7';
+import { exaMcp } from '~/features/mcps/exa';
+import { grepAppMcp } from '~/features/mcps/grep-app';
 import {
   cleanupPermissions,
   getGlobalPermissions,

@@ -3,13 +3,13 @@ import type { Config } from '@opencode-ai/sdk/v2';
 import { setupAgentConfig } from './agent/config';
 import { setupCommandConfig } from './command/config';
 import { ConfigContext, PluginContext } from './context';
+import { setupTaskHooks } from './features/tasks/hook';
 import { setupInstructionConfig } from './instruction/config';
 import { setupInstructionHooks } from './instruction/hook';
 import { setupMcpConfig } from './mcp/config';
 import { setupMcpHooks } from './mcp/hook';
 import { setupPermissionConfig } from './permission/config';
 import { setupSkillConfig } from './skill/config';
-import { setupTaskHooks } from './task/hook';
 import { setupToolSet } from './tool/config';
 import { aggregateHooks } from './util/hook';
 

@@ -8,7 +8,7 @@ import {
   getSessionAgentAndModel,
   isSessionComplete,
   waitForSession,
-} from '../util/session';
+} from '~/util/session';
 import type { TaskResult } from './types';
 
 export const ASYNC_TASK_PREFIX = '[async]';

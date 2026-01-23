@@ -1,9 +1,9 @@
 import { ConfigContext } from '~/context';
 import { Prompt } from '~/util/prompt';
 import { Protocol } from '~/util/prompt/protocols';
-import { defineAgent } from './agent';
+import { defineAgent } from '../../agent/agent';
+import { formatAgentsList } from '../../agent/util';
 import { consultantAgent } from './consultant';
-import { formatAgentsList } from './util';
 
 export const orchestratorAgent = defineAgent({
   id: 'Jethro (orchestrator)',
@@ -16,7 +16,16 @@ export const orchestratorAgent = defineAgent({
       model: config.model,
       temperature: 0.4,
       permission: {
+        bash: 'deny',
+        codesearch: 'deny',
         edit: 'deny',
+        glob: 'deny',
+        grep: 'deny',
+        list: 'deny',
+        lsp: 'deny',
+        read: 'deny',
+        webfetch: 'deny',
+        websearch: 'deny',
       },
       description:
         'Coordinates complex multi-step tasks requiring multiple specialists. Delegates to appropriate agents, synthesizes their outputs, and manages workflow dependencies. Use when: task spans multiple domains, requires parallel work, or needs result aggregation. NEVER writes code or reads files directly.',

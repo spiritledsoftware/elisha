@@ -1,9 +1,9 @@
 import { ConfigContext } from '~/context';
-import { chromeDevtoolsMcp } from '~/mcp/chrome-devtools';
+import { chromeDevtoolsMcp } from '~/features/mcps/chrome-devtools';
 import { Prompt } from '~/util/prompt';
 import { Protocol } from '~/util/prompt/protocols';
-import { defineAgent } from './agent';
-import { formatAgentsList } from './util';
+import { defineAgent } from '../../agent/agent';
+import { formatAgentsList } from '../../agent/util';
 
 export const designerAgent = defineAgent({
   id: 'Oholiab (designer)',

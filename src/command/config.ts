@@ -1,4 +1,6 @@
-import { elishaCommands } from '.';
+import { initDeepCommand } from '~/features/commands/init-deep';
+
+const elishaCommands = [initDeepCommand];
 
 export const setupCommandConfig = async () => {
   for (const command of elishaCommands) {

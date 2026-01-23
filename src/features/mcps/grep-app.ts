@@ -1,4 +1,4 @@
-import { defineMcp } from './mcp';
+import { defineMcp } from '../../mcp/mcp';
 
 export const grepAppMcp = defineMcp({
   id: 'grep-app',

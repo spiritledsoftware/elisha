@@ -1,11 +1,11 @@
 import type { ElishaAgent } from '~/agent/agent';
-import { consultantAgent } from '~/agent/consultant';
-import { explorerAgent } from '~/agent/explorer';
-import { researcherAgent } from '~/agent/researcher';
-import { context7Mcp } from '~/mcp/context7';
-import { exaMcp } from '~/mcp/exa';
-import { grepAppMcp } from '~/mcp/grep-app';
-import { openmemoryMcp } from '~/mcp/openmemory';
+import { consultantAgent } from '~/features/agents/consultant';
+import { explorerAgent } from '~/features/agents/explorer';
+import { researcherAgent } from '~/features/agents/researcher';
+import { context7Mcp } from '~/features/mcps/context7';
+import { exaMcp } from '~/features/mcps/exa';
+import { grepAppMcp } from '~/features/mcps/grep-app';
+import { openmemoryMcp } from '~/features/mcps/openmemory';
 import { Prompt } from '.';
 
 export namespace Protocol {
