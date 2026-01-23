@@ -1,4 +1,4 @@
-import type { Hooks } from '@opencode-ai/plugin';
+import type { Hooks } from '~/types';
 import { log } from '.';
 
 /**
@@ -19,70 +19,37 @@ const runHooksWithIsolation = async (
   }
 };
 
+const HOOK_NAMES: Array<keyof Hooks> = [
+  'chat.params',
+  'chat.message',
+  'command.execute.before',
+  'experimental.chat.messages.transform',
+  'experimental.chat.system.transform',
+  'experimental.session.compacting',
+  'experimental.text.complete',
+  'permission.ask',
+  'tool.execute.after',
+  'tool.execute.before',
+  'event',
+];
+
+type HookFn = (...args: unknown[]) => Promise<void> | void;
+
 /**
  * Aggregates multiple hook sets into a single Hooks object.
  * Same-named hooks are merged with runHooksWithIsolation for isolated concurrent execution.
  */
 export const aggregateHooks = (hookSets: Hooks[]): Hooks => {
-  return {
-    'chat.params': async (input, output) => {
-      await runHooksWithIsolation(
-        hookSets.map((h) => h['chat.params']?.(input, output)),
-      );
-    },
-    'chat.message': async (input, output) => {
-      await runHooksWithIsolation(
-        hookSets.map((h) => h['chat.message']?.(input, output)),
-      );
-    },
-    'command.execute.before': async (input, output) => {
-      await runHooksWithIsolation(
-        hookSets.map((h) => h['command.execute.before']?.(input, output)),
-      );
-    },
-    'experimental.chat.messages.transform': async (input, output) => {
-      await runHooksWithIsolation(
-        hookSets.map((h) =>
-          h['experimental.chat.messages.transform']?.(input, output),
+  return Object.fromEntries(
+    HOOK_NAMES.map((name) => [
+      name,
+      async (...args: unknown[]) =>
+        runHooksWithIsolation(
+          hookSets.map(async (h) => {
+            const hook = h[name] as HookFn | undefined;
+            return await hook?.(...args);
+          }),
         ),
-      );
-    },
-    'experimental.chat.system.transform': async (input, output) => {
-      await runHooksWithIsolation(
-        hookSets.map((h) =>
-          h['experimental.chat.system.transform']?.(input, output),
-        ),
-      );
-    },
-    'experimental.session.compacting': async (input, output) => {
-      await runHooksWithIsolation(
-        hookSets.map((h) =>
-          h['experimental.session.compacting']?.(input, output),
-        ),
-      );
-    },
-    'experimental.text.complete': async (input, output) => {
-      await runHooksWithIsolation(
-        hookSets.map((h) => h['experimental.text.complete']?.(input, output)),
-      );
-    },
-    'permission.ask': async (input, output) => {
-      await runHooksWithIsolation(
-        hookSets.map((h) => h['permission.ask']?.(input, output)),
-      );
-    },
-    'tool.execute.after': async (input, output) => {
-      await runHooksWithIsolation(
-        hookSets.map((h) => h['tool.execute.after']?.(input, output)),
-      );
-    },
-    'tool.execute.before': async (input, output) => {
-      await runHooksWithIsolation(
-        hookSets.map((h) => h['tool.execute.before']?.(input, output)),
-      );
-    },
-    event: async (input) => {
-      await runHooksWithIsolation(hookSets.map((h) => h.event?.(input)));
-    },
-  };
+    ]),
+  ) as Hooks;
 };
