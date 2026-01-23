@@ -1,10 +1,10 @@
-import type { PluginInput } from '@opencode-ai/plugin';
-import { getSessionAgentAndModel } from '~/agent/util/index.ts';
-import { Prompt } from '~/agent/util/prompt/index.ts';
-import { log } from '~/util/index.ts';
-import type { Hooks } from '../types.ts';
-import { ASYNC_TASK_PREFIX } from './tool.ts';
-import { getTaskList, isTaskComplete } from './util.ts';
+import { PluginContext } from '~/context';
+import { log } from '~/util';
+import { Prompt } from '~/util/prompt';
+import { getSessionAgentAndModel } from '~/util/session';
+import type { Hooks } from '../types';
+import { formatChildSessionList, isSessionComplete } from '../util/session';
+import { ASYNC_TASK_PREFIX } from './tool';
 
 const TASK_CONTEXT_PROMPT = `## Active Tasks
 
@@ -13,7 +13,9 @@ The following task session IDs were created in this conversation. You can use th
 - \`elisha_task_output\` - Get the result of a completed or running task
 - \`elisha_task_cancel\` - Cancel a running task`;
 
-export const setupTaskHooks = (ctx: PluginInput): Hooks => {
+export const setupTaskHooks = (): Hooks => {
+  const { client, directory } = PluginContext.use();
+
   const injectedSessions = new Set<string>();
 
   return {
@@ -21,35 +23,30 @@ export const setupTaskHooks = (ctx: PluginInput): Hooks => {
       // Notify parent session when task completes
       if (event.type === 'session.idle') {
         const sessionID = event.properties.sessionID;
-        const completed = await isTaskComplete(sessionID, ctx);
+        const completed = await isSessionComplete(sessionID);
         if (completed) {
-          const { data: session } = await ctx.client.session.get({
+          const { data: session } = await client.session.get({
             path: { id: sessionID },
-            query: { directory: ctx.directory },
+            query: { directory },
           });
 
           const title = session?.title;
           const parentID = session?.parentID;
           if (title?.startsWith(ASYNC_TASK_PREFIX) && parentID) {
-            const { model, agent: parentAgent } = await getSessionAgentAndModel(
-              parentID,
-              ctx,
-            );
+            const { model, agent: parentAgent } =
+              await getSessionAgentAndModel(parentID);
 
             let taskAgent = 'unknown';
             try {
-              const { agent } = await getSessionAgentAndModel(sessionID, ctx);
+              const { agent } = await getSessionAgentAndModel(sessionID);
               taskAgent = agent || 'unknown';
             } catch (error) {
-              log(
-                {
-                  level: 'error',
-                  message: `Failed to get agent name for task(${sessionID}): ${
-                    error instanceof Error ? error.message : 'Unknown error'
-                  }`,
-                },
-                ctx,
-              );
+              log({
+                level: 'error',
+                message: `Failed to get agent name for task(${sessionID}): ${
+                  error instanceof Error ? error.message : 'Unknown error'
+                }`,
+              });
             }
 
             // Notify parent that task completed (use elisha_task_output to get result)
@@ -63,7 +60,7 @@ export const setupTaskHooks = (ctx: PluginInput): Hooks => {
             });
 
             try {
-              await ctx.client.session.prompt({
+              await client.session.prompt({
                 path: { id: parentID },
                 body: {
                   agent: parentAgent,
@@ -76,18 +73,15 @@ export const setupTaskHooks = (ctx: PluginInput): Hooks => {
                     },
                   ],
                 },
-                query: { directory: ctx.directory },
+                query: { directory },
               });
             } catch (error) {
-              log(
-                {
-                  level: 'error',
-                  message: `Failed to notify parent session(${parentID}) of task(${sessionID}) completion: ${
-                    error instanceof Error ? error.message : 'Unknown error'
-                  }`,
-                },
-                ctx,
-              );
+              log({
+                level: 'error',
+                message: `Failed to notify parent session(${parentID}) of task(${sessionID}) completion: ${
+                  error instanceof Error ? error.message : 'Unknown error'
+                }`,
+              });
             }
           }
         }
@@ -98,17 +92,14 @@ export const setupTaskHooks = (ctx: PluginInput): Hooks => {
         const sessionID = event.properties.sessionID;
 
         // Get tasks for this session
-        const taskList = await getTaskList(sessionID, ctx);
+        const taskList = await formatChildSessionList(sessionID);
         if (taskList) {
           // Get model/agent from recent messages
-          const { model, agent } = await getSessionAgentAndModel(
-            sessionID,
-            ctx,
-          );
+          const { model, agent } = await getSessionAgentAndModel(sessionID);
 
           injectedSessions.add(sessionID);
 
-          await ctx.client.session.prompt({
+          await client.session.prompt({
             path: { id: sessionID },
             body: {
               noReply: true,
@@ -128,6 +119,7 @@ export const setupTaskHooks = (ctx: PluginInput): Hooks => {
                 },
               ],
             },
+            query: { directory },
           });
         }
       }

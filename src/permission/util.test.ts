@@ -13,20 +13,16 @@ import type {
   PermissionConfig,
   PermissionObjectConfig,
 } from '@opencode-ai/sdk/v2';
-import { MCP_CONTEXT7_ID } from '~/mcp/context7.ts';
-import { MCP_EXA_ID } from '~/mcp/exa.ts';
-import { MCP_GREP_APP_ID } from '~/mcp/grep-app.ts';
+import { ConfigContext } from '~/context';
+import { context7Mcp } from '~/mcp/context7';
+import { exaMcp } from '~/mcp/exa';
+import { grepAppMcp } from '~/mcp/grep-app';
 import {
-  agentHasPermission,
-  getAgentPermissions,
-} from '~/permission/agent/util.ts';
-import { getGlobalPermissions } from '~/permission/index.ts';
-import { cleanupPermissions, hasPermission } from '~/permission/util.ts';
-import {
-  createMockContext,
-  createMockContextWithAgent,
-  createMockContextWithMcp,
-} from '../test-setup.ts';
+  cleanupPermissions,
+  getGlobalPermissions,
+  hasPermission,
+} from '~/permission/util';
+import { createMockConfig, createMockConfigWithMcp } from '../test-setup';
 
 /**
  * Helper to cast PermissionConfig to object form for property access in tests.
@@ -123,331 +119,204 @@ describe('hasPermission', () => {
   });
 });
 
-describe('getAgentPermissions', () => {
-  it('returns empty object when agent has no permissions', () => {
-    const ctx = createMockContext();
-    expect(getAgentPermissions('nonexistent-agent', ctx)).toEqual({});
-  });
-
-  it('returns empty object when agent exists but has no permission config', () => {
-    const ctx = createMockContextWithAgent('test-agent', {});
-    expect(getAgentPermissions('test-agent', ctx)).toEqual({});
-  });
-
-  it('returns agent permissions when configured', () => {
-    const permissions: PermissionConfig = {
-      edit: 'allow',
-      bash: 'deny',
-    };
-    const ctx = createMockContextWithAgent('test-agent', {
-      permission: permissions,
-    });
-    expect(getAgentPermissions('test-agent', ctx)).toEqual(permissions);
-  });
-});
-
-describe('agentHasPermission', () => {
-  describe('default behavior (no permissions defined)', () => {
-    it('returns true when agent has no permissions defined', () => {
-      const ctx = createMockContext();
-      expect(agentHasPermission('edit', 'nonexistent-agent', ctx)).toBe(true);
-    });
-
-    it('returns true when agent exists but has no permission config', () => {
-      const ctx = createMockContextWithAgent('test-agent', {});
-      expect(agentHasPermission('edit', 'test-agent', ctx)).toBe(true);
-    });
-  });
-
-  describe('exact permission matches', () => {
-    it('returns false when permission is "deny"', () => {
-      const ctx = createMockContextWithAgent('test-agent', {
-        permission: { edit: 'deny' },
-      });
-      expect(agentHasPermission('edit', 'test-agent', ctx)).toBe(false);
-    });
-
-    it('returns true when permission is "allow"', () => {
-      const ctx = createMockContextWithAgent('test-agent', {
-        permission: { edit: 'allow' },
-      });
-      expect(agentHasPermission('edit', 'test-agent', ctx)).toBe(true);
-    });
-
-    it('returns true when permission is "ask"', () => {
-      const ctx = createMockContextWithAgent('test-agent', {
-        permission: { edit: 'ask' },
-      });
-      expect(agentHasPermission('edit', 'test-agent', ctx)).toBe(true);
-    });
-  });
-
-  describe('wildcard pattern matching', () => {
-    it('matches wildcard permission to specific tool (openmemory* -> openmemory_query)', () => {
-      const ctx = createMockContextWithAgent('test-agent', {
-        permission: { 'openmemory*': 'allow' },
-      });
-      expect(agentHasPermission('openmemory_query', 'test-agent', ctx)).toBe(
-        true,
-      );
-    });
-
-    it('matches wildcard permission to specific tool (openmemory* -> openmemory_store)', () => {
-      const ctx = createMockContextWithAgent('test-agent', {
-        permission: { 'openmemory*': 'deny' },
-      });
-      expect(agentHasPermission('openmemory_store', 'test-agent', ctx)).toBe(
-        false,
-      );
-    });
-
-    it('matches wildcard permission to wildcard pattern (openmemory* -> openmemory*)', () => {
-      const ctx = createMockContextWithAgent('test-agent', {
-        permission: { 'openmemory*': 'allow' },
-      });
-      expect(agentHasPermission('openmemory*', 'test-agent', ctx)).toBe(true);
-    });
-
-    it('matches chrome-devtools wildcard pattern', () => {
-      const ctx = createMockContextWithAgent('test-agent', {
-        permission: { 'chrome-devtools*': 'allow' },
-      });
-      expect(
-        agentHasPermission('chrome-devtools_screenshot', 'test-agent', ctx),
-      ).toBe(true);
-    });
-
-    it('matches elisha_task wildcard pattern', () => {
-      const ctx = createMockContextWithAgent('test-agent', {
-        permission: { 'elisha_task*': 'deny' },
-      });
-      expect(agentHasPermission('elisha_task_output', 'test-agent', ctx)).toBe(
-        false,
-      );
-    });
-
-    it('does not match unrelated patterns', () => {
-      const ctx = createMockContextWithAgent('test-agent', {
-        permission: { 'openmemory*': 'deny' },
-      });
-      // edit is not covered by openmemory*, so should return true (default allow)
-      expect(agentHasPermission('edit', 'test-agent', ctx)).toBe(true);
-    });
-  });
-
-  describe('exact match takes precedence', () => {
-    it('uses exact match over wildcard when both exist', () => {
-      const ctx = createMockContextWithAgent('test-agent', {
-        permission: {
-          'openmemory*': 'allow',
-          openmemory_query: 'deny',
-        },
-      });
-      expect(agentHasPermission('openmemory_query', 'test-agent', ctx)).toBe(
-        false,
-      );
-    });
-  });
-
-  describe('string permission config', () => {
-    it('returns true when permission config is "allow" string', () => {
-      const ctx = createMockContextWithAgent('test-agent', {
-        permission: 'allow' as unknown as PermissionConfig,
-      });
-      expect(agentHasPermission('edit', 'test-agent', ctx)).toBe(true);
-    });
-
-    it('returns false when permission config is "deny" string', () => {
-      const ctx = createMockContextWithAgent('test-agent', {
-        permission: 'deny' as unknown as PermissionConfig,
-      });
-      expect(agentHasPermission('edit', 'test-agent', ctx)).toBe(false);
-    });
-  });
-});
-
 describe('cleanupPermissions', () => {
   describe('codesearch permission propagation', () => {
     it('propagates codesearch to context7 when enabled', () => {
-      const ctx = createMockContextWithMcp({
-        [MCP_CONTEXT7_ID]: { enabled: true },
-        [MCP_GREP_APP_ID]: { enabled: false },
+      const ctx = createMockConfigWithMcp({
+        [context7Mcp.id]: { enabled: true },
+        [grepAppMcp.id]: { enabled: false },
       });
       const config: PermissionConfig = { codesearch: 'ask' };
-      const result = asObject(cleanupPermissions(config, ctx));
-
-      expect(result[`${MCP_CONTEXT7_ID}*`]).toBe('ask');
+      ConfigContext.provide(ctx, () => {
+        const result = asObject(cleanupPermissions(config));
+        expect(result[`${context7Mcp.id}*`]).toBe('ask');
+      });
     });
 
     it('propagates codesearch to grep-app when enabled', () => {
-      const ctx = createMockContextWithMcp({
-        [MCP_CONTEXT7_ID]: { enabled: false },
-        [MCP_GREP_APP_ID]: { enabled: true },
+      const ctx = createMockConfigWithMcp({
+        [context7Mcp.id]: { enabled: false },
+        [grepAppMcp.id]: { enabled: true },
       });
       const config: PermissionConfig = { codesearch: 'allow' };
-      const result = asObject(cleanupPermissions(config, ctx));
-
-      expect(result[`${MCP_GREP_APP_ID}*`]).toBe('allow');
+      ConfigContext.provide(ctx, () => {
+        const result = asObject(cleanupPermissions(config));
+        expect(result[`${grepAppMcp.id}*`]).toBe('allow');
+      });
     });
 
     it('sets codesearch to deny after propagating to grep-app', () => {
-      const ctx = createMockContextWithMcp({
-        [MCP_GREP_APP_ID]: { enabled: true },
+      const ctx = createMockConfigWithMcp({
+        [grepAppMcp.id]: { enabled: true },
       });
       const config: PermissionConfig = { codesearch: 'ask' };
-      const result = asObject(cleanupPermissions(config, ctx));
-
-      expect(result.codesearch).toBe('deny');
+      ConfigContext.provide(ctx, () => {
+        const result = asObject(cleanupPermissions(config));
+        expect(result.codesearch).toBe('deny');
+      });
     });
 
     it('does not propagate to context7 when disabled', () => {
-      const ctx = createMockContextWithMcp({
-        [MCP_CONTEXT7_ID]: { enabled: false },
-        [MCP_GREP_APP_ID]: { enabled: false },
+      const ctx = createMockConfigWithMcp({
+        [context7Mcp.id]: { enabled: false },
+        [grepAppMcp.id]: { enabled: false },
       });
       const config: PermissionConfig = { codesearch: 'ask' };
-      const result = asObject(cleanupPermissions(config, ctx));
-
-      expect(result[`${MCP_CONTEXT7_ID}*`]).toBeUndefined();
+      ConfigContext.provide(ctx, () => {
+        const result = asObject(cleanupPermissions(config));
+        expect(result[`${context7Mcp.id}*`]).toBeUndefined();
+      });
     });
 
     it('does not propagate to grep-app when disabled', () => {
-      const ctx = createMockContextWithMcp({
-        [MCP_CONTEXT7_ID]: { enabled: false },
-        [MCP_GREP_APP_ID]: { enabled: false },
+      const ctx = createMockConfigWithMcp({
+        [context7Mcp.id]: { enabled: false },
+        [grepAppMcp.id]: { enabled: false },
       });
       const config: PermissionConfig = { codesearch: 'ask' };
-      const result = asObject(cleanupPermissions(config, ctx));
-
-      expect(result[`${MCP_GREP_APP_ID}*`]).toBeUndefined();
+      ConfigContext.provide(ctx, () => {
+        const result = asObject(cleanupPermissions(config));
+        expect(result[`${grepAppMcp.id}*`]).toBeUndefined();
+      });
     });
 
     it('does not overwrite existing context7 permission', () => {
-      const ctx = createMockContextWithMcp({
-        [MCP_CONTEXT7_ID]: { enabled: true },
+      const ctx = createMockConfigWithMcp({
+        [context7Mcp.id]: { enabled: true },
       });
       const config: PermissionConfig = {
         codesearch: 'ask',
-        [`${MCP_CONTEXT7_ID}*`]: 'deny',
+        [`${context7Mcp.id}*`]: 'deny',
       };
-      const result = asObject(cleanupPermissions(config, ctx));
-
-      expect(result[`${MCP_CONTEXT7_ID}*`]).toBe('deny');
+      ConfigContext.provide(ctx, () => {
+        const result = asObject(cleanupPermissions(config));
+        expect(result[`${context7Mcp.id}*`]).toBe('deny');
+      });
     });
 
     it('does not overwrite existing grep-app permission', () => {
-      const ctx = createMockContextWithMcp({
-        [MCP_GREP_APP_ID]: { enabled: true },
+      const ctx = createMockConfigWithMcp({
+        [grepAppMcp.id]: { enabled: true },
       });
       const config: PermissionConfig = {
         codesearch: 'ask',
-        [`${MCP_GREP_APP_ID}*`]: 'allow',
+        [`${grepAppMcp.id}*`]: 'allow',
       };
-      const result = asObject(cleanupPermissions(config, ctx));
-
-      expect(result[`${MCP_GREP_APP_ID}*`]).toBe('allow');
+      ConfigContext.provide(ctx, () => {
+        const result = asObject(cleanupPermissions(config));
+        expect(result[`${grepAppMcp.id}*`]).toBe('allow');
+      });
     });
 
     it('propagates to both context7 and grep-app when both enabled', () => {
-      const ctx = createMockContextWithMcp({
-        [MCP_CONTEXT7_ID]: { enabled: true },
-        [MCP_GREP_APP_ID]: { enabled: true },
+      const ctx = createMockConfigWithMcp({
+        [context7Mcp.id]: { enabled: true },
+        [grepAppMcp.id]: { enabled: true },
       });
       const config: PermissionConfig = { codesearch: 'ask' };
-      const result = asObject(cleanupPermissions(config, ctx));
-
-      expect(result[`${MCP_CONTEXT7_ID}*`]).toBe('ask');
-      expect(result[`${MCP_GREP_APP_ID}*`]).toBe('ask');
-      expect(result.codesearch).toBe('deny');
+      ConfigContext.provide(ctx, () => {
+        const result = asObject(cleanupPermissions(config));
+        expect(result[`${context7Mcp.id}*`]).toBe('ask');
+        expect(result[`${grepAppMcp.id}*`]).toBe('ask');
+        expect(result.codesearch).toBe('deny');
+      });
     });
   });
 
   describe('websearch permission propagation', () => {
     it('propagates websearch to exa when enabled', () => {
-      const ctx = createMockContextWithMcp({
-        [MCP_EXA_ID]: { enabled: true },
+      const ctx = createMockConfigWithMcp({
+        [exaMcp.id]: { enabled: true },
       });
       const config: PermissionConfig = { websearch: 'ask' };
-      const result = asObject(cleanupPermissions(config, ctx));
-
-      expect(result[`${MCP_EXA_ID}*`]).toBe('ask');
+      ConfigContext.provide(ctx, () => {
+        const result = asObject(cleanupPermissions(config));
+        expect(result[`${exaMcp.id}*`]).toBe('ask');
+      });
     });
 
     it('sets websearch to deny after propagating to exa', () => {
-      const ctx = createMockContextWithMcp({
-        [MCP_EXA_ID]: { enabled: true },
+      const ctx = createMockConfigWithMcp({
+        [exaMcp.id]: { enabled: true },
       });
       const config: PermissionConfig = { websearch: 'allow' };
-      const result = asObject(cleanupPermissions(config, ctx));
-
-      expect(result.websearch).toBe('deny');
+      ConfigContext.provide(ctx, () => {
+        const result = asObject(cleanupPermissions(config));
+        expect(result.websearch).toBe('deny');
+      });
     });
 
     it('does not propagate to exa when disabled', () => {
-      const ctx = createMockContextWithMcp({
-        [MCP_EXA_ID]: { enabled: false },
+      const ctx = createMockConfigWithMcp({
+        [exaMcp.id]: { enabled: false },
       });
       const config: PermissionConfig = { websearch: 'ask' };
-      const result = asObject(cleanupPermissions(config, ctx));
-
-      expect(result[`${MCP_EXA_ID}*`]).toBeUndefined();
-      expect(result.websearch).toBe('ask'); // Unchanged
+      ConfigContext.provide(ctx, () => {
+        const result = asObject(cleanupPermissions(config));
+        expect(result[`${exaMcp.id}*`]).toBeUndefined();
+        expect(result.websearch).toBe('ask'); // Unchanged
+      });
     });
 
     it('does not overwrite existing exa permission', () => {
-      const ctx = createMockContextWithMcp({
-        [MCP_EXA_ID]: { enabled: true },
+      const ctx = createMockConfigWithMcp({
+        [exaMcp.id]: { enabled: true },
       });
       const config: PermissionConfig = {
         websearch: 'ask',
-        [`${MCP_EXA_ID}*`]: 'deny',
+        [`${exaMcp.id}*`]: 'deny',
       };
-      const result = asObject(cleanupPermissions(config, ctx));
-
-      expect(result[`${MCP_EXA_ID}*`]).toBe('deny');
+      ConfigContext.provide(ctx, () => {
+        const result = asObject(cleanupPermissions(config));
+        expect(result[`${exaMcp.id}*`]).toBe('deny');
+      });
     });
   });
 
   describe('edge cases', () => {
     it('returns config unchanged when not an object', () => {
-      const ctx = createMockContext();
+      const ctx = createMockConfig();
       const config = 'allow' as unknown as PermissionConfig;
-      const result = cleanupPermissions(config, ctx);
-
-      expect(result).toBe('allow');
+      ConfigContext.provide(ctx, () => {
+        const result = cleanupPermissions(config);
+        expect(result).toBe('allow');
+      });
     });
 
     it('handles missing codesearch permission', () => {
-      const ctx = createMockContextWithMcp({
-        [MCP_CONTEXT7_ID]: { enabled: true },
+      const ctx = createMockConfigWithMcp({
+        [context7Mcp.id]: { enabled: true },
       });
       const config: PermissionConfig = { edit: 'allow' };
-      const result = asObject(cleanupPermissions(config, ctx));
-
-      expect(result[`${MCP_CONTEXT7_ID}*`]).toBeUndefined();
-      expect(result.edit).toBe('allow');
+      ConfigContext.provide(ctx, () => {
+        const result = asObject(cleanupPermissions(config));
+        expect(result[`${context7Mcp.id}*`]).toBeUndefined();
+        expect(result.edit).toBe('allow');
+      });
     });
 
     it('handles missing websearch permission', () => {
-      const ctx = createMockContextWithMcp({
-        [MCP_EXA_ID]: { enabled: true },
+      const ctx = createMockConfigWithMcp({
+        [exaMcp.id]: { enabled: true },
       });
       const config: PermissionConfig = { edit: 'allow' };
-      const result = asObject(cleanupPermissions(config, ctx));
-
-      expect(result[`${MCP_EXA_ID}*`]).toBeUndefined();
-      expect(result.edit).toBe('allow');
+      ConfigContext.provide(ctx, () => {
+        const result = asObject(cleanupPermissions(config));
+        expect(result[`${exaMcp.id}*`]).toBeUndefined();
+        expect(result.edit).toBe('allow');
+      });
     });
 
     it('defaults to enabled when MCP config is missing', () => {
-      const ctx = createMockContext(); // No MCP config
+      const ctx = createMockConfig(); // No MCP config
       const config: PermissionConfig = { codesearch: 'ask', websearch: 'ask' };
-      const result = asObject(cleanupPermissions(config, ctx));
-
-      // Should propagate since default is enabled
-      expect(result[`${MCP_CONTEXT7_ID}*`]).toBe('ask');
-      expect(result[`${MCP_GREP_APP_ID}*`]).toBe('ask');
-      expect(result[`${MCP_EXA_ID}*`]).toBe('ask');
+      ConfigContext.provide(ctx, () => {
+        const result = asObject(cleanupPermissions(config));
+        // Should propagate since default is enabled
+        expect(result[`${context7Mcp.id}*`]).toBe('ask');
+        expect(result[`${grepAppMcp.id}*`]).toBe('ask');
+        expect(result[`${exaMcp.id}*`]).toBe('ask');
+      });
     });
   });
 });
@@ -455,57 +324,64 @@ describe('cleanupPermissions', () => {
 describe('getGlobalPermissions', () => {
   describe('default permissions', () => {
     it('returns default permissions when no user config', () => {
-      const ctx = createMockContext();
-      const permissions = asObject(getGlobalPermissions(ctx));
+      const ctx = createMockConfig();
+      ConfigContext.provide(ctx, () => {
+        const permissions = asObject(getGlobalPermissions());
 
-      // Check some key defaults
-      expect(permissions.edit).toBe('allow');
-      expect(permissions.glob).toBe('allow');
-      expect(permissions.grep).toBe('allow');
-      expect(permissions.task).toBe('deny');
-      expect(permissions.codesearch).toBe('ask');
-      expect(permissions.websearch).toBe('ask');
-      expect(permissions.webfetch).toBe('ask');
+        // Check some key defaults
+        expect(permissions.edit).toBe('allow');
+        expect(permissions.glob).toBe('allow');
+        expect(permissions.grep).toBe('allow');
+        expect(permissions.task).toBe('deny');
+        expect(permissions.codesearch).toBe('ask');
+        expect(permissions.websearch).toBe('ask');
+        expect(permissions.webfetch).toBe('ask');
+      });
     });
 
     it('includes bash permissions with dangerous patterns denied', () => {
-      const ctx = createMockContext();
-      const permissions = asObject(getGlobalPermissions(ctx));
-      const bashPerms = permissions.bash as unknown as Record<string, string>;
+      const ctx = createMockConfig();
+      ConfigContext.provide(ctx, () => {
+        const permissions = asObject(getGlobalPermissions());
+        const bashPerms = permissions.bash as unknown as Record<string, string>;
 
-      expect(bashPerms['*']).toBe('allow');
-      expect(bashPerms['rm * /']).toBe('deny');
-      expect(bashPerms['rm * ~']).toBe('deny');
-      expect(bashPerms['rm -rf *']).toBe('deny');
-      expect(bashPerms['chmod 777 *']).toBe('deny');
-      expect(bashPerms['chown * /']).toBe('deny');
-      expect(bashPerms['dd if=* of=/dev/*']).toBe('deny');
-      expect(bashPerms['mkfs*']).toBe('deny');
-      expect(bashPerms['> /dev/*']).toBe('deny');
+        expect(bashPerms['*']).toBe('allow');
+        expect(bashPerms['rm * /']).toBe('deny');
+        expect(bashPerms['rm * ~']).toBe('deny');
+        expect(bashPerms['rm -rf *']).toBe('deny');
+        expect(bashPerms['chmod 777 *']).toBe('deny');
+        expect(bashPerms['chown * /']).toBe('deny');
+        expect(bashPerms['dd if=* of=/dev/*']).toBe('deny');
+        expect(bashPerms['mkfs*']).toBe('deny');
+        expect(bashPerms['> /dev/*']).toBe('deny');
+      });
     });
 
     it('includes read permissions with .env files denied', () => {
-      const ctx = createMockContext();
-      const permissions = asObject(getGlobalPermissions(ctx));
-      const readPerms = permissions.read as unknown as Record<string, string>;
+      const ctx = createMockConfig();
+      ConfigContext.provide(ctx, () => {
+        const permissions = asObject(getGlobalPermissions());
+        const readPerms = permissions.read as unknown as Record<string, string>;
 
-      expect(readPerms['*']).toBe('allow');
-      expect(readPerms['*.env']).toBe('deny');
-      expect(readPerms['*.env.*']).toBe('deny');
-      expect(readPerms['*.env.example']).toBe('allow');
+        expect(readPerms['*']).toBe('allow');
+        expect(readPerms['*.env']).toBe('deny');
+        expect(readPerms['*.env.*']).toBe('deny');
+        expect(readPerms['*.env.example']).toBe('allow');
+      });
     });
 
     it('includes elisha_task permission', () => {
-      const ctx = createMockContext();
-      const permissions = asObject(getGlobalPermissions(ctx));
-
-      expect(permissions['elisha_task*']).toBe('allow');
+      const ctx = createMockConfig();
+      ConfigContext.provide(ctx, () => {
+        const permissions = asObject(getGlobalPermissions());
+        expect(permissions['elisha_task*']).toBe('allow');
+      });
     });
   });
 
   describe('user config merging', () => {
     it('merges user config with defaults using defu', () => {
-      const ctx = createMockContext({
+      const ctx = createMockConfig({
         config: {
           permission: {
             edit: 'deny', // Override default
@@ -513,15 +389,17 @@ describe('getGlobalPermissions', () => {
           },
         },
       });
-      const permissions = asObject(getGlobalPermissions(ctx));
+      ConfigContext.provide(ctx, () => {
+        const permissions = asObject(getGlobalPermissions());
 
-      expect(permissions.edit).toBe('deny'); // User override
-      expect(permissions.custom_tool).toBe('allow'); // User addition
-      expect(permissions.glob).toBe('allow'); // Default preserved
+        expect(permissions.edit).toBe('deny'); // User override
+        expect(permissions.custom_tool).toBe('allow'); // User addition
+        expect(permissions.glob).toBe('allow'); // Default preserved
+      });
     });
 
     it('user overrides take precedence over defaults', () => {
-      const ctx = createMockContext({
+      const ctx = createMockConfig({
         config: {
           permission: {
             websearch: 'allow', // Override 'ask' default
@@ -529,14 +407,16 @@ describe('getGlobalPermissions', () => {
           },
         },
       });
-      const permissions = asObject(getGlobalPermissions(ctx));
+      ConfigContext.provide(ctx, () => {
+        const permissions = asObject(getGlobalPermissions());
 
-      expect(permissions.websearch).toBe('allow');
-      expect(permissions.webfetch).toBe('deny');
+        expect(permissions.websearch).toBe('allow');
+        expect(permissions.webfetch).toBe('deny');
+      });
     });
 
     it('deeply merges nested permission objects', () => {
-      const ctx = createMockContext({
+      const ctx = createMockConfig({
         config: {
           permission: {
             bash: {
@@ -545,63 +425,70 @@ describe('getGlobalPermissions', () => {
           },
         },
       });
-      const permissions = asObject(getGlobalPermissions(ctx));
-      const bashPerms = permissions.bash as unknown as Record<string, string>;
+      ConfigContext.provide(ctx, () => {
+        const permissions = asObject(getGlobalPermissions());
+        const bashPerms = permissions.bash as unknown as Record<string, string>;
 
-      // User addition
-      expect(bashPerms['npm *']).toBe('deny');
-      // Defaults preserved
-      expect(bashPerms['*']).toBe('allow');
-      expect(bashPerms['rm -rf *']).toBe('deny');
+        // User addition
+        expect(bashPerms['npm *']).toBe('deny');
+        // Defaults preserved
+        expect(bashPerms['*']).toBe('allow');
+        expect(bashPerms['rm -rf *']).toBe('deny');
+      });
     });
 
     it('returns user permission directly when not an object', () => {
-      const ctx = createMockContext({
+      const ctx = createMockConfig({
         config: {
           permission: 'allow' as unknown as PermissionConfig,
         },
       });
-      const permissions = getGlobalPermissions(ctx);
-
-      expect(permissions).toBe('allow');
+      ConfigContext.provide(ctx, () => {
+        const permissions = getGlobalPermissions();
+        expect(permissions).toBe('allow');
+      });
     });
   });
 
   describe('MCP-dependent permissions', () => {
     it('includes openmemory permission when enabled', () => {
-      const ctx = createMockContextWithMcp({
+      const ctx = createMockConfigWithMcp({
         openmemory: { enabled: true },
       });
-      const permissions = asObject(getGlobalPermissions(ctx));
-
-      expect(permissions['openmemory*']).toBe('allow');
+      ConfigContext.provide(ctx, () => {
+        const permissions = asObject(getGlobalPermissions());
+        expect(permissions['openmemory*']).toBe('allow');
+      });
     });
 
     it('excludes openmemory permission when disabled', () => {
-      const ctx = createMockContextWithMcp({
+      const ctx = createMockConfigWithMcp({
         openmemory: { enabled: false },
       });
-      const permissions = asObject(getGlobalPermissions(ctx));
-
-      expect(permissions['openmemory*']).toBeUndefined();
+      ConfigContext.provide(ctx, () => {
+        const permissions = asObject(getGlobalPermissions());
+        expect(permissions['openmemory*']).toBeUndefined();
+      });
     });
 
     it('includes chrome-devtools permission (denied by default) when enabled', () => {
-      const ctx = createMockContextWithMcp({
+      const ctx = createMockConfigWithMcp({
         'chrome-devtools': { enabled: true },
       });
-      const permissions = asObject(getGlobalPermissions(ctx));
-
-      expect(permissions['chrome-devtools*']).toBe('deny');
+      ConfigContext.provide(ctx, () => {
+        const permissions = asObject(getGlobalPermissions());
+        expect(permissions['chrome-devtools*']).toBe('deny');
+      });
     });
 
     it('excludes chrome-devtools permission when disabled', () => {
-      const ctx = createMockContextWithMcp({
+      const ctx = createMockConfigWithMcp({
         'chrome-devtools': { enabled: false },
       });
-      const permissions = asObject(getGlobalPermissions(ctx));
-
-      expect(permissions['chrome-devtools*']).toBeUndefined();
+      ConfigContext.provide(ctx, () => {
+        const permissions = asObject(getGlobalPermissions());
+        expect(permissions['chrome-devtools*']).toBeUndefined();
+      });
     });
   });
 });

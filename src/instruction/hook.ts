@@ -1,6 +1,6 @@
-import type { PluginInput } from '@opencode-ai/plugin';
-import { Prompt } from '~/agent/util/prompt/index.ts';
-import type { Hooks } from '../types.ts';
+import { PluginContext } from '~/context';
+import { Prompt } from '~/util/prompt';
+import type { Hooks } from '../types';
 
 const INSTRUCTION_PROMPT = `## AGENTS.md Maintenance
 
@@ -36,7 +36,8 @@ Update AGENTS.md files when you discover knowledge that would help future AI age
 - "Future agents will make this same mistake"
 - User explicitly asks to remember something for the project`;
 
-export const setupInstructionHooks = (ctx: PluginInput): Hooks => {
+export const setupInstructionHooks = (): Hooks => {
+  const { client } = PluginContext.use();
   const injectedSessions = new Set<string>();
 
   return {
@@ -44,7 +45,7 @@ export const setupInstructionHooks = (ctx: PluginInput): Hooks => {
       const sessionId = output.message.sessionID;
       if (injectedSessions.has(sessionId)) return;
 
-      const existing = await ctx.client.session.messages({
+      const existing = await client.session.messages({
         path: { id: sessionId },
       });
       if (!existing.data) return;
@@ -63,7 +64,7 @@ export const setupInstructionHooks = (ctx: PluginInput): Hooks => {
       }
 
       injectedSessions.add(sessionId);
-      await ctx.client.session.prompt({
+      await client.session.prompt({
         path: { id: sessionId },
         body: {
           noReply: true,
@@ -87,7 +88,7 @@ export const setupInstructionHooks = (ctx: PluginInput): Hooks => {
       if (event.type === 'session.compacted') {
         const sessionId = event.properties.sessionID;
 
-        const { model, agent } = await ctx.client.session
+        const { model, agent } = await client.session
           .messages({
             path: { id: sessionId },
             query: { limit: 50 },
@@ -102,7 +103,7 @@ export const setupInstructionHooks = (ctx: PluginInput): Hooks => {
           });
 
         injectedSessions.add(sessionId);
-        await ctx.client.session.prompt({
+        await client.session.prompt({
           path: { id: sessionId },
           body: {
             noReply: true,

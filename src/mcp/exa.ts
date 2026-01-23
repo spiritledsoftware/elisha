@@ -1,33 +1,24 @@
-import defu from 'defu';
-import { log } from '~/util/index.ts';
-import type { ElishaConfigContext } from '../types.ts';
-import type { McpConfig } from './types.ts';
+import { log } from '~/util';
+import { defineMcp } from './mcp';
 
-export const MCP_EXA_ID = 'exa';
-
-export const getDefaultConfig = (_ctx: ElishaConfigContext): McpConfig => ({
-  enabled: true,
-  type: 'remote',
-  url: 'https://mcp.exa.ai/mcp?tools=web_search_exa,deep_search_exa',
-  headers: process.env.EXA_API_KEY
-    ? { 'x-api-key': process.env.EXA_API_KEY }
-    : undefined,
-});
-
-export const setupExaMcpConfig = (ctx: ElishaConfigContext) => {
-  if (!process.env.EXA_API_KEY) {
-    log(
-      {
+export const exaMcp = defineMcp({
+  id: 'exa',
+  capabilities: ['Web Search', 'Deep Research'],
+  config: () => {
+    if (!process.env.EXA_API_KEY) {
+      log({
         level: 'warn',
         message:
           '[Elisha] EXA_API_KEY not set - Exa search will use public rate limits',
-      },
-      ctx,
-    );
-  }
-  ctx.config.mcp ??= {};
-  ctx.config.mcp[MCP_EXA_ID] = defu(
-    ctx.config.mcp?.[MCP_EXA_ID] ?? {},
-    getDefaultConfig(ctx),
-  ) as McpConfig;
-};
+      });
+    }
+    return {
+      enabled: true,
+      type: 'remote',
+      url: 'https://mcp.exa.ai/mcp?tools=web_search_exa,deep_search_exa',
+      headers: process.env.EXA_API_KEY
+        ? { 'x-api-key': process.env.EXA_API_KEY }
+        : undefined,
+    };
+  },
+});

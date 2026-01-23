@@ -1,63 +1,38 @@
-import type { AgentConfig } from '@opencode-ai/sdk/v2';
-import defu from 'defu';
-import { setupAgentPermissions } from '../permission/agent/index.ts';
-import type { ElishaConfigContext } from '../types.ts';
-import { AGENT_EXPLORER_ID } from './explorer.ts';
-import type { AgentCapabilities } from './types.ts';
-import {
-  canAgentDelegate,
-  formatAgentsList,
-  isAgentEnabled,
-} from './util/index.ts';
-import { Prompt } from './util/prompt/index.ts';
-import { Protocol } from './util/prompt/protocols.ts';
+import { ConfigContext } from '~/context';
+import { Prompt } from '~/util/prompt';
+import { Protocol } from '~/util/prompt/protocols';
+import { defineAgent } from './agent';
+import { explorerAgent } from './explorer';
+import { formatAgentsList } from './util';
 
-export const AGENT_DOCUMENTER_ID = 'Luke (documenter)';
-
-export const AGENT_DOCUMENTER_CAPABILITIES: AgentCapabilities = {
-  task: 'Documentation',
-  description: 'READMEs, API docs, comments',
-};
-
-const getDefaultConfig = (ctx: ElishaConfigContext): AgentConfig => ({
-  hidden: false,
-  mode: 'all',
-  model: ctx.config.model,
-  temperature: 0.2,
-  permission: setupAgentPermissions(
-    AGENT_DOCUMENTER_ID,
-    {
-      edit: {
-        '*': 'deny',
-        '**/*.md': 'allow',
-        'README*': 'allow',
+export const documenterAgent = defineAgent({
+  id: 'Luke (documenter)',
+  capabilities: ['Documentation', 'READMEs, API docs, comments'],
+  config: () => {
+    const config = ConfigContext.use();
+    return {
+      hidden: false,
+      mode: 'all',
+      model: config.model,
+      temperature: 0.2,
+      permission: {
+        edit: {
+          '*': 'deny',
+          '**/*.md': 'allow',
+          'README*': 'allow',
+        },
+        webfetch: 'deny',
+        websearch: 'deny',
+        codesearch: 'deny',
       },
-      webfetch: 'deny',
-      websearch: 'deny',
-      codesearch: 'deny',
-    },
-    ctx,
-  ),
-  description:
-    'Creates and maintains documentation including READMEs, API references, and architecture docs. Use when: documenting new features, updating outdated docs, creating onboarding guides, or writing inline code comments. Matches existing doc style.',
-});
+      description:
+        'Creates and maintains documentation including READMEs, API references, and architecture docs. Use when: documenting new features, updating outdated docs, creating onboarding guides, or writing inline code comments. Matches existing doc style.',
+    };
+  },
+  prompt: (self) => {
+    const hasExplorer = self.canDelegate && explorerAgent.isEnabled;
 
-export const setupDocumenterAgentConfig = (ctx: ElishaConfigContext) => {
-  ctx.config.agent ??= {};
-  ctx.config.agent[AGENT_DOCUMENTER_ID] = defu(
-    ctx.config.agent?.[AGENT_DOCUMENTER_ID] ?? {},
-    getDefaultConfig(ctx),
-  );
-};
-
-export const setupDocumenterAgentPrompt = (ctx: ElishaConfigContext) => {
-  const agentConfig = ctx.config.agent?.[AGENT_DOCUMENTER_ID];
-  if (!agentConfig || agentConfig.disable) return;
-
-  const canDelegate = canAgentDelegate(AGENT_DOCUMENTER_ID, ctx);
-  const hasExplorer = isAgentEnabled(AGENT_EXPLORER_ID, ctx);
-
-  agentConfig.prompt = Prompt.template`
+    return Prompt.template`
     <role>
       You are a documentation writer. You create clear, maintainable documentation that matches the project's existing style.
     </role>
@@ -70,17 +45,17 @@ export const setupDocumenterAgentPrompt = (ctx: ElishaConfigContext) => {
     </examples>
 
     ${Prompt.when(
-      canDelegate,
+      self.canDelegate,
       `
     <teammates>
-      ${formatAgentsList(ctx)}
+      ${formatAgentsList()}
     </teammates>
     `,
     )}
 
     <protocols>
-      ${Protocol.contextGathering(AGENT_DOCUMENTER_ID, ctx)}
-      ${Protocol.escalation(AGENT_DOCUMENTER_ID, ctx)}
+      ${Protocol.contextGathering(self)}
+      ${Protocol.escalation(self)}
     </protocols>
 
     <capabilities>
@@ -159,4 +134,5 @@ export const setupDocumenterAgentPrompt = (ctx: ElishaConfigContext) => {
       ${Prompt.when(hasExplorer, '- Delegate to explorer if unsure about code')}
     </constraints>
   `;
-};
+  },
+});

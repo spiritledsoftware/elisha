@@ -1,14 +1,19 @@
-import type { ElishaConfigContext } from '../types.ts';
-import { setupChromeDevtoolsMcpConfig } from './chrome-devtools.ts';
-import { setupContext7McpConfig } from './context7.ts';
-import { setupExaMcpConfig } from './exa.ts';
-import { setupGrepAppMcpConfig } from './grep-app.ts';
-import { setupOpenMemoryMcpConfig } from './openmemory/index.ts';
+import { chromeDevtoolsMcp } from './chrome-devtools';
+import { context7Mcp } from './context7';
+import { exaMcp } from './exa';
+import { grepAppMcp } from './grep-app';
+import { openmemoryMcp } from './openmemory';
 
-export const setupMcpConfig = (ctx: ElishaConfigContext) => {
-  setupOpenMemoryMcpConfig(ctx);
-  setupContext7McpConfig(ctx);
-  setupExaMcpConfig(ctx);
-  setupGrepAppMcpConfig(ctx);
-  setupChromeDevtoolsMcpConfig(ctx);
+const elishaMcps = [
+  chromeDevtoolsMcp,
+  context7Mcp,
+  exaMcp,
+  grepAppMcp,
+  openmemoryMcp,
+];
+
+export const setupMcpConfig = async () => {
+  for (const mcp of elishaMcps) {
+    await mcp.setup();
+  }
 };

@@ -1,23 +1,14 @@
-import type { ElishaConfigContext } from '~/types';
+import { ConfigContext } from '~/context';
 import type { McpConfig } from './types';
 
-export const getEnabledMcps = (
-  ctx: ElishaConfigContext,
-): Array<McpConfig & { name: string }> => {
-  const mcps = ctx.config.mcp ?? {};
+export const getEnabledMcps = (): Array<McpConfig & { id: string }> => {
+  const config = ConfigContext.use();
+
+  const mcps = config.mcp ?? {};
   return Object.entries(mcps)
     .filter(([_, config]) => config?.enabled ?? true)
-    .map(([name, config]) => ({
-      name,
+    .map(([id, config]) => ({
+      id,
       ...config,
     }));
-};
-
-export const isMcpEnabled = (
-  mcpName: string,
-  ctx: ElishaConfigContext,
-): boolean => {
-  const mcps = ctx.config.mcp ?? {};
-  const config = mcps[mcpName];
-  return config?.enabled ?? true;
 };

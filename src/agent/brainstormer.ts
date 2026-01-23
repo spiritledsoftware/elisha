@@ -1,69 +1,47 @@
-import type { AgentConfig } from '@opencode-ai/sdk/v2';
-import defu from 'defu';
-import { setupAgentPermissions } from '~/permission/agent/index.ts';
-import type { ElishaConfigContext } from '~/types.ts';
-import type { AgentCapabilities } from './types.ts';
-import { canAgentDelegate, formatAgentsList } from './util/index.ts';
-import { Prompt } from './util/prompt/index.ts';
-import { Protocol } from './util/prompt/protocols.ts';
+import { ConfigContext } from '~/context';
+import { Prompt } from '~/util/prompt';
+import { Protocol } from '~/util/prompt/protocols';
+import { defineAgent } from './agent';
+import { formatAgentsList } from './util';
 
-export const AGENT_BRAINSTORMER_ID = 'Jubal (brainstormer)';
-
-export const AGENT_BRAINSTORMER_CAPABILITIES: AgentCapabilities = {
-  task: 'Creative ideation',
-  description: 'Exploring options, fresh approaches',
-};
-
-const getDefaultConfig = (ctx: ElishaConfigContext): AgentConfig => ({
-  hidden: false,
-  mode: 'all',
-  model: ctx.config.model,
-  temperature: 1.0,
-  permission: setupAgentPermissions(
-    AGENT_BRAINSTORMER_ID,
-    {
-      edit: 'deny',
-      webfetch: 'deny',
-      websearch: 'deny',
-      codesearch: 'deny',
-    },
-    ctx,
-  ),
-  description:
-    "Generates creative ideas and explores unconventional solutions. Use when: stuck in conventional thinking, need fresh approaches, exploring design space, or want many options before deciding. IDEATION-ONLY - generates ideas, doesn't implement.",
-});
-
-export const setupBrainstormerAgentConfig = (ctx: ElishaConfigContext) => {
-  ctx.config.agent ??= {};
-  ctx.config.agent[AGENT_BRAINSTORMER_ID] = defu(
-    ctx.config.agent?.[AGENT_BRAINSTORMER_ID] ?? {},
-    getDefaultConfig(ctx),
-  );
-};
-
-export const setupBrainstormerAgentPrompt = (ctx: ElishaConfigContext) => {
-  const agentConfig = ctx.config.agent?.[AGENT_BRAINSTORMER_ID];
-  if (!agentConfig || agentConfig.disable) return;
-
-  const canDelegate = canAgentDelegate(AGENT_BRAINSTORMER_ID, ctx);
-
-  agentConfig.prompt = Prompt.template`
+export const brainstormerAgent = defineAgent({
+  id: 'Jubal (brainstormer)',
+  capabilities: ['Creative ideation', 'Exploring options, fresh approaches'],
+  config: () => {
+    const config = ConfigContext.use();
+    return {
+      hidden: false,
+      mode: 'all',
+      model: config.model,
+      temperature: 1.0,
+      permission: {
+        edit: 'deny',
+        webfetch: 'deny',
+        websearch: 'deny',
+        codesearch: 'deny',
+      },
+      description:
+        "Generates creative ideas and explores unconventional solutions. Use when: stuck in conventional thinking, need fresh approaches, exploring design space, or want many options before deciding. IDEATION-ONLY - generates ideas, doesn't implement.",
+    };
+  },
+  prompt: (self) => {
+    return Prompt.template`
     <role>
       You are a creative ideation specialist. You generate diverse ideas, explore unconventional approaches, and push beyond obvious solutions.
     </role>
 
     ${Prompt.when(
-      canDelegate,
+      self.canDelegate,
       `
     <teammates>
-      ${formatAgentsList(ctx)}
+      ${formatAgentsList()}
     </teammates>
     `,
     )}
 
     <protocols>
-      ${Protocol.contextGathering(AGENT_BRAINSTORMER_ID, ctx)}
-      ${Protocol.escalation(AGENT_BRAINSTORMER_ID, ctx)}
+      ${Protocol.contextGathering(self)}
+      ${Protocol.escalation(self)}
     </protocols>
 
     <capabilities>
@@ -126,4 +104,5 @@ export const setupBrainstormerAgentPrompt = (ctx: ElishaConfigContext) => {
       - Prefer unconventional ideas - unusual approaches are often most valuable
     </constraints>
   `;
-};
+  },
+});

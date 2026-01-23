@@ -1,11 +1,18 @@
 import { homedir } from 'node:os';
 import path from 'node:path';
-import type { PluginInput } from '@opencode-ai/plugin';
 import type { LogLevel } from '@opencode-ai/sdk/v2';
+import { PluginContext } from '~/context';
 
-// Re-export from submodules
-export * from '../types.ts';
-export * from './hook.ts';
+export const getConfigDir = () => {
+  if (process.platform === 'win32') {
+    const appData = process.env.APPDATA;
+    const base = appData || path.join(homedir(), 'AppData', 'Roaming');
+    return path.join(base, 'Elisha', 'Config');
+  }
+  const xdgConfigHome = process.env.XDG_CONFIG_HOME;
+  const base = xdgConfigHome || path.join(homedir(), '.config');
+  return path.join(base, 'elisha');
+};
 
 export const getCacheDir = () => {
   if (process.platform === 'win32') {
@@ -29,17 +36,15 @@ export const getDataDir = () => {
   return path.join(base, 'elisha');
 };
 
-export const log = async (
-  options: {
-    level?: Lowercase<LogLevel>;
-    message: string;
-    meta?: { [key: string]: unknown };
-  },
-  ctx: PluginInput,
-) => {
+export const log = async (options: {
+  level?: Lowercase<LogLevel>;
+  message: string;
+  meta?: { [key: string]: unknown };
+}) => {
+  const { client, directory } = PluginContext.use();
   const { level = 'info', message, meta: extra } = options;
-  await ctx.client.app.log({
-    query: { directory: ctx.directory },
+  await client.app.log({
+    query: { directory },
     body: {
       service: 'elisha',
       level,

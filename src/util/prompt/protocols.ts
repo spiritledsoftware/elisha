@@ -1,61 +1,49 @@
-import { AGENT_CONSULTANT_ID } from '~/agent/consultant.ts';
-import { AGENT_EXPLORER_ID } from '~/agent/explorer.ts';
-import { AGENT_RESEARCHER_ID } from '~/agent/researcher.ts';
-import {
-  MCP_CONTEXT7_ID,
-  MCP_EXA_ID,
-  MCP_GREP_APP_ID,
-  MCP_OPENMEMORY_ID,
-} from '~/mcp/index.ts';
-import { agentHasPermission } from '~/permission/agent/util.ts';
-import type { ElishaConfigContext } from '~/types.ts';
-import {
-  canAgentDelegate,
-  isAgentEnabled,
-  isMcpAvailableForAgent,
-} from '../index.ts';
-import { Prompt } from './index.ts';
+import type { ElishaAgent } from '~/agent/agent';
+import { consultantAgent } from '~/agent/consultant';
+import { explorerAgent } from '~/agent/explorer';
+import { researcherAgent } from '~/agent/researcher';
+import { context7Mcp } from '~/mcp/context7';
+import { exaMcp } from '~/mcp/exa';
+import { grepAppMcp } from '~/mcp/grep-app';
+import { openmemoryMcp } from '~/mcp/openmemory';
+import { Prompt } from '.';
 
 export namespace Protocol {
-  export const contextGathering = (
-    agentName: string,
-    ctx: ElishaConfigContext,
-  ) => {
-    const hasMemory = isMcpAvailableForAgent(MCP_OPENMEMORY_ID, agentName, ctx);
-    const hasWebSearch = isMcpAvailableForAgent(MCP_EXA_ID, agentName, ctx);
-    const hasWebFetch = agentHasPermission('webfetch', agentName, ctx);
-    const hasContext7 = isMcpAvailableForAgent(MCP_CONTEXT7_ID, agentName, ctx);
-    const hasGrepApp = isMcpAvailableForAgent(MCP_GREP_APP_ID, agentName, ctx);
+  export function contextGathering(agent: ElishaAgent) {
+    const hasMemory = agent.hasMcp(openmemoryMcp.id);
+    const hasWebSearch = agent.hasMcp(exaMcp.id);
+    const hasWebFetch = agent.hasPermission('webfetch');
+    const hasContext7 = agent.hasMcp(context7Mcp.id);
+    const hasGrepApp = agent.hasMcp(grepAppMcp.id);
 
-    const canDelegate = canAgentDelegate(agentName, ctx);
     const hasExplorer =
-      agentName !== AGENT_EXPLORER_ID &&
-      canDelegate &&
-      isAgentEnabled(AGENT_EXPLORER_ID, ctx);
+      agent.id !== explorerAgent.id &&
+      agent.canDelegate &&
+      explorerAgent.isEnabled;
     const hasResearcher =
-      agentName !== AGENT_RESEARCHER_ID &&
-      canDelegate &&
-      isAgentEnabled(AGENT_RESEARCHER_ID, ctx);
+      agent.id !== researcherAgent.id &&
+      agent.canDelegate &&
+      researcherAgent.isEnabled;
 
     return Prompt.template`
       <context_gathering>
       Always gather context before acting:
       ${Prompt.when(
         hasMemory,
-        `- Use \`${MCP_OPENMEMORY_ID}*\` for relevant past sessions or info.`,
+        `- Use \`${openmemoryMcp.id}*\` tools to gather relevant past sessions or info.`,
       )}
       ${Prompt.when(
         hasExplorer,
-        `- Delegate to \`${AGENT_EXPLORER_ID}\` agent to search for files or patterns within the codebase.`,
+        `- Delegate to \`${explorerAgent.id}\` agent to search for files or patterns within the codebase.`,
         '- Search for files or patterns within the codebase.',
       )}
       ${Prompt.when(
         hasResearcher,
-        `- Delegate to \`${AGENT_RESEARCHER_ID}\` agent to gather external information or perform research.`,
+        `- Delegate to \`${researcherAgent.id}\` agent to gather external information or perform research.`,
         Prompt.template`
           ${Prompt.when(
             hasWebSearch,
-            `- Use \`${MCP_EXA_ID}*\` tools to gather external information from the web.`,
+            `- Use \`${exaMcp.id}*\` tools to gather external information from the web.`,
           )}
           ${Prompt.when(
             hasWebFetch,
@@ -63,28 +51,28 @@ export namespace Protocol {
           )}
           ${Prompt.when(
             hasContext7,
-            `- Use \`${MCP_CONTEXT7_ID}*\` tools to find up-to-date library/package documentation.`,
+            `- Use \`${context7Mcp.id}*\` tools to find up-to-date library/package documentation.`,
           )}
           ${Prompt.when(
             hasGrepApp,
-            `- Use \`${MCP_GREP_APP_ID}*\` tools to find relevant code snippets or references.`,
+            `- Use \`${grepAppMcp.id}*\` tools to find relevant code snippets or references.`,
           )}
         `,
       )}
       </context_gathering>
     `;
-  };
+  }
 
   /**
    * Escalation protocol for agents that can delegate to consultant.
    * Use when the agent might get stuck and needs expert help.
    */
-  export const escalation = (agentName: string, ctx: ElishaConfigContext) => {
-    const canDelegate = canAgentDelegate(agentName, ctx);
+  export function escalation(agent: ElishaAgent) {
+    const canDelegate = agent.canDelegate;
     const hasConsultant =
-      agentName !== AGENT_CONSULTANT_ID &&
+      agent.id !== consultantAgent.id &&
       canDelegate &&
-      isAgentEnabled(AGENT_CONSULTANT_ID, ctx);
+      consultantAgent.isEnabled;
 
     return Prompt.template`
       <escalation>
@@ -92,7 +80,7 @@ export namespace Protocol {
       ${Prompt.when(
         hasConsultant,
         `
-        - Delegate to \`${AGENT_CONSULTANT_ID}\` agent for specialized assistance.
+        - Delegate to \`${consultantAgent.id}\` agent for specialized assistance.
         `,
         `
         - Report that you need help to proceed.
@@ -100,7 +88,7 @@ export namespace Protocol {
       )}
       </escalation>
     `;
-  };
+  }
 
   /**
    * Standard confidence levels with recommended actions.

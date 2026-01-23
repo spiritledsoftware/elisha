@@ -1,51 +1,31 @@
-import type { AgentConfig } from '@opencode-ai/sdk/v2';
-import defu from 'defu';
-import { setupAgentPermissions } from '../permission/agent/index.ts';
-import type { ElishaConfigContext } from '../types.ts';
-import { AGENT_CONSULTANT_ID } from './consultant.ts';
-import {
-  canAgentDelegate,
-  formatAgentsList,
-  formatTaskMatchingTable,
-  isAgentEnabled,
-} from './util/index.ts';
-import { Prompt } from './util/prompt/index.ts';
-import { Protocol } from './util/prompt/protocols.ts';
+import { ConfigContext } from '~/context';
+import { Prompt } from '~/util/prompt';
+import { Protocol } from '~/util/prompt/protocols';
+import { defineAgent } from './agent';
+import { consultantAgent } from './consultant';
+import { formatAgentsList } from './util';
 
-export const AGENT_ORCHESTRATOR_ID = 'Jethro (orchestrator)';
+export const orchestratorAgent = defineAgent({
+  id: 'Jethro (orchestrator)',
+  capabilities: [],
+  config: () => {
+    const config = ConfigContext.use();
+    return {
+      hidden: false,
+      mode: 'primary',
+      model: config.model,
+      temperature: 0.4,
+      permission: {
+        edit: 'deny',
+      },
+      description:
+        'Coordinates complex multi-step tasks requiring multiple specialists. Delegates to appropriate agents, synthesizes their outputs, and manages workflow dependencies. Use when: task spans multiple domains, requires parallel work, or needs result aggregation. NEVER writes code or reads files directly.',
+    };
+  },
+  prompt: (self) => {
+    const hasConsultant = self.canDelegate && consultantAgent.isEnabled;
 
-const getDefaultConfig = (ctx: ElishaConfigContext): AgentConfig => ({
-  hidden: false,
-  mode: 'primary',
-  model: ctx.config.model,
-  temperature: 0.4,
-  permission: setupAgentPermissions(
-    AGENT_ORCHESTRATOR_ID,
-    {
-      edit: 'deny',
-    },
-    ctx,
-  ),
-  description:
-    'Coordinates complex multi-step tasks requiring multiple specialists. Delegates to appropriate agents, synthesizes their outputs, and manages workflow dependencies. Use when: task spans multiple domains, requires parallel work, or needs result aggregation. NEVER writes code or reads files directly.',
-});
-
-export const setupOrchestratorAgentConfig = (ctx: ElishaConfigContext) => {
-  ctx.config.agent ??= {};
-  ctx.config.agent[AGENT_ORCHESTRATOR_ID] = defu(
-    ctx.config.agent?.[AGENT_ORCHESTRATOR_ID] ?? {},
-    getDefaultConfig(ctx),
-  );
-};
-
-export const setupOrchestratorAgentPrompt = (ctx: ElishaConfigContext) => {
-  const agentConfig = ctx.config.agent?.[AGENT_ORCHESTRATOR_ID];
-  if (!agentConfig || agentConfig.disable) return;
-
-  const canDelegate = canAgentDelegate(AGENT_ORCHESTRATOR_ID, ctx);
-  const hasConsultant = canDelegate && isAgentEnabled(AGENT_CONSULTANT_ID, ctx);
-
-  agentConfig.prompt = Prompt.template`
+    return Prompt.template`
     <role>
       You are Jethro, the swarm orchestrator.
       
@@ -70,21 +50,21 @@ export const setupOrchestratorAgentPrompt = (ctx: ElishaConfigContext) => {
     </examples>
 
     ${Prompt.when(
-      canDelegate,
+      self.canDelegate,
       `
     <teammates>
-      ${formatAgentsList(ctx)}
+      ${formatAgentsList()}
     </teammates>
     `,
     )}
 
     <protocols>
-      ${Protocol.contextGathering(AGENT_ORCHESTRATOR_ID, ctx)}
-      ${Protocol.escalation(AGENT_ORCHESTRATOR_ID, ctx)}
-      ${Prompt.when(canDelegate, Protocol.taskHandoff)}
-      ${Prompt.when(canDelegate, Protocol.parallelWork)}
-      ${Prompt.when(canDelegate, Protocol.resultSynthesis)}
-      ${Prompt.when(canDelegate, Protocol.progressTracking)}
+      ${Protocol.contextGathering(self)}
+      ${Protocol.escalation(self)}
+      ${Prompt.when(self.canDelegate, Protocol.taskHandoff)}
+      ${Prompt.when(self.canDelegate, Protocol.parallelWork)}
+      ${Prompt.when(self.canDelegate, Protocol.resultSynthesis)}
+      ${Prompt.when(self.canDelegate, Protocol.progressTracking)}
     </protocols>
 
     <capabilities>
@@ -132,7 +112,7 @@ export const setupOrchestratorAgentPrompt = (ctx: ElishaConfigContext) => {
     </workflow>
 
 ${Prompt.when(
-  canDelegate,
+  self.canDelegate,
   `
     <fast_path>
       For simple requests, skip full decomposition:
@@ -178,18 +158,7 @@ ${Prompt.when(
 )}
 
 ${Prompt.when(
-  canDelegate,
-  `
-    <task_matching>
-      Match tasks to specialists by capability:
-
-      ${formatTaskMatchingTable(ctx)}
-    </task_matching>
-`,
-)}
-
-${Prompt.when(
-  canDelegate,
+  self.canDelegate,
   `
     <parallel_patterns>
       **Safe to parallelize**:
@@ -249,4 +218,5 @@ ${Prompt.when(
       \`\`\`
     </output_format>
   `;
-};
+  },
+});

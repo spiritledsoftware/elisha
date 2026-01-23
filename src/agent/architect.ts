@@ -1,56 +1,34 @@
-import type { AgentConfig } from '@opencode-ai/sdk/v2';
-import defu from 'defu';
-import { setupAgentPermissions } from '~/permission/agent/index.ts';
-import type { ElishaConfigContext } from '~/types.ts';
-import type { AgentCapabilities } from './types.ts';
-import { canAgentDelegate, formatAgentsList } from './util/index.ts';
-import { Prompt } from './util/prompt/index.ts';
-import { Protocol } from './util/prompt/protocols.ts';
+import { ConfigContext } from '~/context';
+import { Prompt } from '~/util/prompt';
+import { Protocol } from '~/util/prompt/protocols';
+import { defineAgent } from './agent';
+import { formatAgentsList } from './util';
 
-export const AGENT_ARCHITECT_ID = 'Bezalel (architect)';
-
-export const AGENT_ARCHITECT_CAPABILITIES: AgentCapabilities = {
-  task: 'Architecture design',
-  description: 'System design, tradeoffs, specs',
-};
-
-const getDefaultConfig = (ctx: ElishaConfigContext): AgentConfig => ({
-  hidden: false,
-  mode: 'all',
-  model: ctx.config.model,
-  temperature: 0.5,
-  permission: setupAgentPermissions(
-    AGENT_ARCHITECT_ID,
-    {
-      edit: {
-        '*': 'deny',
-        '.agent/specs/*.md': 'allow',
+export const architectAgent = defineAgent({
+  id: 'Bezalel (architect)',
+  capabilities: ['Architecture design', 'Writing specifications'],
+  config: () => {
+    const config = ConfigContext.use();
+    return {
+      hidden: false,
+      mode: 'all',
+      model: config.model,
+      temperature: 0.5,
+      permission: {
+        edit: {
+          '*': 'deny',
+          '.agent/specs/*.md': 'allow',
+        },
+        webfetch: 'deny',
+        websearch: 'deny',
+        codesearch: 'deny',
       },
-      webfetch: 'deny',
-      websearch: 'deny',
-      codesearch: 'deny',
-    },
-    ctx,
-  ),
-  description:
-    'Creates architectural specs and designs solutions. Use when: designing new systems, evaluating tradeoffs, or need formal specifications. Writes specs to .agent/specs/. DESIGN-ONLY - produces specs, not code.',
-});
-
-export const setupArchitectAgentConfig = (ctx: ElishaConfigContext) => {
-  ctx.config.agent ??= {};
-  ctx.config.agent[AGENT_ARCHITECT_ID] = defu(
-    ctx.config.agent?.[AGENT_ARCHITECT_ID] ?? {},
-    getDefaultConfig(ctx),
-  );
-};
-
-export const setupArchitectAgentPrompt = (ctx: ElishaConfigContext) => {
-  const agentConfig = ctx.config.agent?.[AGENT_ARCHITECT_ID];
-  if (!agentConfig || agentConfig.disable) return;
-
-  const canDelegate = canAgentDelegate(AGENT_ARCHITECT_ID, ctx);
-
-  agentConfig.prompt = Prompt.template`
+      description:
+        'Creates architectural specs and designs solutions. Use when: designing new systems, evaluating tradeoffs, or need formal specifications. Writes specs to .agent/specs/. DESIGN-ONLY - produces specs, not code.',
+    };
+  },
+  prompt: (self) => {
+    return Prompt.template`
     <role>
       You are Bezalel, the solution architect.
       
@@ -71,17 +49,17 @@ export const setupArchitectAgentPrompt = (ctx: ElishaConfigContext) => {
     </examples>
 
     ${Prompt.when(
-      canDelegate,
+      self.canDelegate,
       `
     <teammates>
-      ${formatAgentsList(ctx)}
+      ${formatAgentsList()}
     </teammates>
     `,
     )}
 
     <protocols>
-      ${Protocol.contextGathering(AGENT_ARCHITECT_ID, ctx)}
-      ${Protocol.escalation(AGENT_ARCHITECT_ID, ctx)}
+      ${Protocol.contextGathering(self)}
+      ${Protocol.escalation(self)}
       ${Protocol.confidence}
       ${Protocol.reflection}
     </protocols>
@@ -168,4 +146,5 @@ export const setupArchitectAgentPrompt = (ctx: ElishaConfigContext) => {
       - Do NOT design implementation details - that's planner's job
     </constraints>
   `;
-};
+  },
+});

@@ -1,64 +1,35 @@
-import type { AgentConfig } from '@opencode-ai/sdk/v2';
-import defu from 'defu';
-import { MCP_CHROME_DEVTOOLS_ID } from '~/mcp/chrome-devtools.ts';
-import { setupAgentPermissions } from '~/permission/agent/index.ts';
-import type { ElishaConfigContext } from '../util/index.ts';
-import type { AgentCapabilities } from './types.ts';
-import {
-  canAgentDelegate,
-  formatAgentsList,
-  isMcpAvailableForAgent,
-} from './util/index.ts';
-import { Prompt } from './util/prompt/index.ts';
-import { Protocol } from './util/prompt/protocols.ts';
+import { ConfigContext } from '~/context';
+import { chromeDevtoolsMcp } from '~/mcp/chrome-devtools';
+import { Prompt } from '~/util/prompt';
+import { Protocol } from '~/util/prompt/protocols';
+import { defineAgent } from './agent';
+import { formatAgentsList } from './util';
 
-export const AGENT_DESIGNER_ID = 'Oholiab (designer)';
+export const designerAgent = defineAgent({
+  id: 'Oholiab (designer)',
+  capabilities: ['UI/styling', 'CSS, layouts, visual design'],
+  config: () => {
+    const config = ConfigContext.use();
+    return {
+      hidden: false,
+      mode: 'all',
+      model: config.model,
+      temperature: 0.7,
+      permission: {
+        webfetch: 'deny',
+        websearch: 'deny',
+        codesearch: 'deny',
+        [`${chromeDevtoolsMcp.id}*`]: 'allow',
+      },
+      description:
+        'Implements visual designs, CSS, and UI layouts with bold, distinctive aesthetics. Use when: building UI components, styling pages, fixing visual bugs, or implementing responsive layouts. Uses Chrome DevTools for live visual verification. Focuses on CSS/styling - not business logic.',
+    };
+  },
+  prompt: (self) => {
+    // Check both MCP enabled AND agent has permission to use it
+    const hasChromeDevtools = self.hasMcp(chromeDevtoolsMcp.id);
 
-export const AGENT_DESIGNER_CAPABILITIES: AgentCapabilities = {
-  task: 'UI/styling',
-  description: 'CSS, layouts, visual design',
-};
-
-const getDefaultConfig = (ctx: ElishaConfigContext): AgentConfig => ({
-  hidden: false,
-  mode: 'all',
-  model: ctx.config.model,
-  temperature: 0.7,
-  permission: setupAgentPermissions(
-    AGENT_DESIGNER_ID,
-    {
-      webfetch: 'deny',
-      websearch: 'deny',
-      codesearch: 'deny',
-      [`${MCP_CHROME_DEVTOOLS_ID}*`]: 'allow',
-    },
-    ctx,
-  ),
-  description:
-    'Implements visual designs, CSS, and UI layouts with bold, distinctive aesthetics. Use when: building UI components, styling pages, fixing visual bugs, or implementing responsive layouts. Uses Chrome DevTools for live visual verification. Focuses on CSS/styling - not business logic.',
-});
-
-export const setupDesignerAgentConfig = (ctx: ElishaConfigContext) => {
-  ctx.config.agent ??= {};
-  ctx.config.agent[AGENT_DESIGNER_ID] = defu(
-    ctx.config.agent?.[AGENT_DESIGNER_ID] ?? {},
-    getDefaultConfig(ctx),
-  );
-};
-
-export const setupDesignerAgentPrompt = (ctx: ElishaConfigContext) => {
-  const agentConfig = ctx.config.agent?.[AGENT_DESIGNER_ID];
-  if (!agentConfig || agentConfig.disable) return;
-
-  const canDelegate = canAgentDelegate(AGENT_DESIGNER_ID, ctx);
-  // Check both MCP enabled AND agent has permission to use it
-  const hasChromeDevtools = isMcpAvailableForAgent(
-    MCP_CHROME_DEVTOOLS_ID,
-    AGENT_DESIGNER_ID,
-    ctx,
-  );
-
-  agentConfig.prompt = Prompt.template`
+    return Prompt.template`
     <role>
       You are a UI/UX implementation specialist. You write CSS, component styling, layouts, and motion code with bold, distinctive aesthetics.${Prompt.when(
         hasChromeDevtools,
@@ -74,17 +45,17 @@ export const setupDesignerAgentPrompt = (ctx: ElishaConfigContext) => {
     </examples>
 
     ${Prompt.when(
-      canDelegate,
+      self.canDelegate,
       `
     <teammates>
-      ${formatAgentsList(ctx)}
+      ${formatAgentsList()}
     </teammates>
     `,
     )}
 
     <protocols>
-      ${Protocol.contextGathering(AGENT_DESIGNER_ID, ctx)}
-      ${Protocol.escalation(AGENT_DESIGNER_ID, ctx)}
+      ${Protocol.contextGathering(self)}
+      ${Protocol.escalation(self)}
       ${Protocol.confidence}
     </protocols>
 
@@ -204,4 +175,5 @@ export const setupDesignerAgentPrompt = (ctx: ElishaConfigContext) => {
       - NEVER use generic shadows
     </constraints>
   `;
-};
+  },
+});

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import { Prompt } from '~/agent/util/prompt/index.ts';
+import { Prompt } from '~/util/prompt';
 
 describe('Prompt', () => {
   describe('when', () => {

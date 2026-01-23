@@ -1,56 +1,34 @@
-import type { AgentConfig } from '@opencode-ai/sdk/v2';
-import defu from 'defu';
-import { setupAgentPermissions } from '../permission/agent/index.ts';
-import type { ElishaConfigContext } from '../types.ts';
-import type { AgentCapabilities } from './types.ts';
-import { canAgentDelegate, formatAgentsList } from './util/index.ts';
-import { Prompt } from './util/prompt/index.ts';
-import { Protocol } from './util/prompt/protocols.ts';
+import { ConfigContext } from '~/context';
+import { Prompt } from '~/util/prompt';
+import { Protocol } from '~/util/prompt/protocols';
+import { defineAgent } from './agent';
+import { formatAgentsList } from './util';
 
-export const AGENT_REVIEWER_ID = 'Elihu (reviewer)';
-
-export const AGENT_REVIEWER_CAPABILITIES: AgentCapabilities = {
-  task: 'Code review',
-  description: 'Quality checks, security review',
-};
-
-const getDefaultConfig = (ctx: ElishaConfigContext): AgentConfig => ({
-  hidden: false,
-  mode: 'all',
-  model: ctx.config.model,
-  temperature: 0.2,
-  permission: setupAgentPermissions(
-    AGENT_REVIEWER_ID,
-    {
-      edit: {
-        '*': 'deny',
-        '.agent/reviews/*.md': 'allow',
+export const reviewerAgent = defineAgent({
+  id: 'Elihu (reviewer)',
+  capabilities: ['Code review', 'Quality checks, security review'],
+  config: () => {
+    const config = ConfigContext.use();
+    return {
+      hidden: false,
+      mode: 'all',
+      model: config.model,
+      temperature: 0.2,
+      permission: {
+        edit: {
+          '*': 'deny',
+          '.agent/reviews/*.md': 'allow',
+        },
+        webfetch: 'deny',
+        websearch: 'deny',
+        codesearch: 'deny',
       },
-      webfetch: 'deny',
-      websearch: 'deny',
-      codesearch: 'deny',
-    },
-    ctx,
-  ),
-  description:
-    "Reviews code changes for bugs, security issues, and style violations. Use when: validating implementation quality, checking for regressions, or before merging changes. READ-ONLY - identifies issues, doesn't fix them.",
-});
-
-export const setupReviewerAgentConfig = (ctx: ElishaConfigContext) => {
-  ctx.config.agent ??= {};
-  ctx.config.agent[AGENT_REVIEWER_ID] = defu(
-    ctx.config.agent?.[AGENT_REVIEWER_ID] ?? {},
-    getDefaultConfig(ctx),
-  );
-};
-
-export const setupReviewerAgentPrompt = (ctx: ElishaConfigContext) => {
-  const agentConfig = ctx.config.agent?.[AGENT_REVIEWER_ID];
-  if (!agentConfig || agentConfig.disable) return;
-
-  const canDelegate = canAgentDelegate(AGENT_REVIEWER_ID, ctx);
-
-  agentConfig.prompt = Prompt.template`
+      description:
+        "Reviews code changes for bugs, security issues, and style violations. Use when: validating implementation quality, checking for regressions, or before merging changes. READ-ONLY - identifies issues, doesn't fix them.",
+    };
+  },
+  prompt: (self) => {
+    return Prompt.template`
     <role>
       You are Elihu, the code reviewer.
       
@@ -75,17 +53,17 @@ export const setupReviewerAgentPrompt = (ctx: ElishaConfigContext) => {
     </examples>
 
     ${Prompt.when(
-      canDelegate,
+      self.canDelegate,
       `
     <teammates>
-      ${formatAgentsList(ctx)}
+      ${formatAgentsList()}
     </teammates>
     `,
     )}
 
     <protocols>
-      ${Protocol.contextGathering(AGENT_REVIEWER_ID, ctx)}
-      ${Protocol.escalation(AGENT_REVIEWER_ID, ctx)}
+      ${Protocol.contextGathering(self)}
+      ${Protocol.escalation(self)}
       ${Protocol.confidence}
       ${Protocol.reflection}
     </protocols>
@@ -248,4 +226,5 @@ export const setupReviewerAgentPrompt = (ctx: ElishaConfigContext) => {
       - MUST save review to \`.agent/reviews/\` for tracking
     </constraints>
   `;
-};
+  },
+});

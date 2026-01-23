@@ -1,52 +1,30 @@
-import type { AgentConfig } from '@opencode-ai/sdk/v2';
-import defu from 'defu';
-import { setupAgentPermissions } from '../permission/agent/index.ts';
-import type { ElishaConfigContext } from '../types.ts';
-import type { AgentCapabilities } from './types.ts';
-import { canAgentDelegate, formatAgentsList } from './util/index.ts';
-import { Prompt } from './util/prompt/index.ts';
-import { Protocol } from './util/prompt/protocols.ts';
+import { ConfigContext } from '~/context';
+import { Prompt } from '~/util/prompt';
+import { Protocol } from '~/util/prompt/protocols';
+import { defineAgent } from './agent';
+import { formatAgentsList } from './util';
 
-export const AGENT_EXECUTOR_ID = 'Baruch (executor)';
-
-export const AGENT_EXECUTOR_CAPABILITIES: AgentCapabilities = {
-  task: 'Code implementation',
-  description: 'Writing/modifying code',
-};
-
-const getDefaultConfig = (ctx: ElishaConfigContext): AgentConfig => ({
-  hidden: false,
-  mode: 'all',
-  model: ctx.config.model,
-  temperature: 0.5,
-  permission: setupAgentPermissions(
-    AGENT_EXECUTOR_ID,
-    {
-      webfetch: 'deny',
-      websearch: 'deny',
-      codesearch: 'deny',
-    },
-    ctx,
-  ),
-  description:
-    'Implements code changes following plans or direct instructions. Use when: writing new code, modifying existing code, fixing bugs, or executing plan tasks. Writes production-quality code matching codebase patterns.',
-});
-
-export const setupExecutorAgentConfig = (ctx: ElishaConfigContext) => {
-  ctx.config.agent ??= {};
-  ctx.config.agent[AGENT_EXECUTOR_ID] = defu(
-    ctx.config.agent?.[AGENT_EXECUTOR_ID] ?? {},
-    getDefaultConfig(ctx),
-  );
-};
-
-export const setupExecutorAgentPrompt = (ctx: ElishaConfigContext) => {
-  const agentConfig = ctx.config.agent?.[AGENT_EXECUTOR_ID];
-  if (!agentConfig || agentConfig.disable) return;
-
-  const canDelegate = canAgentDelegate(AGENT_EXECUTOR_ID, ctx);
-
-  agentConfig.prompt = Prompt.template`
+export const executorAgent = defineAgent({
+  id: 'Baruch (executor)',
+  capabilities: ['Writing/modifying code'],
+  config: () => {
+    const config = ConfigContext.use();
+    return {
+      hidden: false,
+      mode: 'all',
+      model: config.model,
+      temperature: 0.5,
+      permission: {
+        webfetch: 'deny',
+        websearch: 'deny',
+        codesearch: 'deny',
+      },
+      description:
+        'Implements code changes following plans or direct instructions. Use when: writing new code, modifying existing code, fixing bugs, or executing plan tasks. Writes production-quality code matching codebase patterns.',
+    };
+  },
+  prompt: (self) => {
+    return Prompt.template`
     <role>
       You are Baruch, the implementation executor.
       
@@ -71,17 +49,17 @@ export const setupExecutorAgentPrompt = (ctx: ElishaConfigContext) => {
     </examples>
 
     ${Prompt.when(
-      canDelegate,
+      self.canDelegate,
       `
     <teammates>
-      ${formatAgentsList(ctx)}
+      ${formatAgentsList()}
     </teammates>
     `,
     )}
 
     <protocols>
-      ${Protocol.contextGathering(AGENT_EXECUTOR_ID, ctx)}
-      ${Protocol.escalation(AGENT_EXECUTOR_ID, ctx)}
+      ${Protocol.contextGathering(self)}
+      ${Protocol.escalation(self)}
       ${Protocol.verification}
       ${Protocol.checkpoint}
       ${Protocol.reflection}
@@ -236,4 +214,5 @@ export const setupExecutorAgentPrompt = (ctx: ElishaConfigContext) => {
       - Technical limitation (API doesn't support needed operation)
     </failure_handling>
   `;
-};
+  },
+});

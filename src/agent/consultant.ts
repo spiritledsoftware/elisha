@@ -1,68 +1,46 @@
-import type { AgentConfig } from '@opencode-ai/sdk/v2';
-import defu from 'defu';
-import { setupAgentPermissions } from '~/permission/agent/index.ts';
-import type { ElishaConfigContext } from '~/types.ts';
-import type { AgentCapabilities } from './types.ts';
-import { canAgentDelegate, formatAgentsList } from './util/index.ts';
-import { Prompt } from './util/prompt/index.ts';
-import { Protocol } from './util/prompt/protocols.ts';
+import { ConfigContext } from '~/context';
+import { Prompt } from '~/util/prompt';
+import { Protocol } from '~/util/prompt/protocols';
+import { defineAgent } from './agent';
+import { formatAgentsList } from './util';
 
-export const AGENT_CONSULTANT_ID = 'Ahithopel (consultant)';
-
-export const AGENT_CONSULTANT_CAPABILITIES: AgentCapabilities = {
-  task: 'Debugging help',
-  description: 'When stuck, need expert guidance',
-};
-
-const getDefaultConfig = (ctx: ElishaConfigContext): AgentConfig => ({
-  hidden: false,
-  mode: 'subagent',
-  model: ctx.config.model,
-  temperature: 0.5,
-  permission: setupAgentPermissions(
-    AGENT_CONSULTANT_ID,
-    {
-      edit: 'deny',
-      webfetch: 'deny',
-      websearch: 'deny',
-      codesearch: 'deny',
-    },
-    ctx,
-  ),
-  description:
-    'Expert consultant for debugging blockers and solving complex problems. Use when: stuck on a problem, need expert guidance, debugging failures, or evaluating approaches. ADVISORY-ONLY - provides recommendations, not code.',
-});
-
-export const setupConsultantAgentConfig = (ctx: ElishaConfigContext) => {
-  ctx.config.agent ??= {};
-  ctx.config.agent[AGENT_CONSULTANT_ID] = defu(
-    ctx.config.agent?.[AGENT_CONSULTANT_ID] ?? {},
-    getDefaultConfig(ctx),
-  );
-};
-
-export const setupConsultantAgentPrompt = (ctx: ElishaConfigContext) => {
-  const agentConfig = ctx.config.agent?.[AGENT_CONSULTANT_ID];
-  if (!agentConfig || agentConfig.disable) return;
-
-  const canDelegate = canAgentDelegate(AGENT_CONSULTANT_ID, ctx);
-
-  agentConfig.prompt = Prompt.template`
+export const consultantAgent = defineAgent({
+  id: 'Ahithopel (consultant)',
+  capabilities: ['Debugging help', 'Expert guidance when stuck'],
+  config: () => {
+    const config = ConfigContext.use();
+    return {
+      hidden: false,
+      mode: 'subagent',
+      model: config.model,
+      temperature: 0.5,
+      permission: {
+        edit: 'deny',
+        webfetch: 'deny',
+        websearch: 'deny',
+        codesearch: 'deny',
+      },
+      description:
+        'Expert consultant for debugging blockers and solving complex problems. Use when: stuck on a problem, need expert guidance, debugging failures, or evaluating approaches. ADVISORY-ONLY - provides recommendations, not code.',
+    };
+  },
+  prompt: (self) => {
+    return Prompt.template`
     <role>
       You are an expert consultant that helps when agents are stuck on problems. You diagnose issues, identify root causes, and provide actionable guidance to get work unblocked.
     </role>
 
     ${Prompt.when(
-      canDelegate,
+      self.canDelegate,
       `
     <teammates>
-      ${formatAgentsList(ctx)}
+      ${formatAgentsList()}
     </teammates>
     `,
     )}
     
     <protocols>
-      ${Protocol.contextGathering(AGENT_CONSULTANT_ID, ctx)}
+      ${Protocol.contextGathering(self)}
     </protocols>
 
     <capabilities>
@@ -124,4 +102,5 @@ export const setupConsultantAgentPrompt = (ctx: ElishaConfigContext) => {
       - Do NOT suggest approaches already tried
     </constraints>
   `;
-};
+  },
+});

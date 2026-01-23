@@ -1,7 +1,8 @@
-import type { PluginInput } from '@opencode-ai/plugin';
-import { Prompt } from '~/agent/util/prompt/index.ts';
-import { log } from '~/util/index.ts';
-import type { Hooks } from '../../types.ts';
+import { PluginContext } from '~/context';
+import { log } from '~/util';
+import { Prompt } from '~/util/prompt';
+import { getSessionAgentAndModel } from '~/util/session';
+import type { Hooks } from '../../types';
 
 const MEMORY_PROMPT = `## Memory Operations
 
@@ -35,21 +36,15 @@ const MEMORY_PROMPT = `## Memory Operations
  * Validates and sanitizes memory content to prevent poisoning attacks.
  * Wraps content in <untrusted-memory> tags with warnings.
  */
-export const validateMemoryContent = (
-  content: string,
-  ctx: PluginInput,
-): string => {
+export const validateMemoryContent = (content: string): string => {
   let sanitized = content;
 
   // Detect HTML comments that might contain hidden instructions
   if (/<!--[\s\S]*?-->/.test(sanitized)) {
-    log(
-      {
-        level: 'warn',
-        message: '[Elisha] Suspicious HTML comment detected in memory content',
-      },
-      ctx,
-    );
+    log({
+      level: 'warn',
+      message: '[Elisha] Suspicious HTML comment detected in memory content',
+    });
     sanitized = sanitized.replace(/<!--[\s\S]*?-->/g, '');
   }
 
@@ -64,13 +59,10 @@ export const validateMemoryContent = (
 
   for (const pattern of suspiciousPatterns) {
     if (pattern.test(sanitized)) {
-      log(
-        {
-          level: 'warn',
-          message: `[Elisha] Suspicious imperative pattern detected: ${pattern}`,
-        },
-        ctx,
-      );
+      log({
+        level: 'warn',
+        message: `[Elisha] Suspicious imperative pattern detected: ${pattern}`,
+      });
     }
   }
 
@@ -85,12 +77,16 @@ export const validateMemoryContent = (
   `;
 };
 
-export const setupMemoryHooks = (ctx: PluginInput): Hooks => {
+export const setupMemoryHooks = (): Hooks => {
+  const { client, directory } = PluginContext.use();
+
   const injectedSessions = new Set<string>();
 
   return {
     'chat.message': async (_input, output) => {
-      const { data: config } = await ctx.client.config.get();
+      const { data: config } = await client.config.get({
+        query: { directory },
+      });
       if (!(config?.mcp?.openmemory?.enabled ?? true)) {
         return;
       }
@@ -98,8 +94,9 @@ export const setupMemoryHooks = (ctx: PluginInput): Hooks => {
       const sessionId = output.message.sessionID;
       if (injectedSessions.has(sessionId)) return;
 
-      const existing = await ctx.client.session.messages({
+      const existing = await client.session.messages({
         path: { id: sessionId },
+        query: { directory, limit: 50 },
       });
       if (!existing.data) return;
 
@@ -116,7 +113,7 @@ export const setupMemoryHooks = (ctx: PluginInput): Hooks => {
       }
 
       injectedSessions.add(sessionId);
-      await ctx.client.session.prompt({
+      await client.session.prompt({
         path: { id: sessionId },
         body: {
           noReply: true,
@@ -127,7 +124,7 @@ export const setupMemoryHooks = (ctx: PluginInput): Hooks => {
               type: 'text',
               text: Prompt.template`
                 <memory-context>
-                  ${validateMemoryContent(MEMORY_PROMPT, ctx)}
+                  ${validateMemoryContent(MEMORY_PROMPT)}
                 </memory-context>
               `,
               synthetic: true,
@@ -138,29 +135,17 @@ export const setupMemoryHooks = (ctx: PluginInput): Hooks => {
     },
     'tool.execute.after': async (input, output) => {
       if (input.tool === 'openmemory_openmemory_query') {
-        output.output = validateMemoryContent(output.output, ctx);
+        output.output = validateMemoryContent(output.output);
       }
     },
     event: async ({ event }) => {
       if (event.type === 'session.compacted') {
         const sessionId = event.properties.sessionID;
 
-        const { model, agent } = await ctx.client.session
-          .messages({
-            path: { id: sessionId },
-            query: { limit: 50 },
-          })
-          .then(({ data }) => {
-            for (const msg of data || []) {
-              if ('model' in msg.info && msg.info.model) {
-                return { model: msg.info.model, agent: msg.info.agent };
-              }
-            }
-            return {};
-          });
+        const { model, agent } = await getSessionAgentAndModel(sessionId);
 
         injectedSessions.add(sessionId);
-        await ctx.client.session.prompt({
+        await client.session.prompt({
           path: { id: sessionId },
           body: {
             noReply: true,
@@ -171,13 +156,14 @@ export const setupMemoryHooks = (ctx: PluginInput): Hooks => {
                 type: 'text',
                 text: Prompt.template`
                   <memory-context>
-                    ${validateMemoryContent(MEMORY_PROMPT, ctx)}
+                    ${validateMemoryContent(MEMORY_PROMPT)}
                   </memory-context>
                 `,
                 synthetic: true,
               },
             ],
           },
+          query: { directory },
         });
       }
     },

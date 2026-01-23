@@ -1,63 +1,37 @@
-import type { AgentConfig } from '@opencode-ai/sdk/v2';
-import defu from 'defu';
-import { setupAgentPermissions } from '../permission/agent/index.ts';
-import type { ElishaConfigContext } from '../types.ts';
-import { AGENT_EXPLORER_ID } from './explorer.ts';
-import type { AgentCapabilities } from './types.ts';
-import {
-  canAgentDelegate,
-  formatAgentsList,
-  formatTaskAssignmentGuide,
-  isAgentEnabled,
-} from './util/index.ts';
-import { Prompt } from './util/prompt/index.ts';
-import { Protocol } from './util/prompt/protocols.ts';
+import { ConfigContext } from '~/context';
+import { Prompt } from '~/util/prompt';
+import { Protocol } from '~/util/prompt/protocols';
+import { defineAgent } from './agent';
+import { explorerAgent } from './explorer';
+import { formatAgentsList } from './util';
 
-export const AGENT_PLANNER_ID = 'Ezra (planner)';
-
-export const AGENT_PLANNER_CAPABILITIES: AgentCapabilities = {
-  task: 'Implementation plan',
-  description: 'Breaking down features into tasks',
-};
-
-const getDefaultConfig = (ctx: ElishaConfigContext): AgentConfig => ({
-  hidden: false,
-  mode: 'all',
-  model: ctx.config.model,
-  temperature: 0.2,
-  permission: setupAgentPermissions(
-    AGENT_PLANNER_ID,
-    {
-      edit: {
-        '*': 'deny',
-        '.agent/plans/*.md': 'allow',
+export const plannerAgent = defineAgent({
+  id: 'Ezra (planner)',
+  capabilities: ['Implementation plan', 'Breaking down features into tasks'],
+  config: () => {
+    const config = ConfigContext.use();
+    return {
+      hidden: false,
+      mode: 'all',
+      model: config.model,
+      temperature: 0.2,
+      permission: {
+        edit: {
+          '*': 'deny',
+          '.agent/plans/*.md': 'allow',
+        },
+        webfetch: 'deny',
+        websearch: 'deny',
+        codesearch: 'deny',
       },
-      webfetch: 'deny',
-      websearch: 'deny',
-      codesearch: 'deny',
-    },
-    ctx,
-  ),
-  description:
-    'Creates structured implementation plans from requirements or specs. Use when: starting a new feature, breaking down complex work, or need ordered task lists with acceptance criteria. Outputs PLAN.md files.',
-});
+      description:
+        'Creates structured implementation plans from requirements or specs. Use when: starting a new feature, breaking down complex work, or need ordered task lists with acceptance criteria. Outputs PLAN.md files.',
+    };
+  },
+  prompt: (self) => {
+    const hasExplorer = self.canDelegate && explorerAgent.isEnabled;
 
-export const setupPlannerAgentConfig = (ctx: ElishaConfigContext) => {
-  ctx.config.agent ??= {};
-  ctx.config.agent[AGENT_PLANNER_ID] = defu(
-    ctx.config.agent?.[AGENT_PLANNER_ID] ?? {},
-    getDefaultConfig(ctx),
-  );
-};
-
-export const setupPlannerAgentPrompt = (ctx: ElishaConfigContext) => {
-  const agentConfig = ctx.config.agent?.[AGENT_PLANNER_ID];
-  if (!agentConfig || agentConfig.disable) return;
-
-  const canDelegate = canAgentDelegate(AGENT_PLANNER_ID, ctx);
-  const hasExplorer = isAgentEnabled(AGENT_EXPLORER_ID, ctx);
-
-  agentConfig.prompt = Prompt.template`
+    return Prompt.template`
     <role>
       You are Ezra, the implementation planner.
       
@@ -78,17 +52,17 @@ export const setupPlannerAgentPrompt = (ctx: ElishaConfigContext) => {
     </examples>
 
     ${Prompt.when(
-      canDelegate,
+      self.canDelegate,
       `
     <teammates>
-      ${formatAgentsList(ctx)}
+      ${formatAgentsList()}
     </teammates>
     `,
     )}
 
     <protocols>
-      ${Protocol.contextGathering(AGENT_PLANNER_ID, ctx)}
-      ${Protocol.escalation(AGENT_PLANNER_ID, ctx)}
+      ${Protocol.contextGathering(self)}
+      ${Protocol.escalation(self)}
       ${Protocol.confidence}
       ${Protocol.verification}
       ${Protocol.checkpoint}
@@ -255,15 +229,6 @@ export const setupPlannerAgentPrompt = (ctx: ElishaConfigContext) => {
       \`\`\`
     </plan_format>
 
-${Prompt.when(
-  canDelegate,
-  `
-    <task_assignment_guide>
-      ${formatTaskAssignmentGuide(ctx)}
-    </task_assignment_guide>
-`,
-)}
-
     <constraints>
       - Every task MUST have a file path
       - Every task MUST have "Done when" criteria that are testable
@@ -280,4 +245,5 @@ ${Prompt.when(
       )}
     </constraints>
   `;
-};
+  },
+});

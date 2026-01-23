@@ -6,7 +6,6 @@
 
 import type { PluginInput } from '@opencode-ai/plugin';
 import type { Config, OpencodeClient } from '@opencode-ai/sdk/v2';
-import type { ElishaConfigContext } from '~/types.ts';
 
 /**
  * Creates a mock OpencodeClient for testing.
@@ -100,10 +99,9 @@ export const createMockPluginInput = (
  * Creates a mock ElishaConfigContext for testing.
  * Combines PluginInput with an empty Config object.
  */
-export const createMockContext = (
+export const createMockConfig = (
   overrides: { input?: Partial<PluginInput>; config?: Partial<Config> } = {},
-): ElishaConfigContext => {
-  const input = createMockPluginInput(overrides.input);
+): Config => {
   const config: Config = {
     model: 'anthropic/claude-sonnet-4-20250514',
     agent: {},
@@ -111,21 +109,18 @@ export const createMockContext = (
     ...overrides.config,
   };
 
-  return {
-    ...input,
-    config,
-  };
+  return config;
 };
 
 /**
  * Creates a mock context with a specific agent configured.
  */
-export const createMockContextWithAgent = (
+export const createMockConfigWithAgent = (
   agentId: string,
   agentConfig: NonNullable<Config['agent']>[string] = {},
-  contextOverrides: Parameters<typeof createMockContext>[0] = {},
-): ElishaConfigContext => {
-  return createMockContext({
+  contextOverrides: Parameters<typeof createMockConfig>[0] = {},
+): Config => {
+  return createMockConfig({
     ...contextOverrides,
     config: {
       ...contextOverrides.config,
@@ -140,11 +135,11 @@ export const createMockContextWithAgent = (
 /**
  * Creates a mock context with specific MCP servers configured.
  */
-export const createMockContextWithMcp = (
+export const createMockConfigWithMcp = (
   mcpConfig: Config['mcp'] = {},
-  contextOverrides: Parameters<typeof createMockContext>[0] = {},
-): ElishaConfigContext => {
-  return createMockContext({
+  contextOverrides: Parameters<typeof createMockConfig>[0] = {},
+): Config => {
+  return createMockConfig({
     ...contextOverrides,
     config: {
       ...contextOverrides.config,

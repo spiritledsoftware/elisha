@@ -1,73 +1,54 @@
-import type { AgentConfig } from '@opencode-ai/sdk/v2';
-import defu from 'defu';
-import { MCP_CHROME_DEVTOOLS_ID } from '~/mcp/chrome-devtools.ts';
-import { TOOL_TASK_ID } from '~/task/tool.ts';
-import { setupAgentPermissions } from '../permission/agent/index.ts';
-import type { ElishaConfigContext } from '../types.ts';
-import type { AgentCapabilities } from './types.ts';
-import { canAgentDelegate, formatAgentsList } from './util/index.ts';
-import { Prompt } from './util/prompt/index.ts';
-import { Protocol } from './util/prompt/protocols.ts';
+import { ConfigContext } from '~/context';
+import { chromeDevtoolsMcp } from '~/mcp/chrome-devtools';
+import { taskToolSet } from '~/task/tool';
+import { Prompt } from '~/util/prompt';
+import { Protocol } from '~/util/prompt/protocols';
+import { defineAgent } from './agent';
+import { formatAgentsList } from './util';
 
-export const AGENT_RESEARCHER_ID = 'Berean (researcher)';
-
-export const AGENT_RESEARCHER_CAPABILITIES: AgentCapabilities = {
-  task: 'External research',
-  description: 'API docs, library usage, best practices',
-};
-
-const getDefaultConfig = (ctx: ElishaConfigContext): AgentConfig => ({
-  hidden: false,
-  mode: 'subagent',
-  model: ctx.config.small_model,
-  temperature: 0.5,
-  permission: setupAgentPermissions(
-    AGENT_RESEARCHER_ID,
-    {
-      edit: 'deny',
-      webfetch: 'allow',
-      websearch: 'allow',
-      codesearch: 'allow',
-      [`${MCP_CHROME_DEVTOOLS_ID}*`]: 'allow',
-      [`${TOOL_TASK_ID}*`]: 'deny', // Leaf node
-    },
-    ctx,
-  ),
-  description:
-    'Researches external sources for documentation, examples, and best practices. Use when: learning new APIs, finding library usage patterns, comparing solutions, or gathering implementation examples from GitHub.',
-});
-
-export const setupResearcherAgentConfig = (ctx: ElishaConfigContext) => {
-  ctx.config.agent ??= {};
-  ctx.config.agent[AGENT_RESEARCHER_ID] = defu(
-    ctx.config.agent?.[AGENT_RESEARCHER_ID] ?? {},
-    getDefaultConfig(ctx),
-  );
-};
-
-export const setupResearcherAgentPrompt = (ctx: ElishaConfigContext) => {
-  const agentConfig = ctx.config.agent?.[AGENT_RESEARCHER_ID];
-  if (!agentConfig || agentConfig.disable) return;
-
-  const canDelegate = canAgentDelegate(AGENT_RESEARCHER_ID, ctx);
-
-  agentConfig.prompt = Prompt.template`
+export const researcherAgent = defineAgent({
+  id: 'Berean (researcher)',
+  capabilities: [
+    'External research',
+    'API docs, library usage, best practices',
+  ],
+  config: () => {
+    const config = ConfigContext.use();
+    return {
+      hidden: false,
+      mode: 'subagent',
+      model: config.small_model,
+      temperature: 0.5,
+      permission: {
+        edit: 'deny',
+        webfetch: 'allow',
+        websearch: 'allow',
+        codesearch: 'allow',
+        [`${chromeDevtoolsMcp.id}*`]: 'allow',
+        [`${taskToolSet.id}*`]: 'deny', // Leaf node
+      },
+      description:
+        'Researches external sources for documentation, examples, and best practices. Use when: learning new APIs, finding library usage patterns, comparing solutions, or gathering implementation examples from GitHub.',
+    };
+  },
+  prompt: (self) => {
+    return Prompt.template`
     <role>
       You are an external research specialist. You find documentation, examples, and best practices from the web, returning synthesized, actionable findings.
     </role>
 
     ${Prompt.when(
-      canDelegate,
+      self.canDelegate,
       `
     <teammates>
-      ${formatAgentsList(ctx)}
+      ${formatAgentsList()}
     </teammates>
     `,
     )}
 
     <protocols>
-      ${Protocol.contextGathering(AGENT_RESEARCHER_ID, ctx)}
-      ${Protocol.escalation(AGENT_RESEARCHER_ID, ctx)}
+      ${Protocol.contextGathering(self)}
+      ${Protocol.escalation(self)}
       ${Protocol.confidence}
       ${Protocol.retryStrategy}
     </protocols>
@@ -143,4 +124,5 @@ export const setupResearcherAgentPrompt = (ctx: ElishaConfigContext) => {
       - MUST note version compatibility when relevant
     </constraints>
   `;
-};
+  },
+});

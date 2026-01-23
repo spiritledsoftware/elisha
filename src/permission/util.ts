@@ -3,8 +3,72 @@ import type {
   PermissionConfig,
   PermissionObjectConfig,
 } from '@opencode-ai/sdk/v2';
-import { MCP_CONTEXT7_ID, MCP_EXA_ID, MCP_GREP_APP_ID } from '~/mcp';
-import type { ElishaConfigContext } from '~/types';
+import defu from 'defu';
+import { ConfigContext } from '~/context';
+import { chromeDevtoolsMcp } from '~/mcp/chrome-devtools';
+import { context7Mcp } from '~/mcp/context7';
+import { exaMcp } from '~/mcp/exa';
+import { grepAppMcp } from '~/mcp/grep-app';
+import { openmemoryMcp } from '~/mcp/openmemory';
+import { taskToolSet } from '~/task/tool';
+
+function getDefaultPermissions(): PermissionConfig {
+  const config = ConfigContext.use();
+
+  const permissions: PermissionConfig = {
+    bash: {
+      '*': 'allow',
+      'rm * /': 'deny',
+      'rm * ~': 'deny',
+      'rm -rf *': 'deny',
+      'chmod 777 *': 'deny',
+      'chown * /': 'deny',
+      'dd if=* of=/dev/*': 'deny',
+      'mkfs*': 'deny',
+      '> /dev/*': 'deny',
+    },
+    codesearch: 'ask', // Always ask before performing code searches
+    doom_loop: 'ask',
+    edit: 'allow',
+    [`${taskToolSet.id}*`]: 'allow',
+    external_directory: 'ask', // Always ask before accessing external directories
+    glob: 'allow',
+    grep: 'allow',
+    list: 'allow',
+    lsp: 'allow',
+    question: 'allow',
+    read: {
+      '*': 'allow',
+      '*.env': 'deny',
+      '*.env.*': 'deny',
+      '*.env.example': 'allow',
+    },
+    task: 'deny', // Use elisha's task tools instead
+    todoread: 'allow',
+    todowrite: 'allow',
+    webfetch: 'ask', // Always ask before fetching from the web
+    websearch: 'ask', // Always ask before performing web searches
+  };
+
+  if (config.mcp?.[openmemoryMcp.id]?.enabled ?? true) {
+    permissions[`${openmemoryMcp.id}*`] = 'allow';
+  }
+
+  if (config.mcp?.[chromeDevtoolsMcp.id]?.enabled ?? true) {
+    permissions[`${chromeDevtoolsMcp.id}*`] = 'deny'; // Selectively allow in agents
+  }
+
+  return permissions;
+}
+
+export function getGlobalPermissions(): PermissionConfig {
+  const config = ConfigContext.use();
+
+  if (typeof config.permission !== 'object') {
+    return config.permission ?? getDefaultPermissions();
+  }
+  return defu(config.permission, getDefaultPermissions());
+}
 
 export const hasPermission = (
   value:
@@ -31,36 +95,38 @@ export const hasPermission = (
 };
 
 export const cleanupPermissions = (
-  config: PermissionConfig,
-  ctx: ElishaConfigContext,
+  permissions: PermissionConfig,
 ): PermissionConfig => {
-  if (typeof config !== 'object') {
-    return config;
+  const config = ConfigContext.use();
+
+  if (typeof permissions !== 'object') {
+    return permissions;
   }
 
-  const codesearchPermission = config.codesearch;
+  const codesearchPermission = permissions.codesearch;
   if (codesearchPermission) {
-    if (ctx.config.mcp?.[MCP_CONTEXT7_ID]?.enabled ?? true) {
-      const context7Permission = config[`${MCP_CONTEXT7_ID}*`];
-      config[`${MCP_CONTEXT7_ID}*`] =
+    if (config.mcp?.[context7Mcp.id]?.enabled ?? true) {
+      const context7Permission = permissions[`${context7Mcp.id}*`];
+      permissions[`${context7Mcp.id}*`] =
         context7Permission ?? codesearchPermission;
     }
 
-    if (ctx.config.mcp?.[MCP_GREP_APP_ID]?.enabled ?? true) {
-      const grepAppPermission = config[`${MCP_GREP_APP_ID}*`];
-      config.codesearch = 'deny'; // Use grep instead
-      config[`${MCP_GREP_APP_ID}*`] = grepAppPermission ?? codesearchPermission;
+    if (config.mcp?.[grepAppMcp.id]?.enabled ?? true) {
+      const grepAppPermission = permissions[`${grepAppMcp.id}*`];
+      permissions.codesearch = 'deny'; // Use grep instead
+      permissions[`${grepAppMcp.id}*`] =
+        grepAppPermission ?? codesearchPermission;
     }
   }
 
-  const websearchPermission = config.websearch;
+  const websearchPermission = permissions.websearch;
   if (websearchPermission) {
-    if (ctx.config.mcp?.[MCP_EXA_ID]?.enabled ?? true) {
-      const exaPermission = config[`${MCP_EXA_ID}*`];
-      config.websearch = 'deny'; // Use exa instead
-      config[`${MCP_EXA_ID}*`] = exaPermission ?? websearchPermission;
+    if (config.mcp?.[exaMcp.id]?.enabled ?? true) {
+      const exaPermission = permissions[`${exaMcp.id}*`];
+      permissions.websearch = 'deny'; // Use exa instead
+      permissions[`${exaMcp.id}*`] = exaPermission ?? websearchPermission;
     }
   }
 
-  return config;
+  return permissions;
 };

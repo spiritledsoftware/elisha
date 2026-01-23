@@ -1,71 +1,49 @@
-import type { AgentConfig } from '@opencode-ai/sdk/v2';
-import defu from 'defu';
-import { TOOL_TASK_ID } from '~/task/tool.ts';
-import { setupAgentPermissions } from '../permission/agent/index.ts';
-import type { ElishaConfigContext } from '../types.ts';
-import type { AgentCapabilities } from './types.ts';
-import { canAgentDelegate, formatAgentsList } from './util/index.ts';
-import { Prompt } from './util/prompt/index.ts';
-import { Protocol } from './util/prompt/protocols.ts';
+import { ConfigContext } from '~/context';
+import { taskToolSet } from '~/task/tool';
+import { Prompt } from '~/util/prompt';
+import { Protocol } from '~/util/prompt/protocols';
+import { defineAgent } from './agent';
+import { formatAgentsList } from './util';
 
-export const AGENT_EXPLORER_ID = 'Caleb (explorer)';
-
-export const AGENT_EXPLORER_CAPABILITIES: AgentCapabilities = {
-  task: 'Find code/files',
-  description: 'Locating code, understanding structure',
-};
-
-const getDefaultConfig = (ctx: ElishaConfigContext): AgentConfig => ({
-  hidden: false,
-  mode: 'subagent',
-  model: ctx.config.small_model,
-  temperature: 0.4,
-  permission: setupAgentPermissions(
-    AGENT_EXPLORER_ID,
-    {
-      edit: 'deny',
-      webfetch: 'deny',
-      websearch: 'deny',
-      codesearch: 'deny',
-      [`${TOOL_TASK_ID}*`]: 'deny', // Leaf node
-    },
-    ctx,
-  ),
-  description:
-    "Searches and navigates the codebase to find files, patterns, and structure. Use when: locating code, understanding project layout, finding usage examples, or mapping dependencies. READ-ONLY - finds and reports, doesn't modify.",
-});
-
-export const setupExplorerAgentConfig = (ctx: ElishaConfigContext) => {
-  ctx.config.agent ??= {};
-  ctx.config.agent[AGENT_EXPLORER_ID] = defu(
-    ctx.config.agent?.[AGENT_EXPLORER_ID] ?? {},
-    getDefaultConfig(ctx),
-  );
-};
-
-export const setupExplorerAgentPrompt = (ctx: ElishaConfigContext) => {
-  const agentConfig = ctx.config.agent?.[AGENT_EXPLORER_ID];
-  if (!agentConfig || agentConfig.disable) return;
-
-  const canDelegate = canAgentDelegate(AGENT_EXPLORER_ID, ctx);
-
-  agentConfig.prompt = Prompt.template`
+export const explorerAgent = defineAgent({
+  id: 'Caleb (explorer)',
+  capabilities: ['Find code/files', 'Locating code, understanding structure'],
+  config: () => {
+    const config = ConfigContext.use();
+    return {
+      hidden: false,
+      mode: 'subagent',
+      model: config.small_model,
+      temperature: 0.4,
+      permission: {
+        edit: 'deny',
+        webfetch: 'deny',
+        websearch: 'deny',
+        codesearch: 'deny',
+        [`${taskToolSet.id}*`]: 'deny', // Leaf node
+      },
+      description:
+        "Searches and navigates the codebase to find files, patterns, and structure. Use when: locating code, understanding project layout, finding usage examples, or mapping dependencies. READ-ONLY - finds and reports, doesn't modify.",
+    };
+  },
+  prompt: (self) => {
+    return Prompt.template`
     <role>
       You are a codebase search specialist. You find files and code patterns, returning concise, actionable results.
     </role>
 
     ${Prompt.when(
-      canDelegate,
+      self.canDelegate,
       `
     <teammates>
-      ${formatAgentsList(ctx)}
+      ${formatAgentsList()}
     </teammates>
     `,
     )}
 
     <protocols>
-      ${Protocol.contextGathering(AGENT_EXPLORER_ID, ctx)}
-      ${Protocol.escalation(AGENT_EXPLORER_ID, ctx)}
+      ${Protocol.contextGathering(self)}
+      ${Protocol.escalation(self)}
       ${Protocol.confidence}
     </protocols>
 
@@ -122,4 +100,5 @@ export const setupExplorerAgentPrompt = (ctx: ElishaConfigContext) => {
       - MUST search thoroughly before reporting "not found"
     </constraints>
   `;
-};
+  },
+});

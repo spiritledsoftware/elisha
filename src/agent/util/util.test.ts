@@ -1,18 +1,16 @@
 import { describe, expect, it } from 'bun:test';
 import {
-  canAgentDelegate,
   formatAgentsList,
   getEnabledAgents,
   getSubAgents,
   hasSubAgents,
-  isAgentEnabled,
-  isMcpAvailableForAgent,
-} from '~/agent/util/index.ts';
-import { createMockContext } from '../../test-setup.ts';
+} from '~/agent/util';
+import { ConfigContext } from '~/context';
+import { createMockConfig } from '../../test-setup';
 
 describe('getEnabledAgents', () => {
   it('returns all agents when none disabled', () => {
-    const ctx = createMockContext({
+    const ctx = createMockConfig({
       config: {
         agent: {
           'Agent A': { mode: 'subagent', description: 'Agent A desc' },
@@ -21,14 +19,15 @@ describe('getEnabledAgents', () => {
       },
     });
 
-    const result = getEnabledAgents(ctx);
-
-    expect(result).toHaveLength(2);
-    expect(result.map((a) => a.name)).toEqual(['Agent A', 'Agent B']);
+    ConfigContext.provide(ctx, () => {
+      const result = getEnabledAgents();
+      expect(result).toHaveLength(2);
+      expect(result.map((a) => a.id)).toEqual(['Agent A', 'Agent B']);
+    });
   });
 
   it('filters out agents with disable: true', () => {
-    const ctx = createMockContext({
+    const ctx = createMockConfig({
       config: {
         agent: {
           'Agent A': { mode: 'subagent', description: 'Agent A desc' },
@@ -42,40 +41,43 @@ describe('getEnabledAgents', () => {
       },
     });
 
-    const result = getEnabledAgents(ctx);
-
-    expect(result).toHaveLength(2);
-    expect(result.map((a) => a.name)).toEqual(['Agent A', 'Agent C']);
+    ConfigContext.provide(ctx, () => {
+      const result = getEnabledAgents();
+      expect(result).toHaveLength(2);
+      expect(result.map((a) => a.id)).toEqual(['Agent A', 'Agent C']);
+    });
   });
 
   it('returns empty array when no agents configured', () => {
-    const ctx = createMockContext({
+    const ctx = createMockConfig({
       config: {
         agent: {},
       },
     });
 
-    const result = getEnabledAgents(ctx);
-
-    expect(result).toHaveLength(0);
+    ConfigContext.provide(ctx, () => {
+      const result = getEnabledAgents();
+      expect(result).toHaveLength(0);
+    });
   });
 
   it('returns empty array when agent config is undefined', () => {
-    const ctx = createMockContext({
+    const ctx = createMockConfig({
       config: {
         agent: undefined,
       },
     });
 
-    const result = getEnabledAgents(ctx);
-
-    expect(result).toHaveLength(0);
+    ConfigContext.provide(ctx, () => {
+      const result = getEnabledAgents();
+      expect(result).toHaveLength(0);
+    });
   });
 });
 
 describe('getSubAgents', () => {
   it('filters out primary mode agents', () => {
-    const ctx = createMockContext({
+    const ctx = createMockConfig({
       config: {
         agent: {
           'Primary Agent': {
@@ -88,14 +90,15 @@ describe('getSubAgents', () => {
       },
     });
 
-    const result = getSubAgents(ctx);
-
-    expect(result).toHaveLength(2);
-    expect(result.map((a) => a.name)).toEqual(['Sub Agent', 'All Agent']);
+    ConfigContext.provide(ctx, () => {
+      const result = getSubAgents();
+      expect(result).toHaveLength(2);
+      expect(result.map((a) => a.id)).toEqual(['Sub Agent', 'All Agent']);
+    });
   });
 
   it('filters out agents without descriptions', () => {
-    const ctx = createMockContext({
+    const ctx = createMockConfig({
       config: {
         agent: {
           'Agent A': { mode: 'subagent', description: 'Has description' },
@@ -105,14 +108,15 @@ describe('getSubAgents', () => {
       },
     });
 
-    const result = getSubAgents(ctx);
-
-    expect(result).toHaveLength(1);
-    expect(result[0]?.name).toBe('Agent A');
+    ConfigContext.provide(ctx, () => {
+      const result = getSubAgents();
+      expect(result).toHaveLength(1);
+      expect(result[0]?.id).toBe('Agent A');
+    });
   });
 
   it('returns agents suitable for delegation', () => {
-    const ctx = createMockContext({
+    const ctx = createMockConfig({
       config: {
         agent: {
           Orchestrator: { mode: 'primary', description: 'Main orchestrator' },
@@ -123,19 +127,20 @@ describe('getSubAgents', () => {
       },
     });
 
-    const result = getSubAgents(ctx);
-
-    expect(result).toHaveLength(2);
-    expect(result.map((a) => a.name)).toContain('Explorer');
-    expect(result.map((a) => a.name)).toContain('Executor');
-    expect(result.map((a) => a.name)).not.toContain('Orchestrator');
-    expect(result.map((a) => a.name)).not.toContain('Hidden');
+    ConfigContext.provide(ctx, () => {
+      const result = getSubAgents();
+      expect(result).toHaveLength(2);
+      expect(result.map((a) => a.id)).toContain('Explorer');
+      expect(result.map((a) => a.id)).toContain('Executor');
+      expect(result.map((a) => a.id)).not.toContain('Orchestrator');
+      expect(result.map((a) => a.id)).not.toContain('Hidden');
+    });
   });
 });
 
 describe('hasSubAgents', () => {
   it('returns true when delegatable agents exist', () => {
-    const ctx = createMockContext({
+    const ctx = createMockConfig({
       config: {
         agent: {
           'Sub Agent': { mode: 'subagent', description: 'Can delegate to' },
@@ -143,11 +148,13 @@ describe('hasSubAgents', () => {
       },
     });
 
-    expect(hasSubAgents(ctx)).toBe(true);
+    ConfigContext.provide(ctx, () => {
+      expect(hasSubAgents()).toBe(true);
+    });
   });
 
   it('returns false when no delegatable agents', () => {
-    const ctx = createMockContext({
+    const ctx = createMockConfig({
       config: {
         agent: {
           'Primary Only': { mode: 'primary', description: 'Main agent' },
@@ -155,11 +162,13 @@ describe('hasSubAgents', () => {
       },
     });
 
-    expect(hasSubAgents(ctx)).toBe(false);
+    ConfigContext.provide(ctx, () => {
+      expect(hasSubAgents()).toBe(false);
+    });
   });
 
   it('returns false when agents have no descriptions', () => {
-    const ctx = createMockContext({
+    const ctx = createMockConfig({
       config: {
         agent: {
           'No Desc': { mode: 'subagent' },
@@ -167,250 +176,27 @@ describe('hasSubAgents', () => {
       },
     });
 
-    expect(hasSubAgents(ctx)).toBe(false);
+    ConfigContext.provide(ctx, () => {
+      expect(hasSubAgents()).toBe(false);
+    });
   });
 
   it('returns false when no agents configured', () => {
-    const ctx = createMockContext({
+    const ctx = createMockConfig({
       config: {
         agent: {},
       },
     });
 
-    expect(hasSubAgents(ctx)).toBe(false);
-  });
-});
-
-describe('canAgentDelegate', () => {
-  it('returns false when no sub-agents available', () => {
-    const ctx = createMockContext({
-      config: {
-        agent: {
-          'Test Agent': {
-            mode: 'primary',
-            description: 'Only primary agent',
-            permission: { 'elisha_task*': 'allow' },
-          },
-        },
-      },
+    ConfigContext.provide(ctx, () => {
+      expect(hasSubAgents()).toBe(false);
     });
-
-    expect(canAgentDelegate('Test Agent', ctx)).toBe(false);
-  });
-
-  it('returns false when agent lacks task permission', () => {
-    const ctx = createMockContext({
-      config: {
-        agent: {
-          'Test Agent': {
-            mode: 'subagent',
-            description: 'Test agent',
-            permission: { 'elisha_task*': 'deny', task: 'deny' },
-          },
-          'Other Agent': {
-            mode: 'subagent',
-            description: 'Available for delegation',
-          },
-        },
-      },
-    });
-
-    expect(canAgentDelegate('Test Agent', ctx)).toBe(false);
-  });
-
-  it('returns true when both conditions met with elisha_task permission', () => {
-    const ctx = createMockContext({
-      config: {
-        agent: {
-          'Test Agent': {
-            mode: 'subagent',
-            description: 'Test agent',
-            permission: { 'elisha_task*': 'allow' },
-          },
-          'Other Agent': {
-            mode: 'subagent',
-            description: 'Available for delegation',
-          },
-        },
-      },
-    });
-
-    const result = canAgentDelegate('Test Agent', ctx);
-    expect(result).toBe(true);
-  });
-
-  it('returns true when both conditions met with task permission', () => {
-    const ctx = createMockContext({
-      config: {
-        agent: {
-          'Test Agent': {
-            mode: 'subagent',
-            description: 'Test agent',
-            permission: { task: 'allow' },
-          },
-          'Other Agent': {
-            mode: 'subagent',
-            description: 'Available for delegation',
-          },
-        },
-      },
-    });
-
-    expect(canAgentDelegate('Test Agent', ctx)).toBe(true);
-  });
-
-  it('returns true when agent has no explicit permission (defaults to allow)', () => {
-    const ctx = createMockContext({
-      config: {
-        agent: {
-          'Test Agent': {
-            mode: 'subagent',
-            description: 'Test agent',
-            permission: {},
-          },
-          'Other Agent': {
-            mode: 'subagent',
-            description: 'Available for delegation',
-          },
-        },
-      },
-    });
-
-    expect(canAgentDelegate('Test Agent', ctx)).toBe(true);
-  });
-});
-
-describe('isMcpAvailableForAgent', () => {
-  it('returns false when MCP is disabled', () => {
-    const ctx = createMockContext({
-      config: {
-        mcp: {
-          'test-mcp': { enabled: false, command: ['test'] },
-        },
-        agent: {
-          'Test Agent': {
-            mode: 'subagent',
-            permission: { 'test-mcp*': 'allow' },
-          },
-        },
-      },
-    });
-
-    expect(isMcpAvailableForAgent('test-mcp', 'Test Agent', ctx)).toBe(false);
-  });
-
-  it("returns false when agent permission is 'deny'", () => {
-    const ctx = createMockContext({
-      config: {
-        mcp: {
-          'test-mcp': { enabled: true, command: ['test'] },
-        },
-        agent: {
-          'Test Agent': {
-            mode: 'subagent',
-            permission: { 'test-mcp*': 'deny' },
-          },
-        },
-      },
-    });
-
-    expect(isMcpAvailableForAgent('test-mcp', 'Test Agent', ctx)).toBe(false);
-  });
-
-  it('returns true when MCP enabled and permission allows', () => {
-    const ctx = createMockContext({
-      config: {
-        mcp: {
-          'test-mcp': { enabled: true, command: ['test'] },
-        },
-        agent: {
-          'Test Agent': {
-            mode: 'subagent',
-            permission: { 'test-mcp*': 'allow' },
-          },
-        },
-      },
-    });
-
-    expect(isMcpAvailableForAgent('test-mcp', 'Test Agent', ctx)).toBe(true);
-  });
-
-  it('returns true when MCP has no explicit enabled flag (defaults to true)', () => {
-    const ctx = createMockContext({
-      config: {
-        mcp: {
-          'test-mcp': { type: 'local', command: ['test'] },
-        },
-        agent: {
-          'Test Agent': {
-            mode: 'subagent',
-            permission: { 'test-mcp*': 'allow' },
-          },
-        },
-      },
-    });
-
-    expect(isMcpAvailableForAgent('test-mcp', 'Test Agent', ctx)).toBe(true);
-  });
-
-  it('returns true when agent has no explicit permission (defaults to allow)', () => {
-    const ctx = createMockContext({
-      config: {
-        mcp: {
-          'test-mcp': { enabled: true, command: ['test'] },
-        },
-        agent: {
-          'Test Agent': {
-            mode: 'subagent',
-            permission: {},
-          },
-        },
-      },
-    });
-
-    expect(isMcpAvailableForAgent('test-mcp', 'Test Agent', ctx)).toBe(true);
-  });
-});
-
-describe('isAgentEnabled', () => {
-  it('returns true when agent exists and is not disabled', () => {
-    const ctx = createMockContext({
-      config: {
-        agent: {
-          'Test Agent': { mode: 'subagent' },
-        },
-      },
-    });
-
-    expect(isAgentEnabled('Test Agent', ctx)).toBe(true);
-  });
-
-  it('returns false when agent is disabled', () => {
-    const ctx = createMockContext({
-      config: {
-        agent: {
-          'Test Agent': { mode: 'subagent', disable: true },
-        },
-      },
-    });
-
-    expect(isAgentEnabled('Test Agent', ctx)).toBe(false);
-  });
-
-  it('returns false when agent does not exist', () => {
-    const ctx = createMockContext({
-      config: {
-        agent: {},
-      },
-    });
-
-    expect(isAgentEnabled('Nonexistent Agent', ctx)).toBe(false);
   });
 });
 
 describe('formatAgentsList', () => {
   it('returns empty string when no delegatable agents', () => {
-    const ctx = createMockContext({
+    const ctx = createMockConfig({
       config: {
         agent: {
           'Primary Only': { mode: 'primary', description: 'Main agent' },
@@ -418,11 +204,13 @@ describe('formatAgentsList', () => {
       },
     });
 
-    expect(formatAgentsList(ctx)).toBe('');
+    ConfigContext.provide(ctx, () => {
+      expect(formatAgentsList()).toBe('');
+    });
   });
 
   it('formats agents as markdown list with descriptions', () => {
-    const ctx = createMockContext({
+    const ctx = createMockConfig({
       config: {
         agent: {
           Explorer: { mode: 'subagent', description: 'Searches the codebase' },
@@ -431,15 +219,16 @@ describe('formatAgentsList', () => {
       },
     });
 
-    const result = formatAgentsList(ctx);
-
-    expect(result).toContain('- **Explorer**: Searches the codebase');
-    expect(result).toContain('- **Executor**: Implements code changes');
-    expect(result.split('\n')).toHaveLength(2);
+    ConfigContext.provide(ctx, () => {
+      const result = formatAgentsList();
+      expect(result).toContain('- **Explorer**: Searches the codebase');
+      expect(result).toContain('- **Executor**: Implements code changes');
+      expect(result.split('\n')).toHaveLength(2);
+    });
   });
 
   it('excludes primary mode agents from list', () => {
-    const ctx = createMockContext({
+    const ctx = createMockConfig({
       config: {
         agent: {
           Orchestrator: { mode: 'primary', description: 'Main coordinator' },
@@ -448,14 +237,15 @@ describe('formatAgentsList', () => {
       },
     });
 
-    const result = formatAgentsList(ctx);
-
-    expect(result).not.toContain('Orchestrator');
-    expect(result).toContain('- **Helper**: Helps with tasks');
+    ConfigContext.provide(ctx, () => {
+      const result = formatAgentsList();
+      expect(result).not.toContain('Orchestrator');
+      expect(result).toContain('- **Helper**: Helps with tasks');
+    });
   });
 
   it('excludes agents without descriptions', () => {
-    const ctx = createMockContext({
+    const ctx = createMockConfig({
       config: {
         agent: {
           'With Desc': { mode: 'subagent', description: 'Has description' },
@@ -464,10 +254,11 @@ describe('formatAgentsList', () => {
       },
     });
 
-    const result = formatAgentsList(ctx);
-
-    expect(result).toContain('- **With Desc**: Has description');
-    expect(result).not.toContain('No Desc');
-    expect(result.split('\n')).toHaveLength(1);
+    ConfigContext.provide(ctx, () => {
+      const result = formatAgentsList();
+      expect(result).toContain('- **With Desc**: Has description');
+      expect(result).not.toContain('No Desc');
+      expect(result.split('\n')).toHaveLength(1);
+    });
   });
 });
