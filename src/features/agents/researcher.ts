@@ -2,7 +2,7 @@ import { defineAgent } from '~/agent';
 import { formatAgentsList } from '~/agent/util';
 import { ConfigContext } from '~/context';
 import { chromeDevtoolsMcp } from '~/features/mcps/chrome-devtools';
-import { taskToolSet } from '~/features/tasks/tool';
+import { taskToolSet } from '~/features/tools/tasks';
 import { Prompt } from '~/util/prompt';
 import { Protocol } from '~/util/prompt/protocols';
 

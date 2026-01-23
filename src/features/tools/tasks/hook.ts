@@ -7,7 +7,7 @@ import {
   getSessionAgentAndModel,
   isSessionComplete,
 } from '~/util/session';
-import { ASYNC_TASK_PREFIX } from './tool';
+import { ASYNC_TASK_PREFIX } from '.';
 
 const TASK_CONTEXT_PROMPT = `## Active Tasks
 

@@ -1,7 +1,7 @@
 import type { AgentConfig } from '@opencode-ai/sdk/v2';
 import defu from 'defu';
 import { ConfigContext } from '~/context';
-import { taskToolSet } from '~/features/tasks/tool';
+import { taskToolSet } from '~/features/tools/tasks';
 import {
   cleanupPermissions,
   getGlobalPermissions,

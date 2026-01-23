@@ -10,7 +10,7 @@ import { context7Mcp } from '~/features/mcps/context7';
 import { exaMcp } from '~/features/mcps/exa';
 import { grepAppMcp } from '~/features/mcps/grep-app';
 import { openmemoryMcp } from '~/features/mcps/openmemory';
-import { taskToolSet } from '~/features/tasks/tool';
+import { taskToolSet } from '~/features/tools/tasks';
 
 function getDefaultPermissions(): PermissionConfig {
   const config = ConfigContext.use();

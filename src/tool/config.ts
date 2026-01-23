@@ -1,7 +1,5 @@
-import { taskToolSet } from '~/features/tasks/tool';
+import { elishaToolSets } from '~/features/tools';
 import type { ToolSet } from './types';
-
-const elishaToolSets = [taskToolSet];
 
 export const setupToolSet = async () => {
   let tools: ToolSet = {};

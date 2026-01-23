@@ -1,15 +1,7 @@
 import { ConfigContext } from '~/context';
-import { architectAgent } from '../features/agents/architect';
-import { brainstormerAgent } from '../features/agents/brainstormer';
-import { consultantAgent } from '../features/agents/consultant';
-import { designerAgent } from '../features/agents/designer';
-import { documenterAgent } from '../features/agents/documenter';
+import { elishaAgents } from '~/features/agents';
 import { executorAgent } from '../features/agents/executor';
-import { explorerAgent } from '../features/agents/explorer';
 import { orchestratorAgent } from '../features/agents/orchestrator';
-import { plannerAgent } from '../features/agents/planner';
-import { researcherAgent } from '../features/agents/researcher';
-import { reviewerAgent } from '../features/agents/reviewer';
 import { changeAgentModel, disableAgent } from './util';
 
 const setupDefaultAgent = () => {
@@ -28,20 +20,6 @@ const setupDefaultAgent = () => {
   }
   // Otherwise, user defines at runtime
 };
-
-const elishaAgents = [
-  architectAgent,
-  brainstormerAgent,
-  consultantAgent,
-  designerAgent,
-  documenterAgent,
-  executorAgent,
-  explorerAgent,
-  orchestratorAgent,
-  plannerAgent,
-  researcherAgent,
-  reviewerAgent,
-];
 
 export const setupAgentConfig = async () => {
   const config = ConfigContext.use();
