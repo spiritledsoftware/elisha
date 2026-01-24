@@ -1,5 +1,11 @@
 # @spiritledsoftware/elisha
 
+## 0.5.0
+
+### Minor Changes
+
+- 94ebdb1: Large refactor to reduce LOC
+
 ## 0.4.0
 
 ### Minor Changes
