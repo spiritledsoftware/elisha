@@ -1,8 +1,8 @@
 import { describe, expect, it, mock, spyOn } from 'bun:test';
 import type { Hooks } from '@opencode-ai/plugin';
 import { PluginContext } from '~/context';
+import { aggregateHooks } from '~/hook/util';
 import * as utilIndex from '~/util';
-import { aggregateHooks } from '~/util/hook';
 import { createMockPluginInput } from '../test-setup';
 
 describe('aggregateHooks', () => {

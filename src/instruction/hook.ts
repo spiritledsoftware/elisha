@@ -1,6 +1,6 @@
 import { PluginContext } from '~/context';
+import { defineHookSet } from '~/hook/hook';
 import { Prompt } from '~/util/prompt';
-import type { Hooks } from '../types';
 
 const INSTRUCTION_PROMPT = `## AGENTS.md Maintenance
 
@@ -36,79 +36,43 @@ Update AGENTS.md files when you discover knowledge that would help future AI age
 - "Future agents will make this same mistake"
 - User explicitly asks to remember something for the project`;
 
-export const setupInstructionHooks = (): Hooks => {
-  const { client } = PluginContext.use();
-  const injectedSessions = new Set<string>();
+export const instructionHooks = defineHookSet({
+  id: 'instruction-hooks',
+  capabilities: ['Injects AGENTS.md maintenance instructions into sessions'],
+  hooks: () => {
+    const { client } = PluginContext.use();
+    const injectedSessions = new Set<string>();
 
-  return {
-    'chat.message': async (_input, output) => {
-      const sessionId = output.message.sessionID;
-      if (injectedSessions.has(sessionId)) return;
+    return {
+      'chat.message': async (_input, output) => {
+        const sessionId = output.message.sessionID;
+        if (injectedSessions.has(sessionId)) return;
 
-      const existing = await client.session.messages({
-        path: { id: sessionId },
-      });
-      if (!existing.data) return;
+        const existing = await client.session.messages({
+          path: { id: sessionId },
+        });
+        if (!existing.data) return;
 
-      const hasAgentsCtx = existing.data.some((msg) => {
-        if (msg.parts.length === 0) return false;
-        return msg.parts.some(
-          (part) =>
-            part.type === 'text' &&
-            part.text.includes('<instructions-context>'),
-        );
-      });
-      if (hasAgentsCtx) {
-        injectedSessions.add(sessionId);
-        return;
-      }
-
-      injectedSessions.add(sessionId);
-      await client.session.prompt({
-        path: { id: sessionId },
-        body: {
-          noReply: true,
-          model: output.message.model,
-          agent: output.message.agent,
-          parts: [
-            {
-              type: 'text',
-              text: Prompt.template`
-                <instructions-context>
-                  ${INSTRUCTION_PROMPT}
-                </instructions-context>
-              `,
-              synthetic: true,
-            },
-          ],
-        },
-      });
-    },
-    event: async ({ event }) => {
-      if (event.type === 'session.compacted') {
-        const sessionId = event.properties.sessionID;
-
-        const { model, agent } = await client.session
-          .messages({
-            path: { id: sessionId },
-            query: { limit: 50 },
-          })
-          .then(({ data }) => {
-            for (const msg of data || []) {
-              if ('model' in msg.info && msg.info.model) {
-                return { model: msg.info.model, agent: msg.info.agent };
-              }
-            }
-            return {};
-          });
+        const hasAgentsCtx = existing.data.some((msg) => {
+          if (msg.parts.length === 0) return false;
+          return msg.parts.some(
+            (part) =>
+              part.type === 'text' &&
+              part.text.includes('<instructions-context>'),
+          );
+        });
+        if (hasAgentsCtx) {
+          injectedSessions.add(sessionId);
+          return;
+        }
 
         injectedSessions.add(sessionId);
         await client.session.prompt({
           path: { id: sessionId },
           body: {
             noReply: true,
-            model,
-            agent,
+            model: output.message.model,
+            agent: output.message.agent,
             parts: [
               {
                 type: 'text',
@@ -122,7 +86,47 @@ export const setupInstructionHooks = (): Hooks => {
             ],
           },
         });
-      }
-    },
-  };
-};
+      },
+      event: async ({ event }) => {
+        if (event.type === 'session.compacted') {
+          const sessionId = event.properties.sessionID;
+
+          const { model, agent } = await client.session
+            .messages({
+              path: { id: sessionId },
+              query: { limit: 50 },
+            })
+            .then(({ data }) => {
+              for (const msg of data || []) {
+                if ('model' in msg.info && msg.info.model) {
+                  return { model: msg.info.model, agent: msg.info.agent };
+                }
+              }
+              return {};
+            });
+
+          injectedSessions.add(sessionId);
+          await client.session.prompt({
+            path: { id: sessionId },
+            body: {
+              noReply: true,
+              model,
+              agent,
+              parts: [
+                {
+                  type: 'text',
+                  text: Prompt.template`
+                    <instructions-context>
+                      ${INSTRUCTION_PROMPT}
+                    </instructions-context>
+                  `,
+                  synthetic: true,
+                },
+              ],
+            },
+          });
+        }
+      },
+    };
+  },
+});

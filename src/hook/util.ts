@@ -1,5 +1,5 @@
-import type { Hooks } from '~/types';
-import { log } from '.';
+import { log } from '~/util';
+import type { Hooks } from './types';
 
 /**
  * Runs hooks with isolation using Promise.allSettled.
@@ -39,7 +39,7 @@ type HookFn = (...args: unknown[]) => Promise<void> | void;
  * Aggregates multiple hook sets into a single Hooks object.
  * Same-named hooks are merged with runHooksWithIsolation for isolated concurrent execution.
  */
-export const aggregateHooks = (hookSets: Hooks[]): Hooks => {
+export const aggregateHooks = (hookSets: Array<Partial<Hooks>>): Hooks => {
   return Object.fromEntries(
     HOOK_NAMES.map((name) => [
       name,
