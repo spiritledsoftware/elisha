@@ -1,8 +1,9 @@
-import type { ElishaConfigContext } from '../types.ts';
+import { ConfigContext } from '~/context';
 
-export const setupInstructionConfig = (ctx: ElishaConfigContext) => {
-  const instructions = new Set(ctx.config.instructions ?? []);
+export const setupInstructionConfig = () => {
+  const config = ConfigContext.use();
+  const instructions = new Set(config.instructions ?? []);
   instructions.add('AGENTS.md');
   instructions.add('**/AGENTS.md');
-  ctx.config.instructions = Array.from(instructions);
+  config.instructions = Array.from(instructions);
 };

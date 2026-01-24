@@ -1,380 +1,216 @@
-# Agent Configuration Directory
+# Agent System
 
-This directory contains the agent swarm definitions. Each agent is a flat TypeScript file.
+Defines the 11 specialized AI agents that form the Elisha swarm. Each agent has a specific role, capabilities, and constraints.
 
-## Directory Structure
+## Agent Architecture
 
-```
-agent/
-├── index.ts              # Agent registration and setup (two-phase)
-├── types.ts              # AgentCapabilities type
-├── [agent].ts            # Each agent as flat file (executor.ts, planner.ts, etc.)
-└── util/
-    ├── index.ts          # Agent helpers (canAgentDelegate, formatAgentsList, etc.)
-    └── prompt/
-        ├── index.ts      # Prompt.template, Prompt.when, Prompt.code
-        └── protocols.ts  # Protocol namespace (reusable prompt sections)
-```
+### Agent Definition Pattern
 
-## Creating a New Agent
-
-### 1. Create Agent File
-
-Create a flat file in `agent/`:
-
-```
-agent/
-└── my-agent.ts
-```
-
-### 2. Write the Configuration
+All agents use `defineAgent()` from `./agent.ts`:
 
 ```typescript
-import type { AgentConfig } from '@opencode-ai/sdk/v2';
-import defu from 'defu';
-import { setupAgentPermissions } from '../permission/agent/index.ts';
-import type { ElishaConfigContext } from '../types.ts';
-import type { AgentCapabilities } from './types.ts';
-import { canAgentDelegate, formatAgentsList } from './util/index.ts';
-import { Prompt } from './util/prompt/index.ts';
-import { Protocol } from './util/prompt/protocols.ts';
-
-export const AGENT_MY_AGENT_ID = 'MyName (my-agent)';
-
-export const AGENT_MY_AGENT_CAPABILITIES: AgentCapabilities = {
-  task: 'Task type description',
-  description: 'When to use this agent',
-};
-
-const getDefaultConfig = (ctx: ElishaConfigContext): AgentConfig => ({
-  hidden: false,
-  mode: 'subagent',
-  model: ctx.config.model,
-  temperature: 0.5,
-  permission: setupAgentPermissions(
-    AGENT_MY_AGENT_ID,
-    {
-      edit: 'deny',
-      webfetch: 'ask',
-    },
-    ctx,
-  ),
-  description: 'Brief description for Task tool selection...',
+export const myAgent = defineAgent({
+  id: 'Name (role)',           // Format: "Name (role)" - e.g., "Baruch (executor)"
+  capabilities: ['...'],       // Array of capability descriptions
+  config: () => ({             // Returns AgentConfig (can be async)
+    mode: 'subagent',          // 'primary' | 'subagent' | 'all'
+    model: config.model,       // Use config.model or config.small_model
+    temperature: 0.5,
+    permission: { ... },
+    description: '...',        // Used by orchestrator for delegation
+  }),
+  prompt: (self) => Prompt.template`...`,  // Returns prompt string
 });
-
-// Phase 1: Config setup
-export const setupMyAgentConfig = (ctx: ElishaConfigContext) => {
-  ctx.config.agent ??= {};
-  ctx.config.agent[AGENT_MY_AGENT_ID] = defu(
-    ctx.config.agent?.[AGENT_MY_AGENT_ID] ?? {},
-    getDefaultConfig(ctx),
-  );
-};
-
-// Phase 2: Prompt setup (after all configs finalized)
-export const setupMyAgentPrompt = (ctx: ElishaConfigContext) => {
-  const agentConfig = ctx.config.agent?.[AGENT_MY_AGENT_ID];
-  if (!agentConfig || agentConfig.disable) return;
-
-  const canDelegate = canAgentDelegate(AGENT_MY_AGENT_ID, ctx);
-
-  agentConfig.prompt = Prompt.template`
-    <role>
-      You are a specialized agent that does X.
-    </role>
-
-    ${Prompt.when(
-      canDelegate,
-      `
-    <teammates>
-      ${formatAgentsList(ctx)}
-    </teammates>
-    `,
-    )}
-
-    <protocols>
-      ${Protocol.contextGathering(AGENT_MY_AGENT_ID, ctx)}
-      ${Protocol.escalation(AGENT_MY_AGENT_ID, ctx)}
-    </protocols>
-
-    <instructions>
-      1. Step one
-      2. Step two
-    </instructions>
-  `;
-};
 ```
 
-### 3. Register in `index.ts`
+### Agent Modes
 
-```typescript
-import { setupMyAgentConfig, setupMyAgentPrompt } from './my-agent.ts';
+| Mode | Description | Example |
+|------|-------------|---------|
+| `primary` | Main entry point, coordinates work | orchestrator |
+| `subagent` | Specialist, receives delegated tasks | explorer, executor |
+| `all` | Can be primary or subagent | executor (when orchestrator disabled) |
 
-export const setupAgentConfig = (ctx: ElishaConfigContext) => {
-  // Phase 1: All configs first
-  setupMyAgentConfig(ctx);
-  // ... other configs
+### Agent Hierarchy
 
-  // Phase 2: All prompts after configs finalized
-  setupMyAgentPrompt(ctx);
-  // ... other prompts
-};
+```
+orchestrator (primary)
+├── explorer (read-only search)
+├── researcher (external research)
+├── brainstormer (ideation)
+├── consultant (expert advice)
+├── architect (design specs)
+├── planner (implementation plans)
+├── reviewer (code review)
+├── documenter (documentation)
+├── designer (UI/CSS)
+└── executor (code changes)
 ```
 
-### 4. Add to Capabilities Map
+## Prompt System
 
-In `util/index.ts`, add to `AGENT_CAPABILITIES`:
+### Prompt.template
 
-```typescript
-import { AGENT_MY_AGENT_CAPABILITIES, AGENT_MY_AGENT_ID } from '../my-agent.ts';
-
-const AGENT_CAPABILITIES: Record<string, AgentCapabilities> = {
-  // ... existing
-  [AGENT_MY_AGENT_ID]: AGENT_MY_AGENT_CAPABILITIES,
-};
-```
-
-## Agent Modes
-
-| Mode       | Usage                                                                               |
-| ---------- | ----------------------------------------------------------------------------------- |
-| `primary`  | Main agent (orchestrator). Set as `default_agent`.                                  |
-| `all`      | Core agents (planner, executor, reviewer, designer, brainstormer) available via Task tool. |
-| `subagent` | Helper agents (explorer, researcher, consultant, documenter) with specialized roles. |
-
-## Two-Phase Setup Pattern
-
-Agents use two-phase setup to ensure config is finalized before prompts read it:
+Tagged template literal that handles:
+- Filtering null/undefined/empty values
+- Preserving indentation for multi-line interpolations
+- Dedenting common leading whitespace
+- Collapsing 3+ newlines into 2
 
 ```typescript
-// In index.ts
-export const setupAgentConfig = (ctx: ElishaConfigContext) => {
-  // PHASE 1: Config setup (permissions, model, mode)
-  setupExplorerAgentConfig(ctx);
-  setupExecutorAgentConfig(ctx);
-  // ... all other configs
-
-  // PHASE 2: Prompt setup (uses finalized config)
-  setupExplorerAgentPrompt(ctx);
-  setupExecutorAgentPrompt(ctx);
-  // ... all other prompts
-};
-```
-
-This ensures `canAgentDelegate()` and similar checks see the complete agent roster.
-
-## Prompt Utilities
-
-### `Prompt.template`
-
-Tagged template literal for composing prompts:
-
-```typescript
-import { Prompt } from './util/prompt/index.ts';
-
 const prompt = Prompt.template`
   <role>
-    You are a helpful assistant.
+    ${roleDescription}
   </role>
-
-  <instructions>
-    ${instructionList}
-  </instructions>
+  
+  ${Prompt.when(hasFeature, '<feature>...</feature>')}
 `;
 ```
 
-Features:
+### Prompt.when
 
-- Filters out `null`, `undefined`, and empty string values
-- Preserves indentation for multi-line interpolated values
-- Removes common leading indentation (dedent)
-- Collapses 3+ consecutive newlines into 2
-- Trims leading/trailing whitespace
-
-### `Prompt.when`
-
-Conditional content helper for clean optional sections:
+Conditional content inclusion:
 
 ```typescript
-${Prompt.when(condition, `
-<optional-section>
-  This only appears if condition is true.
-</optional-section>
-`)}
+// Include section only if condition is true
+${Prompt.when(self.canDelegate, Protocol.taskHandoff)}
+
+// With else clause
+${Prompt.when(hasExplorer, 
+  `Delegate to explorer`,
+  `Search directly`
+)}
 ```
 
-### `Prompt.code`
+### Protocol Namespace
 
-Formats a code block with optional language:
+Reusable prompt sections in `./util/prompt/protocols.ts`:
+
+| Protocol | Purpose | Dynamic? |
+|----------|---------|----------|
+| `contextGathering(agent)` | How to gather context | Yes - adapts to agent's MCPs |
+| `escalation(agent)` | How to handle blockers | Yes - checks for consultant |
+| `confidence` | Confidence level reporting | Static |
+| `checkpoint` | Plan checkpoint format | Static |
+| `taskHandoff` | Delegation format | Static |
+| `verification` | Quality gate checklist | Static |
+| `parallelWork` | Parallel execution rules | Static |
+| `resultSynthesis` | Combining agent outputs | Static |
+| `progressTracking` | Workflow state tracking | Static |
+| `clarification` | Handling unclear requests | Static |
+| `scopeAssessment` | Complexity triage | Static |
+| `reflection` | Self-review before output | Static |
+| `retryStrategy` | Failure recovery | Static |
+
+## Agent Utilities
+
+### `./util/index.ts`
 
 ```typescript
-${Prompt.code('console.log("Hello");', 'typescript')}
+// Get all enabled agents
+getEnabledAgents(): Array<AgentConfig & { id: string }>
+
+// Get agents suitable for delegation (have descriptions)
+getSubAgents(): Array<AgentConfig & { id: string }>
+
+// Check if delegation is possible
+hasSubAgents(): boolean
+
+// Format agents for prompt injection
+formatAgentsList(): string
 ```
 
-## Protocol Namespace
+### Agent Self-Reference
 
-Reusable prompt sections in `util/prompt/protocols.ts`:
+The `self` parameter in `config` and `prompt` provides:
 
 ```typescript
-import { Protocol } from './util/prompt/protocols.ts';
-
-// Context gathering (memory, explorer, researcher)
-${Protocol.contextGathering(AGENT_ID, ctx)}
-
-// Escalation to consultant
-${Protocol.escalation(AGENT_ID, ctx)}
-
-// Standard confidence levels
-${Protocol.confidence}
-
-// Checkpoint format for plans
-${Protocol.checkpoint}
-
-// Task handoff format
-${Protocol.taskHandoff}
-
-// Verification checklist
-${Protocol.verification}
-
-// Parallel execution guidelines
-${Protocol.parallelWork}
-
-// Result synthesis format
-${Protocol.resultSynthesis}
-
-// Progress tracking format
-${Protocol.progressTracking}
+self.id           // Agent's ID
+self.isEnabled    // Whether agent is enabled in config
+self.permissions  // Agent's permission config
+self.hasPermission(pattern)  // Check specific permission
+self.hasMcp(mcpName)         // Check if MCP is available
+self.canDelegate             // Can use task tools + has subagents
 ```
 
-Protocols are permission-aware - they only include sections the agent can actually use.
+## Permission Patterns
 
-## Permission-Aware Prompts
-
-### `canAgentDelegate(agentId, ctx)`
-
-Checks if an agent can delegate to other agents:
+### Common Permission Configs
 
 ```typescript
-const canDelegate = canAgentDelegate(AGENT_MY_AGENT_ID, ctx);
+// Read-only agent (explorer)
+permission: {
+  edit: 'deny',
+  webfetch: 'deny',
+  websearch: 'deny',
+  [`${TOOL_TASK_ID}*`]: 'deny',  // Leaf node - can't delegate
+}
 
-${Prompt.when(canDelegate, `
-<teammates>
-  ${formatAgentsList(ctx)}
-</teammates>
-`)}
+// Full access agent (executor)
+permission: {
+  webfetch: 'deny',
+  websearch: 'deny',
+  codesearch: 'deny',
+}
+
+// Orchestrator (no direct code access)
+permission: {
+  edit: 'deny',
+}
 ```
 
-### `isMcpAvailableForAgent(mcpId, agentId, ctx)`
+### MCP Permission Pattern
 
-Checks if an MCP is both enabled and allowed for a specific agent:
+Use `${mcp.id}*` wildcard for MCP tool permissions:
 
 ```typescript
-import { MCP_OPENMEMORY_ID } from '../mcp/index.ts';
+import { openmemory } from '~/mcp/openmemory';
 
-const hasMemory = isMcpAvailableForAgent(MCP_OPENMEMORY_ID, AGENT_MY_AGENT_ID, ctx);
+permission: {
+  [`${openmemory.id}*`]: 'allow',  // All openmemory tools
+}
 ```
 
-### Other Utility Functions
+## Adding a New Agent
 
-| Function                              | Purpose                                          |
-| ------------------------------------- | ------------------------------------------------ |
-| `isToolAllowedForAgent(tool, id, ctx)` | Check if a tool pattern is allowed for an agent |
-| `getEnabledAgents(ctx)`               | Get all non-disabled agents                      |
-| `getSubAgents(ctx)`                   | Get agents with descriptions (for delegation)    |
-| `hasSubAgents(ctx)`                   | Check if any agents are available for delegation |
-| `isAgentEnabled(name, ctx)`           | Check if a specific agent is enabled             |
-| `formatTaskMatchingTable(ctx)`        | Format task->agent matching table                 |
-| `formatTaskAssignmentGuide(ctx)`      | Format simplified assignment guide               |
+1. Create `src/agent/my-agent.ts`:
+   ```typescript
+   import { defineAgent } from './agent';
+   import { Prompt } from './util/prompt';
+   import { Protocol } from './util/prompt/protocols';
+   
+   export const myAgent = defineAgent({
+     id: 'Name (role)',
+     capabilities: ['What it does'],
+     config: () => ({ ... }),
+     prompt: (self) => Prompt.template`...`,
+   });
+   ```
 
-## Existing Agents
+2. Add to `src/agent/index.ts`:
+   ```typescript
+   import { myAgent } from './my-agent';
+   
+   export const elishaAgents = [
+     // ... existing agents
+     myAgent,
+   ];
+   ```
 
-| Agent ID                    | Mode       | Purpose                                              |
-| --------------------------- | ---------- | ---------------------------------------------------- |
-| `Elisha (orchestrator)`     | `primary`  | Task coordinator, delegates all work                 |
-| `Caleb (explorer)`          | `subagent` | Codebase search (read-only)                          |
-| `Berean (researcher)`       | `subagent` | External research                                    |
-| `Jubal (brainstormer)`      | `all`      | Creative ideation                                    |
-| `Ahithopel (consultant)`    | `subagent` | Expert helper for debugging blockers (advisory-only) |
-| `Bezalel (architect)`       | `subagent` | Writes architectural specs to .agent/specs/          |
-| `Ezra (planner)`            | `all`      | Creates implementation plans                         |
-| `Elihu (reviewer)`          | `all`      | Code review (read-only)                              |
-| `Luke (documenter)`         | `subagent` | Documentation writing                                |
-| `Oholiab (designer)`        | `all`      | Frontend/UX design specialist                        |
-| `Baruch (executor)`         | `all`      | Implements plan tasks                                |
-| `compaction`                | `subagent` | Session compaction (hidden, system use)              |
-
-## Disabling Built-in Agents
-
-The `index.ts` disables some default OpenCode agents to avoid conflicts:
-
-```typescript
-disableAgent('build', ctx);
-disableAgent('plan', ctx);
-disableAgent('explore', ctx);
-disableAgent('general', ctx);
-```
+3. If agent can be delegated to, add to orchestrator's teammates list (automatic via `formatAgentsList()` if it has a `description`)
 
 ## Critical Rules
 
-### Use Flat Files, Not Subdirectories
+- **Agent IDs must be unique** - Format: "Name (role)"
+- **Always use `defineAgent()`** - Don't create agents manually
+- **Leaf agents deny `TOOL_TASK_ID*`** - Prevents infinite delegation loops
+- **Use `self.canDelegate` checks** - Don't assume delegation is available
+- **Prompts must be deterministic** - Same config = same prompt
 
-```
-# Correct
-agent/executor.ts
+## Anti-Patterns
 
-# Wrong
-agent/executor/index.ts
-```
-
-### Always Use `defu` for Config Merging
-
-```typescript
-// Correct - preserves user overrides
-ctx.config.agent[AGENT_ID] = defu(
-  ctx.config.agent?.[AGENT_ID] ?? {},
-  getDefaultConfig(ctx),
-);
-
-// Wrong - loses nested user config
-ctx.config.agent[AGENT_ID] = {
-  ...getDefaultConfig(ctx),
-  ...ctx.config.agent?.[AGENT_ID],
-};
-```
-
-### Include `.ts` Extensions
-
-```typescript
-// Correct
-import { Prompt } from './util/prompt/index.ts';
-
-// Wrong - will fail at runtime
-import { Prompt } from './util/prompt';
-```
-
-### Export Agent ID and Capabilities
-
-Always export both for use elsewhere:
-
-```typescript
-export const AGENT_MY_AGENT_ID = 'MyName (my-agent)';
-export const AGENT_MY_AGENT_CAPABILITIES: AgentCapabilities = { ... };
-```
-
-### Use Permission-Aware Prompts
-
-Always check permissions before including capability sections:
-
-```typescript
-// Correct - only shows teammates if agent can delegate
-${Prompt.when(canAgentDelegate(AGENT_ID, ctx), `
-<teammates>
-  ${formatAgentsList(ctx)}
-</teammates>
-`)}
-
-// Wrong - shows teammates even if agent can't use them
-<teammates>
-  ${formatAgentsList(ctx)}
-</teammates>
-```
+- ❌ Hardcoding agent IDs in prompts (use `self.id` or imports)
+- ❌ Checking `config.agent?.[id]` directly (use `self.isEnabled`)
+- ❌ Creating circular delegation (A → B → A)
+- ❌ Skipping `Protocol.contextGathering` for agents that need context
+- ❌ Using `Prompt.when` without proper boolean condition

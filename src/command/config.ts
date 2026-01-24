@@ -1,6 +1,7 @@
-import type { ElishaConfigContext } from '../types.ts';
-import { setupInitDeepCommandConfig } from './init-deep/index.ts';
+import { elishaCommands } from '~/features/commands';
 
-export const setupCommandConfig = (ctx: ElishaConfigContext) => {
-  setupInitDeepCommandConfig(ctx);
+export const setupCommandConfig = async () => {
+  for (const command of elishaCommands) {
+    await command.setup();
+  }
 };

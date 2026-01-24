@@ -1,10 +1,10 @@
 {
   "compilerOptions": {
     // Environment setup & latest features
-    "lib": ["ESNext"],
-    "target": "ESNext",
-    "module": "Preserve",
-    "moduleDetection": "force",
+    "lib": ["esnext"],
+    "target": "esnext",
+    "module": "esnext",
+    "moduleDetection": "auto",
     "jsx": "react-jsx",
     "allowJs": true,
 
@@ -26,9 +26,9 @@
     "noUnusedParameters": false,
     "noPropertyAccessFromIndexSignature": false,
 
-    "baseUrl": ".",
     "paths": {
-      "~/*": ["src/*"]
+      "~": ["./src"],
+      "~/*": ["./src/*"]
     }
   }
 }
