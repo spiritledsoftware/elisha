@@ -9,8 +9,9 @@ export type TaskResult =
   | {
       status: 'failed';
       task_id?: string;
+      title?: string;
       error: string;
-      code: 'AGENT_NOT_FOUND' | 'SESSION_ERROR' | 'TIMEOUT' | 'CANCELLED';
+      code: 'AGENT_NOT_FOUND' | 'SESSION_ERROR' | 'WAIT_TIMEOUT' | 'CANCELLED';
     }
   | { status: 'running'; task_id: string; title: string }
   | { status: 'cancelled'; task_id: string };

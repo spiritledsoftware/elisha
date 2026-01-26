@@ -205,7 +205,7 @@ describe('formatAgentsList', () => {
     });
 
     ConfigContext.provide(ctx, () => {
-      expect(formatAgentsList()).toBe('');
+      expect(formatAgentsList()).toBe(undefined);
     });
   });
 
@@ -221,9 +221,9 @@ describe('formatAgentsList', () => {
 
     ConfigContext.provide(ctx, () => {
       const result = formatAgentsList();
-      expect(result).toContain('- **Explorer**: Searches the codebase');
-      expect(result).toContain('- **Executor**: Implements code changes');
-      expect(result.split('\n')).toHaveLength(2);
+      expect(result).toContain('#### **Explorer**:');
+      expect(result).toContain('#### **Executor**:');
+      expect(result?.split('\n')).toHaveLength(4);
     });
   });
 
@@ -240,7 +240,7 @@ describe('formatAgentsList', () => {
     ConfigContext.provide(ctx, () => {
       const result = formatAgentsList();
       expect(result).not.toContain('Orchestrator');
-      expect(result).toContain('- **Helper**: Helps with tasks');
+      expect(result).toContain('#### **Helper**:\nHelps with tasks');
     });
   });
 
@@ -256,9 +256,9 @@ describe('formatAgentsList', () => {
 
     ConfigContext.provide(ctx, () => {
       const result = formatAgentsList();
-      expect(result).toContain('- **With Desc**: Has description');
+      expect(result).toContain('#### **With Desc**:\nHas description');
       expect(result).not.toContain('No Desc');
-      expect(result.split('\n')).toHaveLength(1);
+      expect(result?.split('\n')).toHaveLength(2);
     });
   });
 });

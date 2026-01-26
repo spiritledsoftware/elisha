@@ -1,5 +1,7 @@
 import type { ElishaAgent } from '~/agent/agent';
 import { consultantAgent } from '~/features/agents/consultant';
+import { documenterAgent } from '~/features/agents/documenter';
+import { executorAgent } from '~/features/agents/executor';
 import { explorerAgent } from '~/features/agents/explorer';
 import { researcherAgent } from '~/features/agents/researcher';
 import { context7Mcp } from '~/features/mcps/context7';
@@ -146,6 +148,20 @@ export namespace Protocol {
     DEPENDENCIES: [Prior tasks, files that must exist]
     \`\`\`
     </task_handoff>
+  `;
+
+  export const handoffProcessing = Prompt.template`
+    <handoff_processing>
+      When receiving a task, extract and validate:
+      
+      1. **OBJECTIVE** - What to accomplish (must be clear and specific)
+      2. **CONTEXT** - Background info, file paths, patterns to follow
+      3. **CONSTRAINTS** - Boundaries, things to avoid
+      4. **SUCCESS** - Criteria to verify completion
+      5. **DEPENDENCIES** - Prerequisites that must exist
+      
+      If any required information is missing, request clarification before starting.
+    </handoff_processing>
   `;
 
   /**
@@ -349,4 +365,65 @@ export namespace Protocol {
     **Always report**: What failed, what was tried, what worked (if anything)
     </retry_strategy>
   `;
+
+  export const agentsMdMaintenance = (self: ElishaAgent) => {
+    const canEdit = self.hasPermission('edit:**/AGENTS.md');
+    const hasDocumenter =
+      self.id !== documenterAgent.id &&
+      self.canDelegate &&
+      documenterAgent.isEnabled;
+    const hasExecutor =
+      self.id !== executorAgent.id &&
+      self.canDelegate &&
+      executorAgent.isEnabled;
+
+    const updaterAgent = hasDocumenter
+      ? documenterAgent.id
+      : hasExecutor
+        ? executorAgent.id
+        : undefined;
+
+    return Prompt.template`
+      <agents_md_maintenance>
+        Update AGENTS.md files when you discover knowledge that would help future AI agents working on this codebase.
+
+        **When to Update**:
+
+        - Discovered a pattern not documented (e.g., "services always use dependency injection")
+        - Learned from a mistake (e.g., "don't import X directly, use the re-export from Y")
+        - Found a non-obvious convention (e.g., "test files must end with \`.spec.ts\`, not \`.test.ts\`")
+        - Encountered a gotcha that wasted time (e.g., "build must run before tests")
+        - Identified a critical constraint (e.g., "never modify files in \`generated/\`")
+
+        **How to Update**:
+
+        1. Read the existing AGENTS.md file first
+        2. ${Prompt.when(
+          canEdit,
+          'Add new information in the appropriate section',
+          Prompt.when(
+            Boolean(updaterAgent),
+            `Delegate the update to \`${updaterAgent}\` agent`,
+            'Report the needed update in your final output',
+          ),
+        )}
+        3. Keep it concise—every line should earn its place
+        4. Use specific examples from the codebase
+
+        **What NOT to Add**:
+
+        - Generic programming advice (agents already know this)
+        - One-off debugging notes (use memory for session-specific context)
+        - Information already in README or other docs (reference instead)
+        - Speculative patterns (only document confirmed conventions)
+
+        **Update Triggers**:
+
+        - "I wish I had known this when I started"
+        - "This would have saved me from that error"
+        - "Future agents will make this same mistake"
+        - User explicitly asks to remember something for the project
+      </agents_md_maintenance>
+    `;
+  };
 }

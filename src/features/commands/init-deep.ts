@@ -1,5 +1,5 @@
+import { defineCommand } from '~/command';
 import { Prompt } from '~/util/prompt';
-import { defineCommand } from '../../command/command';
 
 export const initDeepCommand = defineCommand({
   id: 'init-deep',

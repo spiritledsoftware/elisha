@@ -28,7 +28,10 @@ export const setupAgentConfig = async () => {
   disableAgent('plan');
   disableAgent('explore');
   disableAgent('general');
-  changeAgentModel('compaction', config.small_model);
+
+  if (config?.small_model) {
+    changeAgentModel('compaction', config.small_model);
+  }
 
   for (const agent of elishaAgents) {
     await agent.setupConfig();

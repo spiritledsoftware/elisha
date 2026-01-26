@@ -2,7 +2,6 @@ import type { Hooks } from './types';
 
 export type ElishaHookSetOptions = {
   id: string;
-  capabilities: Array<string>;
   hooks: () => Hooks | Promise<Hooks>;
 };
 

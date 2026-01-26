@@ -21,6 +21,7 @@ import {
   cleanupPermissions,
   getGlobalPermissions,
   hasPermission,
+  isPatternMatch,
 } from '~/permission/util';
 import { createMockConfig, createMockConfigWithMcp } from '../test-setup';
 
@@ -30,6 +31,71 @@ import { createMockConfig, createMockConfigWithMcp } from '../test-setup';
  */
 const asObject = (config: PermissionConfig): PermissionObjectConfig =>
   config as PermissionObjectConfig;
+
+describe('isPatternMatch', () => {
+  describe('basic wildcards', () => {
+    it('matches exact strings', () => {
+      expect(isPatternMatch('edit', 'edit')).toBe(true);
+      expect(isPatternMatch('edit', 'read')).toBe(false);
+    });
+
+    it('matches * wildcard (any chars except colon)', () => {
+      expect(isPatternMatch('edit*', 'edit')).toBe(true);
+      expect(isPatternMatch('edit*', 'editFile')).toBe(true);
+      expect(isPatternMatch('mcp-openmemory*', 'mcp-openmemory_store')).toBe(
+        true,
+      );
+    });
+
+    it('does not match colon with * wildcard', () => {
+      expect(isPatternMatch('foo*', 'foo:bar')).toBe(false);
+    });
+
+    it('matches ** wildcard (any chars including colon)', () => {
+      expect(isPatternMatch('**', 'anything:here')).toBe(true);
+      expect(isPatternMatch('**/AGENTS.md', 'src/agent/AGENTS.md')).toBe(true);
+    });
+
+    it('matches ? wildcard (single char)', () => {
+      expect(isPatternMatch('fil?.ts', 'file.ts')).toBe(true);
+      expect(isPatternMatch('fil?.ts', 'files.ts')).toBe(false);
+    });
+  });
+
+  describe('trailing space+wildcard (OpenCode compatibility)', () => {
+    it('matches command without args when pattern has trailing space+wildcard', () => {
+      expect(isPatternMatch('rm *', 'rm')).toBe(true);
+    });
+
+    it('matches command with args', () => {
+      expect(isPatternMatch('rm *', 'rm -rf /')).toBe(true);
+    });
+
+    it('matches git commands', () => {
+      expect(isPatternMatch('git *', 'git')).toBe(true);
+      expect(isPatternMatch('git *', 'git status')).toBe(true);
+      expect(isPatternMatch('git *', 'git commit -m "test"')).toBe(true);
+    });
+
+    it('does not apply to non-trailing space+wildcard', () => {
+      // Middle wildcard should still require the space
+      expect(isPatternMatch('rm * /', 'rm /')).toBe(false);
+      expect(isPatternMatch('rm * /', 'rm -rf /')).toBe(true);
+    });
+  });
+
+  describe('regex special characters', () => {
+    it('escapes dots in patterns', () => {
+      expect(isPatternMatch('*.env', 'foo.env')).toBe(true);
+      expect(isPatternMatch('*.env', 'fooXenv')).toBe(false);
+    });
+
+    it('escapes other special characters', () => {
+      expect(isPatternMatch('file[1].ts', 'file[1].ts')).toBe(true);
+      expect(isPatternMatch('file(1).ts', 'file(1).ts')).toBe(true);
+    });
+  });
+});
 
 describe('hasPermission', () => {
   describe('handles undefined/null values', () => {
@@ -75,12 +141,13 @@ describe('hasPermission', () => {
   });
 
   describe('handles nested object values', () => {
-    it('returns false when all nested values are "deny"', () => {
+    it('returns true when all nested values are "deny" (permissive-by-default)', () => {
       const config: PermissionConfig = {
         bash: 'deny',
         edit: 'deny',
       };
-      expect(hasPermission(config)).toBe(false);
+      // With permissive-by-default, no matching rule means allow
+      expect(hasPermission(config)).toBe(true);
     });
 
     it('returns true when at least one nested value is "allow"', () => {
@@ -102,7 +169,7 @@ describe('hasPermission', () => {
       expect(hasPermission(config)).toBe(true);
     });
 
-    it('returns false when all deeply nested values are "deny"', () => {
+    it('returns true when all deeply nested values are "deny" (permissive-by-default)', () => {
       const config: PermissionConfig = {
         bash: {
           '*': 'deny',
@@ -110,11 +177,37 @@ describe('hasPermission', () => {
         },
         edit: 'deny',
       };
-      expect(hasPermission(config)).toBe(false);
+      // With permissive-by-default, no matching rule means allow
+      expect(hasPermission(config)).toBe(true);
     });
 
-    it('returns false for empty object', () => {
-      expect(hasPermission({})).toBe(false);
+    it('returns true for empty object (permissive-by-default)', () => {
+      // With permissive-by-default, empty config means allow
+      expect(hasPermission({})).toBe(true);
+    });
+  });
+
+  describe('permissive-by-default behavior', () => {
+    it('returns true when no rules match (permissive-by-default)', () => {
+      const config: PermissionConfig = { edit: 'allow' };
+      // Checking for 'bash' which is not in the config
+      expect(hasPermission(config, ['bash'])).toBe(true);
+    });
+
+    it('returns true when pattern does not match any key', () => {
+      const config: PermissionConfig = {
+        edit: 'allow',
+        glob: 'allow',
+      };
+      expect(hasPermission(config, ['unknown_tool'])).toBe(true);
+    });
+
+    it('returns true when pattern matches an allowed key', () => {
+      const config: PermissionConfig = {
+        edit: 'allow',
+        glob: 'allow',
+      };
+      expect(hasPermission(config, ['edit'])).toBe(true);
     });
   });
 });

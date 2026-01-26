@@ -6,12 +6,12 @@ import {
   cleanupPermissions,
   getGlobalPermissions,
   hasPermission,
+  isPatternMatch,
 } from '~/permission/util';
 import { getEnabledAgents, hasSubAgents } from './util';
 
 export type ElishaAgentOptions = {
   id: string;
-  capabilities: Array<string>;
   config:
     | AgentConfig
     | ((self: ElishaAgent) => AgentConfig | Promise<AgentConfig>);
@@ -86,19 +86,22 @@ export const defineAgent = ({
       if (typeof permissions === 'string') {
         return permissions !== 'deny';
       }
-      const exactPermission = permissions[permissionPattern];
-      if (exactPermission) {
-        return hasPermission(exactPermission);
-      }
 
-      const basePattern = permissionPattern.replace(/\*$/, '');
+      const patterns = permissionPattern.split(':');
+      const toolPattern = patterns[0] ?? '';
+
+      // Last-match-wins: iterate through all keys and track the last matching result
+      let lastMatchResult: boolean | undefined;
+
       for (const [key, value] of Object.entries(permissions)) {
-        const baseKey = key.replace(/\*$/, '');
-        if (basePattern.startsWith(baseKey)) {
-          return hasPermission(value);
+        // Check if the permission key matches the requested tool pattern
+        // e.g., key="edit*" should match toolPattern="edit" or "editFile"
+        if (isPatternMatch(key, toolPattern)) {
+          lastMatchResult = hasPermission(value, patterns.slice(1));
         }
       }
-      return true;
+
+      return lastMatchResult ?? true;
     },
     hasMcp(mcpName: string): boolean {
       const { mcp = {} } = ConfigContext.use();
@@ -108,14 +111,13 @@ export const defineAgent = ({
       // Check if agent has permission to use it
       return this.hasPermission(`${mcpName}*`);
     },
-
     get canDelegate(): boolean {
       // Must have agents to delegate to
       if (!hasSubAgents()) return false;
 
       // Must have permission to use task tools
       return (
-        this.hasPermission(`${taskToolSet.id}*`) || this.hasPermission(`task`)
+        this.hasPermission(`${taskToolSet.id}*`) || this.hasPermission('task')
       );
     },
   };

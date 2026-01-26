@@ -1,5 +1,5 @@
+import { defineMcp } from '~/mcp';
 import { log } from '~/util';
-import { defineMcp } from '../../mcp/mcp';
 
 export const exaMcp = defineMcp({
   id: 'exa',

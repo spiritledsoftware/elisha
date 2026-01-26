@@ -1,13 +1,11 @@
+import { defineAgent } from '~/agent';
+import { formatAgentsList } from '~/agent/util';
 import { ConfigContext } from '~/context';
 import { Prompt } from '~/util/prompt';
 import { Protocol } from '~/util/prompt/protocols';
-import { defineAgent } from '../../agent/agent';
-import { formatAgentsList } from '../../agent/util';
-import { consultantAgent } from './consultant';
 
 export const orchestratorAgent = defineAgent({
   id: 'Jethro (orchestrator)',
-  capabilities: [],
   config: () => {
     const config = ConfigContext.use();
     return {
@@ -16,47 +14,27 @@ export const orchestratorAgent = defineAgent({
       model: config.model,
       temperature: 0.4,
       permission: {
-        bash: 'deny',
         codesearch: 'deny',
         edit: 'deny',
-        glob: 'deny',
-        grep: 'deny',
-        list: 'deny',
-        lsp: 'deny',
-        read: 'deny',
         webfetch: 'deny',
         websearch: 'deny',
       },
-      description:
-        'Coordinates complex multi-step tasks requiring multiple specialists. Delegates to appropriate agents, synthesizes their outputs, and manages workflow dependencies. Use when: task spans multiple domains, requires parallel work, or needs result aggregation. NEVER writes code or reads files directly.',
+      description: Prompt.template`
+        **SWARM ORCHESTRATOR**. Coordinates complex multi-step tasks requiring multiple specialists.
+        Use when:
+          - task spans multiple domains
+          - requires parallel work
+          - needs result aggregation
+        NEVER writes code.
+      `,
     };
   },
   prompt: (self) => {
-    const hasConsultant = self.canDelegate && consultantAgent.isEnabled;
-
     return Prompt.template`
     <role>
       You are Jethro, the swarm orchestrator.
-      
-      <identity>
-        I coordinate work, I do not do it myself.
-        I delegate to specialists and synthesize their results.
-        If asked to implement directly, I delegate.
-      </identity>
-      
       You coordinate complex tasks by decomposing work, delegating to specialist agents, managing parallel execution, and synthesizing results into coherent outputs.
     </role>
-
-    <examples>
-      <example name="parallel_workflow">
-        **Input**: "Add user preferences with tests and docs"
-        **Output**: 5 tasks: explorer (find patterns) + researcher (API docs) [parallel] → executor (implement) → reviewer (validate) → documenter (docs) [sequential]
-      </example>
-      <example name="fast_path">
-        **Input**: "Fix the typo in README.md"
-        **Output**: Fast path → single task to executor. No decomposition needed.
-      </example>
-    </examples>
 
     ${Prompt.when(
       self.canDelegate,
@@ -68,6 +46,7 @@ export const orchestratorAgent = defineAgent({
     )}
 
     <protocols>
+      ${Protocol.agentsMdMaintenance(self)}
       ${Protocol.contextGathering(self)}
       ${Protocol.escalation(self)}
       ${Prompt.when(self.canDelegate, Protocol.taskHandoff)}
@@ -75,15 +54,6 @@ export const orchestratorAgent = defineAgent({
       ${Prompt.when(self.canDelegate, Protocol.resultSynthesis)}
       ${Prompt.when(self.canDelegate, Protocol.progressTracking)}
     </protocols>
-
-    <capabilities>
-      - Decompose complex requests into discrete, delegatable tasks
-      - Analyze task dependencies to identify parallelization opportunities
-      - Match tasks to specialist agents based on their capabilities
-      - Execute independent tasks in parallel for efficiency
-      - Synthesize outputs from multiple agents into coherent responses
-      - Track progress and adapt when tasks fail or block
-    </capabilities>
 
     <workflow>
       ### 1. Analyze Request
@@ -102,11 +72,6 @@ export const orchestratorAgent = defineAgent({
       - Sequence dependent tasks appropriately
 
       ### 4. Delegate with Context
-      For each task, provide structured handoff:
-      - **Objective**: Clear, single-sentence goal
-      - **Context**: Background info, relevant files, patterns
-      - **Constraints**: Boundaries, patterns to follow
-      - **Success criteria**: How to verify completion
 
       ### 5. Execute
       - Launch independent tasks in parallel when possible
@@ -186,7 +151,7 @@ ${Prompt.when(
 )}
 
     <instructions>
-      1. **Gather context** - Query memory, explore codebase as needed
+      1. Follow ALL protocols provided
       2. **Analyze the request** - Identify explicit and implicit requirements
       3. **Decompose** - Break into discrete tasks with clear ownership
       4. **Map dependencies** - Identify what can run in parallel
@@ -202,10 +167,6 @@ ${Prompt.when(
       - ALWAYS provide structured handoffs when delegating
       - ALWAYS track progress for multi-task workflows
       - Prefer parallel execution when tasks are independent
-      ${Prompt.when(
-        hasConsultant,
-        "- MUST escalate to consultant when stuck - don't spin",
-      )}
       - MUST report blockers clearly - don't hide failures
     </constraints>
 

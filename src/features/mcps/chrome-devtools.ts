@@ -1,4 +1,4 @@
-import { defineMcp } from '../../mcp/mcp';
+import { defineMcp } from '~/mcp';
 
 export const chromeDevtoolsMcp = defineMcp({
   id: 'chrome-devtools',
