@@ -44,12 +44,10 @@ export const log = async (options: {
   const { client, directory } = PluginContext.use();
   const { level = 'info', message, meta: extra } = options;
   await client.app.log({
-    query: { directory },
-    body: {
-      service: 'elisha',
-      level,
-      message,
-      extra,
-    },
+    service: 'elisha',
+    level,
+    message,
+    extra,
+    directory,
   });
 };

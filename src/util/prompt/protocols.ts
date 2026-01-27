@@ -125,14 +125,15 @@ export namespace Protocol {
   `;
 
   /**
-   * Task handoff protocol for structured delegation.
-   * Ensures context is preserved when passing work between agents.
+   * Task handoff protocol for structured delegation and lifecycle management.
+   * Covers initial handoff, monitoring, steering, and resurrection.
    */
   export const taskHandoff = Prompt.template`
     <task_handoff>
-    When delegating to another agent, provide structured context:
+    When delegating to another agent, manage the full task lifecycle:
     
-    **Required handoff information**:
+    ### 1. Initial Handoff
+    Provide structured context:
     - **Objective**: What needs to be accomplished (1 sentence)
     - **Context**: Relevant background the agent needs
     - **Constraints**: Boundaries, patterns to follow, things to avoid
@@ -147,6 +148,34 @@ export namespace Protocol {
     SUCCESS: [Specific, verifiable criteria]
     DEPENDENCIES: [Prior tasks, files that must exist]
     \`\`\`
+    
+    ### 2. Monitor Progress (async tasks)
+    For long-running tasks, check progress periodically:
+    - Use \`task_output(wait=false)\` to get partial results
+    - Check more frequently for complex tasks or less capable models
+    - Early detection prevents wasted effort
+    
+    ### 3. Steer if Off-Track
+    Use \`task_send_message\` to redirect running tasks:
+    - "Stop X, focus on Y instead"
+    - "Add constraint: must also handle Z"
+    - "Narrow scope to only files in /src"
+    
+    ### 4. Refine via Resurrection
+    Completed tasks can be continued with follow-up messages:
+    - **Critique**: "Issues found: [list]. Please fix."
+    - **Elaborate**: "Expand section X with examples"
+    - **Iterate**: "Good, now also add Y"
+    
+    **Key insight**: Resurrection preserves context - more efficient than starting new tasks.
+    
+    ### When to Intervene
+    | Situation | Action |
+    |-----------|--------|
+    | Task going wrong direction | Steer immediately via \`task_send_message\` |
+    | Output incomplete | Resurrect with specific gaps to fill |
+    | Output has errors | Resurrect with specific fixes needed |
+    | Need related follow-up | Resurrect same task (preserves context) |
     </task_handoff>
   `;
 
@@ -248,30 +277,51 @@ export namespace Protocol {
 
   /**
    * Progress tracking protocol for multi-step workflows.
-   * Maintains visibility into swarm execution state.
+   * Maintains visibility into swarm execution state and guides intervention.
    */
   export const progressTracking = Prompt.template`
     <progress_tracking>
-    For multi-step workflows, maintain execution state:
+    For multi-step workflows, maintain execution state and respond to it:
     
-    **Track**:
+    ### Track State
     - Tasks completed with outcomes
     - Tasks in progress with current agent
     - Tasks pending with dependencies
     - Blockers encountered
     
-    **Update frequency**: After each task completes or fails
-    
-    **Progress format**:
+    ### Progress Table Format
     \`\`\`markdown
     ## Workflow Progress
     **Started**: [timestamp]
     **Status**: In Progress | Blocked | Complete
     
-    | Task | Agent | Status | Notes |
-    |------|-------|--------|-------|
-    | [task] | [agent] | ✅/🔄/⏳/❌ | [outcome] |
+    | Task | Agent | Status | Health | Notes |
+    |------|-------|--------|--------|-------|
+    | [task] | [agent] | ✅/🔄/⏳/❌ | 🟢/🟡/🔴 | [outcome] |
     \`\`\`
+    
+    ### Health Indicators
+    | Health | Meaning | Action |
+    |--------|---------|--------|
+    | 🟢 | On track | Continue monitoring |
+    | 🟡 | Slow or partial progress | Check output, consider steering |
+    | 🔴 | Stuck, off-track, or failed | Intervene immediately |
+    
+    ### Respond to State
+    When tracking reveals issues:
+    
+    | Observed State | Response |
+    |----------------|----------|
+    | Task running too long | Fetch partial output, assess health |
+    | Partial output off-track | Send steering message via \`task_send_message\` |
+    | Task completed but incomplete | Resurrect with gaps to fill |
+    | Task failed | Assess cause, retry or escalate |
+    | Multiple tasks blocked | Re-evaluate dependencies, parallelize differently |
+    
+    ### Update Frequency
+    - After each task completes or fails
+    - Periodically for long-running async tasks
+    - Immediately when blockers detected
     </progress_tracking>
   `;
 

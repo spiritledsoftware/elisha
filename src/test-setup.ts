@@ -6,6 +6,7 @@
 
 import type { PluginInput } from '@opencode-ai/plugin';
 import type { Config, OpencodeClient } from '@opencode-ai/sdk/v2';
+import type { PluginContext } from './types';
 
 /**
  * Creates a mock OpencodeClient for testing.
@@ -78,9 +79,9 @@ export const createMockClient = (
  * Creates a mock PluginInput for testing.
  * Provides sensible defaults that can be overridden.
  */
-export const createMockPluginInput = (
-  overrides: Partial<PluginInput> = {},
-): PluginInput => {
+export const createMockPluginCtx = (
+  overrides: Partial<PluginContext> = {},
+): PluginContext => {
   return {
     client: createMockClient(),
     project: {
@@ -92,7 +93,7 @@ export const createMockPluginInput = (
     serverUrl: new URL('http://localhost:3000'),
     $: (() => {}) as unknown as PluginInput['$'],
     ...overrides,
-  } as PluginInput;
+  } as PluginContext;
 };
 
 /**

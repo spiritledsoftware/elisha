@@ -33,13 +33,10 @@ export const setupAgentConfig = async () => {
     changeAgentModel('compaction', config.small_model);
   }
 
-  for (const agent of elishaAgents) {
-    await agent.setupConfig();
-  }
+  // Setup configs concurrently
+  await Promise.all(elishaAgents.map((agent) => agent.setupConfig()));
   // Setup prompts after all configs are set
-  for (const agent of elishaAgents) {
-    await agent.setupPrompt();
-  }
+  await Promise.all(elishaAgents.map((agent) => agent.setupPrompt()));
 
   setupDefaultAgent();
 };

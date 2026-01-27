@@ -19,9 +19,9 @@ export const changeAgentModel = (name: string, model: string) => {
 };
 
 export async function getActiveAgents() {
-  const { client, directory } = PluginContext.use();
+  const { client } = PluginContext.use();
 
-  return await client.app.agents({ query: { directory } });
+  return await client.app.agents();
 }
 
 /**

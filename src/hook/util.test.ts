@@ -3,12 +3,12 @@ import type { Hooks } from '@opencode-ai/plugin';
 import { PluginContext } from '~/context';
 import { aggregateHooks } from '~/hook/util';
 import * as utilIndex from '~/util';
-import { createMockPluginInput } from '../test-setup';
+import { createMockPluginCtx } from '../test-setup';
 
 describe('aggregateHooks', () => {
   describe('chat.params', () => {
     it('calls all hooks from all hook sets', async () => {
-      const ctx = createMockPluginInput();
+      const ctx = createMockPluginCtx();
       await PluginContext.provide(ctx, async () => {
         const hook1 = mock(() => Promise.resolve());
         const hook2 = mock(() => Promise.resolve());
@@ -30,7 +30,7 @@ describe('aggregateHooks', () => {
     });
 
     it('runs hooks concurrently', async () => {
-      const ctx = createMockPluginInput();
+      const ctx = createMockPluginCtx();
       await PluginContext.provide(ctx, async () => {
         const executionOrder: number[] = [];
 
@@ -63,7 +63,7 @@ describe('aggregateHooks', () => {
 
     it('continues executing other hooks when one fails', async () => {
       const logSpy = spyOn(utilIndex, 'log').mockResolvedValue(undefined);
-      const ctx = createMockPluginInput();
+      const ctx = createMockPluginCtx();
 
       await PluginContext.provide(ctx, async () => {
         const hook1 = mock(() => Promise.resolve());
@@ -90,7 +90,7 @@ describe('aggregateHooks', () => {
 
     it('logs errors for failed hooks', async () => {
       const logSpy = spyOn(utilIndex, 'log').mockResolvedValue(undefined);
-      const ctx = createMockPluginInput();
+      const ctx = createMockPluginCtx();
 
       await PluginContext.provide(ctx, async () => {
         const errorMessage = 'Test hook failure';
@@ -116,7 +116,7 @@ describe('aggregateHooks', () => {
 
   describe('event', () => {
     it('calls all event hooks from all hook sets', async () => {
-      const ctx = createMockPluginInput();
+      const ctx = createMockPluginCtx();
 
       await PluginContext.provide(ctx, async () => {
         const hook1 = mock(() => Promise.resolve());
@@ -134,7 +134,7 @@ describe('aggregateHooks', () => {
 
     it('continues when one event hook fails', async () => {
       const logSpy = spyOn(utilIndex, 'log').mockResolvedValue(undefined);
-      const ctx = createMockPluginInput();
+      const ctx = createMockPluginCtx();
 
       await PluginContext.provide(ctx, async () => {
         const hook1 = mock(() =>
@@ -157,7 +157,7 @@ describe('aggregateHooks', () => {
 
   describe('tool.execute.before', () => {
     it('calls all tool.execute.before hooks from all hook sets', async () => {
-      const ctx = createMockPluginInput();
+      const ctx = createMockPluginCtx();
 
       await PluginContext.provide(ctx, async () => {
         const hook1 = mock(() => Promise.resolve());
@@ -181,7 +181,7 @@ describe('aggregateHooks', () => {
 
     it('continues when one tool hook fails', async () => {
       const logSpy = spyOn(utilIndex, 'log').mockResolvedValue(undefined);
-      const ctx = createMockPluginInput();
+      const ctx = createMockPluginCtx();
 
       await PluginContext.provide(ctx, async () => {
         const hook1 = mock(() => Promise.resolve());
@@ -208,7 +208,7 @@ describe('aggregateHooks', () => {
 
   describe('edge cases', () => {
     it('handles empty hook sets gracefully', async () => {
-      const ctx = createMockPluginInput();
+      const ctx = createMockPluginCtx();
 
       PluginContext.provide(ctx, () => {
         const hookSets: Hooks[] = [];
@@ -227,7 +227,7 @@ describe('aggregateHooks', () => {
     });
 
     it('handles hooks that are undefined', async () => {
-      const ctx = createMockPluginInput();
+      const ctx = createMockPluginCtx();
 
       await PluginContext.provide(ctx, async () => {
         const hook1 = mock(() => Promise.resolve());
@@ -250,7 +250,7 @@ describe('aggregateHooks', () => {
     });
 
     it('handles mixed defined and undefined hooks across sets', async () => {
-      const ctx = createMockPluginInput();
+      const ctx = createMockPluginCtx();
 
       await PluginContext.provide(ctx, async () => {
         const chatHook1 = mock(() => Promise.resolve());
@@ -279,7 +279,7 @@ describe('aggregateHooks', () => {
 
     it('logs multiple errors when multiple hooks fail', async () => {
       const logSpy = spyOn(utilIndex, 'log').mockResolvedValue(undefined);
-      const ctx = createMockPluginInput();
+      const ctx = createMockPluginCtx();
 
       await PluginContext.provide(ctx, async () => {
         const hook1 = mock(() => Promise.reject(new Error('Error 1')));

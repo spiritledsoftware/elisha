@@ -26,7 +26,10 @@ export const taskHooks = defineHookSet({
     return {
       event: async ({ event }) => {
         // Notify parent session when task completes
-        if (event.type === 'session.idle') {
+        if (
+          event.type === 'session.status' &&
+          event.properties.status.type === 'idle'
+        ) {
           const sessionID = event.properties.sessionID;
           const completedResult = await isSessionComplete(sessionID);
           if (completedResult.error) {
@@ -39,8 +42,8 @@ export const taskHooks = defineHookSet({
 
           if (completedResult.data) {
             const sessionResult = await client.session.get({
-              path: { id: sessionID },
-              query: { directory },
+              sessionID,
+              directory,
             });
             if (sessionResult.error) {
               log({
@@ -75,33 +78,29 @@ export const taskHooks = defineHookSet({
                 return;
               }
 
-              const { agent: taskAgent = 'unknown' } =
-                taskAgentModelResult.data;
+              const { agent: taskAgent } = taskAgentModelResult.data;
 
               // Notify parent that task completed (use elisha_task_output to get result)
               const notification = JSON.stringify({
                 status: 'completed',
                 task_id: sessionID,
-                agent: taskAgent,
+                agent: taskAgent || 'unknown',
                 title,
-                message:
-                  'Task completed. Use elisha_task_output to get the result.',
+                message: `Task completed. Use \`${taskOutputTool.id}\` to get the result.`,
               });
 
-              const promptResult = await client.session.prompt({
-                path: { id: parentID },
-                body: {
-                  agent: parentAgent,
-                  model: parentModel,
-                  parts: [
-                    {
-                      type: 'text',
-                      text: notification,
-                      synthetic: true,
-                    },
-                  ],
-                },
-                query: { directory },
+              const promptResult = await client.session.promptAsync({
+                sessionID: parentID,
+                agent: parentAgent,
+                model: parentModel,
+                parts: [
+                  {
+                    type: 'text',
+                    text: notification,
+                    synthetic: true,
+                  },
+                ],
+                directory,
               });
               if (promptResult.error) {
                 log({
@@ -135,27 +134,25 @@ export const taskHooks = defineHookSet({
 
             injectedSessions.add(sessionID);
 
-            const promptResult = await client.session.prompt({
-              path: { id: sessionID },
-              body: {
-                noReply: true,
-                model,
-                agent,
-                parts: [
-                  {
-                    type: 'text',
-                    text: Prompt.template`
+            const promptResult = await client.session.promptAsync({
+              sessionID,
+              noReply: true,
+              model,
+              agent,
+              parts: [
+                {
+                  type: 'text',
+                  text: Prompt.template`
                       <task-context>
                         ${TASK_CONTEXT_PROMPT}
 
                         ${taskList}
                       </task-context>
                     `,
-                    synthetic: true,
-                  },
-                ],
-              },
-              query: { directory },
+                  synthetic: true,
+                },
+              ],
+              directory,
             });
             if (promptResult.error) {
               log({

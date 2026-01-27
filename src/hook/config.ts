@@ -4,7 +4,7 @@ import { aggregateHooks } from './util';
 
 export const setupHookSet = async (): Promise<Hooks> => {
   const hookSets = await Promise.all(
-    elishaHooks.map((hookSet) => hookSet.setup()),
+    elishaHooks.map(async (hookSet) => await hookSet.setup()),
   );
 
   return aggregateHooks(hookSets);

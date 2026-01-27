@@ -1,14 +1,21 @@
-import type { Session } from '@opencode-ai/sdk';
-import type { BadRequestError, NotFoundError } from '@opencode-ai/sdk/v2';
+import type {
+  BadRequestError,
+  Message,
+  NotFoundError,
+  Part,
+  Session,
+} from '@opencode-ai/sdk/v2';
+import defu from 'defu';
 import { PluginContext } from '~/context';
+import type { PartInput } from './types';
 
-const MAX_POLL_INTERVAL_MS = 5000;
-const BACKOFF_MULTIPLIER = 1.5;
-const POLL_INTERVAL_MS = 500;
+const MAX_POLL_INTERVAL_MS = 2000;
+const BACKOFF_MULTIPLIER = 1.2;
+const POLL_INTERVAL_MS = 200;
 const TIMEOUT_MS = 20 * 60 * 1000; // 20 minutes
 
 export const getChildSessions = async (
-  id: string,
+  sessionID: string,
 ): Promise<
   | {
       data: Session[];
@@ -21,17 +28,17 @@ export const getChildSessions = async (
 > => {
   const { client, directory } = PluginContext.use();
   // Get child sessions (tasks) for this session
-  const { data: children, error } = await client.session.children({
-    path: { id: id },
-    query: { directory },
+  const childrenResult = await client.session.children({
+    sessionID,
+    directory,
   });
-  if (error) return { error };
+  if (childrenResult.error) return { error: childrenResult.error };
 
-  return { data: children };
+  return { data: childrenResult.data };
 };
 
 export const formatChildSessionList = async (
-  id: string,
+  sessionID: string,
 ): Promise<
   | {
       data: string;
@@ -42,18 +49,18 @@ export const formatChildSessionList = async (
       error: BadRequestError | NotFoundError;
     }
 > => {
-  const { data: children, error } = await getChildSessions(id);
+  const { data: children, error } = await getChildSessions(sessionID);
   if (error) return { error };
   // Format task IDs as a list
   const taskList = children
-    .map((child) => `- \`${child.id}\` - ${child.title || 'Untitled task'}`)
+    .map((child) => `- \`${child.id}\`: ${child.title}`)
     .join('\n');
 
   return { data: taskList };
 };
 
 export const isSessionComplete = async (
-  id: string,
+  sessionID: string,
 ): Promise<
   | {
       data: boolean;
@@ -66,29 +73,32 @@ export const isSessionComplete = async (
 > => {
   const { client, directory } = PluginContext.use();
 
-  const [sessionStatusResult, sessionMessagesResult] = await Promise.all([
-    client.session.status({
-      query: { directory },
-    }),
-    client.session.messages({
-      path: { id },
-      query: { directory, limit: 1 },
-    }),
-  ]);
-  if (sessionStatusResult.error) {
-    return { error: sessionStatusResult.error };
-  }
-  if (sessionMessagesResult.error) {
-    return { error: sessionMessagesResult.error };
+  const messagesResult = await client.session.messages({
+    sessionID,
+    directory,
+  });
+  if (messagesResult.error) {
+    return { error: messagesResult.error };
   }
 
-  // No messages yet, session is still busy
-  if (sessionMessagesResult.data.length === 0) {
+  // Get the latest message
+  const lastestMessage = messagesResult.data
+    // Sort by creation time descending
+    .sort((a, b) => b.info.time.created - a.info.time.created)
+    .at(0);
+  if (!lastestMessage || lastestMessage.info.role !== 'assistant') {
     return { data: false };
   }
 
-  // Session is idle (completed)
-  if (sessionStatusResult.data[id]?.type === 'idle') {
+  const sessionStatusResult = await client.session.status({
+    directory,
+  });
+  if (sessionStatusResult.error) {
+    return { error: sessionStatusResult.error };
+  }
+
+  const sessionStatus = sessionStatusResult.data[sessionID];
+  if (sessionStatus?.type === 'idle' || sessionStatus?.type === undefined) {
     return { data: true };
   }
 
@@ -111,11 +121,13 @@ export const waitForSession = async (
   const effectiveTimeout = Math.max(timeoutMs, 1000);
   const startTime = Date.now();
   let pollInterval = POLL_INTERVAL_MS;
-  while (Date.now() - startTime < effectiveTimeout) {
-    const { data: complete, error } = await isSessionComplete(sessionID);
-    if (error) return { error };
 
-    if (complete) {
+  while (Date.now() - startTime < effectiveTimeout) {
+    const completedResult = await isSessionComplete(sessionID);
+    if (completedResult.error) {
+      return { error: completedResult.error };
+    }
+    if (completedResult.data) {
       return { data: true };
     }
     await Bun.sleep(pollInterval);
@@ -128,11 +140,33 @@ export const waitForSession = async (
   return { data: false };
 };
 
-export const fetchSessionText = async (
-  id: string,
+export const formatMessageParts = (parts: Array<Part>, info: Message) => {
+  const result: Array<PartInput> = [];
+  for (const part of parts) {
+    if (part.type === 'text') {
+      // NOTE: Strip the ID because OpenCode sorts by ID
+      const { id: _id, text, ...rest } = part;
+      result.push({
+        ...rest,
+        text: `**${
+          info.role === 'assistant' ? info.agent : 'Prompt'
+        }:**\n${text}\n\n`,
+        synthetic: true,
+      });
+    }
+    // Need to handle others later
+  }
+  return result;
+};
+
+export const fetchSessionOutput = async (
+  sessionID: string,
 ): Promise<
   | {
-      data: string;
+      data: {
+        info: Message;
+        parts: Array<PartInput>;
+      };
       error?: undefined;
     }
   | {
@@ -142,22 +176,40 @@ export const fetchSessionText = async (
 > => {
   const { client, directory } = PluginContext.use();
 
-  const { data: messages, error } = await client.session.messages({
-    path: { id: id },
-    query: { directory },
+  const messagesResult = await client.session.messages({
+    sessionID,
+    directory,
   });
-  if (error) return { error };
+  if (messagesResult.error) return { error: messagesResult.error };
 
-  // Extract text content from the message parts
-  return {
-    data:
-      messages
-        .filter((m) => m.info.role === 'assistant')
-        .flatMap((m) => m.parts)
-        .filter((p) => p.type === 'text')
-        .map((p) => p.text)
-        .join('\n') || '(No text content in response)',
-  };
+  // Sort messages by creation time ascending
+  let messages = messagesResult.data.sort(
+    (a, b) => a.info.time.created - b.info.time.created,
+  );
+  // Only return messages from the last user prompt onwards
+  messages = messages.slice(
+    messages.findLastIndex((m) => m.info.role === 'user') + 1,
+  );
+
+  const result = messages.reduce(
+    (acc, message) => {
+      acc.parts.push(...formatMessageParts(message.parts, message.info));
+      acc.info = defu(acc.info, message.info) as Message;
+      return acc;
+    },
+    {
+      info: { role: 'user' } as Message,
+      parts: [
+        {
+          type: 'text',
+          text: `**Task(${sessionID}) output:**\n\n`,
+          synthetic: true,
+        },
+      ] as Array<PartInput>,
+    },
+  );
+
+  return { data: result };
 };
 
 export async function getSessionAgentAndModel(sessionID: string): Promise<
@@ -182,8 +234,8 @@ export async function getSessionAgentAndModel(sessionID: string): Promise<
 
   return await client.session
     .messages({
-      path: { id: sessionID },
-      query: { directory, limit: 50 },
+      sessionID,
+      directory,
     })
     .then(({ data, error }) => {
       if (error) return { error };

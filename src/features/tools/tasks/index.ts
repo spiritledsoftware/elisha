@@ -1,11 +1,13 @@
-import type { Session } from '@opencode-ai/sdk';
+import type { Session } from '@opencode-ai/sdk/v2';
 import * as z from 'zod';
 import { getActiveAgents } from '~/agent/util';
 import { PluginContext } from '~/context';
 import { defineTool, defineToolSet } from '~/tool';
 import { log } from '~/util';
 import {
-  fetchSessionText,
+  fetchSessionOutput,
+  formatMessageParts,
+  getChildSessions,
   getSessionAgentAndModel,
   isSessionComplete,
   waitForSession,
@@ -27,24 +29,31 @@ export const taskTool = defineTool({
         .boolean()
         .default(false)
         .describe(
-          'Whether to run the task asynchronously in the background. Default is false (synchronous).',
+          'Whether to run the task asynchronously in the background (fire-and-forget) (default=false).',
+        ),
+      timeout_ms: z
+        .number()
+        .optional()
+        .describe(
+          'Maximum time in **milliseconds** to wait for task completion (only if async=false). If timeout is reached, the task will be aborted.',
         ),
     },
-    execute: async (args, context) => {
+    execute: async (args, toolCtx) => {
       const activeAgentsResult = await getActiveAgents();
       if (activeAgentsResult.error) {
         return JSON.stringify({
           status: 'failed',
-          error: `Failed to retrieve active agents: ${String(
+          error: `Failed to retrieve active agents: ${JSON.stringify(
             activeAgentsResult.error,
           )}`,
           code: 'AGENT_NOT_FOUND',
         } satisfies TaskResult);
       }
 
-      if (
-        !activeAgentsResult.data?.find((agent) => agent.name === args.agent)
-      ) {
+      const agent = activeAgentsResult.data?.find((agent) =>
+        agent.name.toLowerCase().includes(args.agent.toLowerCase()),
+      );
+      if (!agent) {
         return JSON.stringify({
           status: 'failed',
           error: `Agent(${args.agent}) not found or not active.`,
@@ -56,18 +65,16 @@ export const taskTool = defineTool({
 
       let session: Session;
       const createSessionResult = await client.session.create({
-        body: {
-          parentID: context.sessionID,
-          title: args.async
-            ? `${ASYNC_TASK_PREFIX} Task: ${args.title}`
-            : `Task: ${args.title}`,
-        },
-        query: { directory },
+        parentID: toolCtx.sessionID,
+        title: args.async
+          ? `${ASYNC_TASK_PREFIX} Task: ${args.title}`
+          : `Task: ${args.title}`,
+        directory,
       });
       if (createSessionResult.error) {
         return JSON.stringify({
           status: 'failed',
-          error: `Failed to create session for task: ${String(
+          error: `Failed to create session for task: ${JSON.stringify(
             createSessionResult.error,
           )}`,
           code: 'SESSION_ERROR',
@@ -76,55 +83,111 @@ export const taskTool = defineTool({
 
       session = createSessionResult.data;
 
-      const promptPromise = client.session.prompt({
-        path: { id: session.id },
-        body: {
-          agent: args.agent,
-          parts: [{ type: 'text', text: args.prompt }],
-        },
-        query: { directory },
-      });
-
       if (args.async) {
-        promptPromise.then(async ({ error }) => {
-          if (error) {
-            await log({
-              level: 'error',
-              message: `Task(${session.id}) failed to start: ${
-                error instanceof Error ? error.message : 'Unknown error'
-              }`,
-            });
-          }
+        const promptResult = await client.session.promptAsync({
+          sessionID: session.id,
+          agent: agent.name,
+          parts: [{ type: 'text', text: args.prompt }],
+          directory,
         });
+        if (promptResult.error) {
+          return JSON.stringify({
+            status: 'failed',
+            task_id: session.id,
+            error: `Failed to start async task: ${JSON.stringify(
+              promptResult.error,
+            )}`,
+            code: 'SESSION_ERROR',
+          } satisfies TaskResult);
+        }
+
         return JSON.stringify({
           status: 'running',
           task_id: session.id,
+          agent: agent.name,
           title: args.title,
         } satisfies TaskResult);
       }
 
+      const promptPromise = client.session.prompt({
+        sessionID: session.id,
+        agent: agent.name,
+        parts: [{ type: 'text', text: args.prompt }],
+        directory,
+      });
+
+      // Handle timeout for synchronous execution
+      if (args.timeout_ms !== undefined) {
+        let didTimeout = false;
+        const timeoutPromise = Bun.sleep(args.timeout_ms).then(() => {
+          didTimeout = true;
+        });
+
+        await Promise.race([promptPromise, timeoutPromise]);
+
+        if (didTimeout) {
+          // Abort the session to clean up resources
+          const abortResult = await client.session.abort({
+            sessionID: session.id,
+            directory,
+          });
+          if (abortResult.error) {
+            await log({
+              level: 'error',
+              message: `Failed to abort timed-out task(${
+                session.id
+              }): ${JSON.stringify(abortResult.error)}`,
+            });
+          }
+
+          return JSON.stringify({
+            status: 'failed',
+            task_id: session.id,
+            error: `Task timed out after ${args.timeout_ms} ms`,
+            code: 'TIMEOUT',
+          } satisfies TaskResult);
+        }
+      }
+
+      // No timeout or task completed before timeout
       const promptResult = await promptPromise;
       if (promptResult.error) {
         return JSON.stringify({
           status: 'failed',
           task_id: session.id,
-          error: `Failed to execute task: ${String(promptResult.error)}`,
+          error: `Failed to execute task: ${JSON.stringify(
+            promptResult.error,
+          )}`,
           code: 'SESSION_ERROR',
         } satisfies TaskResult);
       }
 
-      const result =
-        promptResult.data.parts
-          .filter((p) => p.type === 'text')
-          .map((p) => p.text)
-          .join('\n') || '(No text content in response)';
+      const injectResult = await client.session.promptAsync({
+        sessionID: toolCtx.sessionID,
+        agent: toolCtx.agent,
+        parts: formatMessageParts(
+          promptResult.data.parts,
+          promptResult.data.info,
+        ),
+        directory,
+      });
+      if (injectResult.error) {
+        return JSON.stringify({
+          status: 'failed',
+          task_id: session.id,
+          error: `Failed to inject task output into parent session: ${JSON.stringify(
+            injectResult.error,
+          )}`,
+          code: 'SESSION_ERROR',
+        } satisfies TaskResult);
+      }
 
       return JSON.stringify({
         status: 'completed',
         task_id: session.id,
-        agent: args.agent,
+        agent: agent.name,
         title: args.title,
-        result,
+        result: 'See next message for session output',
       } satisfies TaskResult);
     },
   },
@@ -136,25 +199,20 @@ export const listTasksTool = defineTool({
     description: 'List all tasks started in the current session.',
     args: {},
     execute: async (_, toolCtx) => {
-      const { client, directory } = PluginContext.use();
-
-      const childrenResult = await client.session.children({
-        path: { id: toolCtx.sessionID },
-        query: { directory },
-      });
+      const childrenResult = await getChildSessions(toolCtx.sessionID);
       if (childrenResult.error) {
         return JSON.stringify({
           status: 'failed',
-          error: `Failed to retrieve tasks: ${String(childrenResult.error)}`,
+          error: `Failed to retrieve tasks: ${JSON.stringify(
+            childrenResult.error,
+          )}`,
           code: 'SESSION_ERROR',
         } satisfies TaskResult);
       }
 
-      const tasks = childrenResult.data.map((s) => ({
-        task_id: s.id,
-        title: s.title,
-      }));
-      return JSON.stringify(tasks);
+      return JSON.stringify({
+        tasks: childrenResult.data,
+      });
     },
   },
 });
@@ -174,6 +232,7 @@ export const taskOutputTool = defineTool({
       timeout_ms: z
         .number()
         .optional()
+        .default(60000)
         .describe(
           'Maximum time in **milliseconds** to wait for task completion (only if wait=true).',
         ),
@@ -181,15 +240,14 @@ export const taskOutputTool = defineTool({
     execute: async (args, toolCtx) => {
       const { client, directory } = PluginContext.use();
 
-      const childrenResult = await client.session.children({
-        path: { id: toolCtx.sessionID },
-        query: { directory },
-      });
+      const childrenResult = await getChildSessions(toolCtx.sessionID);
       if (childrenResult.error) {
         return JSON.stringify({
           status: 'failed',
           task_id: args.task_id,
-          error: `Failed to retrieve tasks: ${String(childrenResult.error)}`,
+          error: `Failed to retrieve tasks: ${JSON.stringify(
+            childrenResult.error,
+          )}`,
           code: 'SESSION_ERROR',
         } satisfies TaskResult);
       }
@@ -204,112 +262,101 @@ export const taskOutputTool = defineTool({
         } satisfies TaskResult);
       }
 
-      const isSessionCompletedResult = await isSessionComplete(task.id);
-      if (isSessionCompletedResult.error) {
+      const agentAndModelResult = await getSessionAgentAndModel(task.id);
+      if (agentAndModelResult.error) {
         return JSON.stringify({
           status: 'failed',
           task_id: task.id,
-          error: `Failed to check task status: ${String(
-            isSessionCompletedResult.error,
+          title: task.title,
+          error: `Failed to get agent info: ${JSON.stringify(
+            agentAndModelResult.error,
           )}`,
           code: 'SESSION_ERROR',
         } satisfies TaskResult);
       }
 
-      if (isSessionCompletedResult.data) {
-        const sessionTextResult = await fetchSessionText(task.id);
-        if (sessionTextResult.error) {
-          return JSON.stringify({
-            status: 'failed',
-            task_id: task.id,
-            error: `Failed to fetch task output: ${String(
-              sessionTextResult.error,
-            )}`,
-            code: 'SESSION_ERROR',
-          } satisfies TaskResult);
-        }
-
-        const agentAndModelResult = await getSessionAgentAndModel(task.id);
-        if (agentAndModelResult.error) {
-          return JSON.stringify({
-            status: 'failed',
-            task_id: task.id,
-            error: `Failed to get agent info: ${String(
-              agentAndModelResult.error,
-            )}`,
-            code: 'SESSION_ERROR',
-          } satisfies TaskResult);
-        }
-
+      const completedResult = await isSessionComplete(task.id);
+      if (completedResult.error) {
         return JSON.stringify({
-          status: 'completed',
+          status: 'failed',
           task_id: task.id,
           agent: agentAndModelResult.data.agent || 'unknown',
           title: task.title,
-          result: sessionTextResult.data,
+          error: `Failed to check task status: ${JSON.stringify(
+            completedResult.error,
+          )}`,
+          code: 'SESSION_ERROR',
         } satisfies TaskResult);
       }
 
-      if (args.wait) {
+      let isCompleted = completedResult.data;
+      if (!isCompleted && args.wait) {
         const waitResult = await waitForSession(task.id, args.timeout_ms);
         if (waitResult.error) {
           return JSON.stringify({
             status: 'failed',
             task_id: task.id,
-            error: `Failed while waiting for task completion: ${String(
+            agent: agentAndModelResult.data.agent || 'unknown',
+            title: task.title,
+            error: `Failed while waiting for task completion: ${JSON.stringify(
               waitResult.error,
             )}`,
             code: 'SESSION_ERROR',
           } satisfies TaskResult);
         }
 
-        if (!waitResult.data) {
-          return JSON.stringify({
-            status: 'failed',
-            task_id: task.id,
-            error:
-              'Reached timeout waiting for task completion. Try again later or add a longer timeout.',
-            code: 'WAIT_TIMEOUT',
-          } satisfies TaskResult);
-        }
+        isCompleted = waitResult.data;
+      }
 
-        const sessionTextResult = await fetchSessionText(task.id);
-        if (sessionTextResult.error) {
-          return JSON.stringify({
-            status: 'failed',
-            task_id: task.id,
-            error: `Failed to fetch task output: ${String(
-              sessionTextResult.error,
-            )}`,
-            code: 'SESSION_ERROR',
-          } satisfies TaskResult);
-        }
+      const sessionOutputResult = await fetchSessionOutput(task.id);
+      if (sessionOutputResult.error) {
+        return JSON.stringify({
+          status: 'failed',
+          task_id: task.id,
+          agent: agentAndModelResult.data.agent || 'unknown',
+          title: task.title,
+          error: `Failed to fetch task output: ${JSON.stringify(
+            sessionOutputResult.error,
+          )}`,
+          code: 'SESSION_ERROR',
+        } satisfies TaskResult);
+      }
 
-        const agentAndModelResult = await getSessionAgentAndModel(task.id);
-        if (agentAndModelResult.error) {
-          return JSON.stringify({
-            status: 'failed',
-            task_id: task.id,
-            error: `Failed to get agent info: ${String(
-              agentAndModelResult.error,
-            )}`,
-            code: 'SESSION_ERROR',
-          } satisfies TaskResult);
-        }
+      const injectResult = await client.session.promptAsync({
+        sessionID: toolCtx.sessionID,
+        agent: toolCtx.agent,
+        parts: sessionOutputResult.data.parts,
+        directory,
+      });
+      if (injectResult.error) {
+        return JSON.stringify({
+          status: 'failed',
+          task_id: task.id,
+          agent: agentAndModelResult.data.agent || 'unknown',
+          title: task.title,
+          error: `Failed to inject task output into parent session: ${JSON.stringify(
+            injectResult.error,
+          )}`,
+          code: 'SESSION_ERROR',
+        } satisfies TaskResult);
+      }
 
+      if (isCompleted) {
         return JSON.stringify({
           status: 'completed',
           task_id: task.id,
           agent: agentAndModelResult.data.agent || 'unknown',
           title: task.title,
-          result: sessionTextResult.data,
+          result: 'See next message for session output',
         } satisfies TaskResult);
       }
 
       return JSON.stringify({
         status: 'running',
         task_id: task.id,
+        agent: agentAndModelResult.data.agent || 'unknown',
         title: task.title,
+        partialResult: 'See next message for current session output',
       } satisfies TaskResult);
     },
   },
@@ -325,28 +372,63 @@ export const sendMessageToTaskTool = defineTool({
         .describe('The ID of the task to send the message to.'),
       message: z.string().describe('The message to send to the task.'),
     },
-    execute: async (args) => {
+    execute: async (args, toolCtx) => {
       const { client, directory } = PluginContext.use();
 
-      client.session
-        .prompt({
-          path: { id: args.task_id },
-          body: {
-            agent: 'user',
-            parts: [{ type: 'text', text: args.message, synthetic: true }],
-          },
-          query: { directory },
-        })
-        .then(async ({ error }) => {
-          if (error) {
-            await log({
-              level: 'error',
-              message: `Failed to send message to task(${
-                args.task_id
-              }): ${String(error.data)}`,
-            });
-          }
-        });
+      const childrenResult = await client.session.children({
+        sessionID: toolCtx.sessionID,
+        directory,
+      });
+      if (childrenResult.error) {
+        return JSON.stringify({
+          status: 'failed',
+          task_id: args.task_id,
+          error: `Failed to retrieve tasks: ${JSON.stringify(
+            childrenResult.error,
+          )}`,
+          code: 'SESSION_ERROR',
+        } satisfies TaskResult);
+      }
+
+      const task = childrenResult.data.find((s) => s.id === args.task_id);
+      if (!task) {
+        return JSON.stringify({
+          status: 'failed',
+          task_id: args.task_id,
+          error: `Task(${args.task_id}) not found.`,
+          code: 'SESSION_ERROR',
+        } satisfies TaskResult);
+      }
+
+      const agentAndModelResult = await getSessionAgentAndModel(task.id);
+      if (agentAndModelResult.error) {
+        return JSON.stringify({
+          status: 'failed',
+          task_id: task.id,
+          error: `Failed to get agent info: ${JSON.stringify(
+            agentAndModelResult.error,
+          )}`,
+          code: 'SESSION_ERROR',
+        } satisfies TaskResult);
+      }
+
+      const { agent, model } = agentAndModelResult.data;
+
+      const { error } = await client.session.promptAsync({
+        sessionID: task.id,
+        agent,
+        model,
+        parts: [{ type: 'text', text: args.message }],
+        directory,
+      });
+      if (error) {
+        return JSON.stringify({
+          status: 'failed',
+          task_id: args.task_id,
+          error: `Failed to send message to task: ${JSON.stringify(error)}`,
+          code: 'SESSION_ERROR',
+        } satisfies TaskResult);
+      }
 
       return JSON.stringify({
         task_id: args.task_id,
@@ -366,15 +448,14 @@ export const cancelTaskTool = defineTool({
     execute: async (args, toolCtx) => {
       const { client, directory } = PluginContext.use();
 
-      const childrenResult = await client.session.children({
-        path: { id: toolCtx.sessionID },
-        query: { directory },
-      });
+      const childrenResult = await getChildSessions(toolCtx.sessionID);
       if (childrenResult.error) {
         return JSON.stringify({
           status: 'failed',
           task_id: args.task_id,
-          error: `Failed to retrieve tasks: ${String(childrenResult.error)}`,
+          error: `Failed to retrieve tasks: ${JSON.stringify(
+            childrenResult.error,
+          )}`,
           code: 'SESSION_ERROR',
         } satisfies TaskResult);
       }
@@ -394,7 +475,7 @@ export const cancelTaskTool = defineTool({
         return JSON.stringify({
           status: 'failed',
           task_id: task.id,
-          error: `Failed to check task status: ${String(
+          error: `Failed to check task status: ${JSON.stringify(
             completedResult.error,
           )}`,
           code: 'SESSION_ERROR',
@@ -411,12 +492,23 @@ export const cancelTaskTool = defineTool({
       }
 
       const abortResult = await client.session.abort({
-        path: { id: task.id },
-        query: { directory },
+        sessionID: task.id,
+        directory,
       });
       if (abortResult.error) {
-        const nowCompleted = await isSessionComplete(task.id);
-        if (nowCompleted) {
+        const nowCompletedResult = await isSessionComplete(task.id);
+        if (nowCompletedResult.error) {
+          return JSON.stringify({
+            status: 'failed',
+            task_id: task.id,
+            error: `Failed to check task status after abort failure: ${JSON.stringify(
+              nowCompletedResult.error,
+            )}`,
+            code: 'SESSION_ERROR',
+          } satisfies TaskResult);
+        }
+
+        if (nowCompletedResult.data) {
           return JSON.stringify({
             status: 'failed',
             task_id: task.id,
@@ -428,7 +520,7 @@ export const cancelTaskTool = defineTool({
         return JSON.stringify({
           status: 'failed',
           task_id: task.id,
-          error: `Failed to cancel task: ${String(abortResult.error)}`,
+          error: `Failed to cancel task: ${JSON.stringify(abortResult.error)}`,
           code: 'SESSION_ERROR',
         } satisfies TaskResult);
       }
