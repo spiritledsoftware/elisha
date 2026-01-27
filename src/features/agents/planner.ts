@@ -57,6 +57,7 @@ export const plannerAgent = defineAgent({
       ${Protocol.verification}
       ${Protocol.confidence}
       ${Protocol.checkpoint}
+      ${Prompt.when(self.canCommunicate, Protocol.agentCommunication(self))}
     </protocols>
 
     <planning_workflow>

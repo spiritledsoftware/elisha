@@ -1,7 +1,12 @@
 import type { AgentConfig } from '@opencode-ai/sdk/v2';
 import defu from 'defu';
 import { ConfigContext } from '~/context';
-import { taskToolSet } from '~/features/tools/tasks';
+import {
+  taskBroadcastsReadTool,
+  taskBroadcastTool,
+  taskCreateTool,
+  taskSendMessageTool,
+} from '~/features/tools/tasks';
 import {
   cleanupPermissions,
   getGlobalPermissions,
@@ -26,6 +31,7 @@ export type ElishaAgent = Omit<ElishaAgentOptions, 'config' | 'prompt'> & {
   hasPermission: (permissionPattern: string) => boolean;
   hasMcp: (mcpName: string) => boolean;
   canDelegate: boolean;
+  canCommunicate: boolean;
 };
 
 export const defineAgent = ({
@@ -115,9 +121,15 @@ export const defineAgent = ({
       // Must have agents to delegate to
       if (!hasSubAgents()) return false;
 
-      // Must have permission to use task tools
       return (
-        this.hasPermission(`${taskToolSet.id}*`) || this.hasPermission('task')
+        this.hasPermission(taskCreateTool.id) || this.hasPermission('task')
+      );
+    },
+    get canCommunicate(): boolean {
+      return (
+        this.hasPermission(taskBroadcastTool.id) &&
+        this.hasPermission(taskBroadcastsReadTool.id) &&
+        this.hasPermission(taskSendMessageTool.id)
       );
     },
   };

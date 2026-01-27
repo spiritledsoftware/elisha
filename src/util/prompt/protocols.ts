@@ -3,11 +3,17 @@ import { consultantAgent } from '~/features/agents/consultant';
 import { documenterAgent } from '~/features/agents/documenter';
 import { executorAgent } from '~/features/agents/executor';
 import { explorerAgent } from '~/features/agents/explorer';
+import { orchestratorAgent } from '~/features/agents/orchestrator';
 import { researcherAgent } from '~/features/agents/researcher';
 import { context7Mcp } from '~/features/mcps/context7';
 import { exaMcp } from '~/features/mcps/exa';
 import { grepAppMcp } from '~/features/mcps/grep-app';
 import { openmemoryMcp } from '~/features/mcps/openmemory';
+import {
+  taskBroadcastsReadTool,
+  taskBroadcastTool,
+  taskSendMessageTool,
+} from '~/features/tools/tasks';
 import { Prompt } from '.';
 
 export namespace Protocol {
@@ -415,6 +421,65 @@ export namespace Protocol {
     **Always report**: What failed, what was tried, what worked (if anything)
     </retry_strategy>
   `;
+
+  /**
+   * Sibling communication protocol for task coordination.
+   * Dynamic based on agent type - orchestrators vs subagents.
+   */
+  export function agentCommunication(agent: ElishaAgent) {
+    const isOrchestrator = agent.id === orchestratorAgent.id;
+
+    return Prompt.template`
+      <agent_communication>
+        ${Prompt.when(
+          agent.canDelegate,
+          `
+        ### Orchestrator Communication
+        As an orchestrator, you can:
+        - **Broadcast to children**: \`${taskBroadcastTool.id}({ target: 'children', ... })\` to share context with all delegated tasks
+        - **Read child broadcasts**: \`${taskBroadcastsReadTool.id}({ source: 'children' })\` to see what tasks discovered
+        `,
+        )}
+        
+        ${Prompt.when(
+          !isOrchestrator,
+          `
+        ### Sibling Communication
+        You can share discoveries with sibling tasks using \`${taskBroadcastTool.id}\`.
+        
+        #### When to Broadcast
+        - **Discovery**: Found important file, pattern, or configuration
+        - **Warning**: Encountered a gotcha or anti-pattern to avoid
+        - **Context**: Background info that helps understand the codebase
+        - **Blocker**: Stuck and need sibling awareness (not help request)
+        
+        #### Broadcast Guidelines
+        - Be concise: 2-5 lines, actionable information
+        - Include specifics: file paths, function names, patterns
+        - Don't broadcast obvious things (e.g., "found package.json")
+        - Don't broadcast your task progress (that's for parent)
+        
+        #### Reading Broadcasts
+        Use \`${taskBroadcastsReadTool.id}\` at the start of complex tasks to sync context.
+        Sibling discoveries may save you from redundant searches.
+        
+        #### Direct Sibling Messages
+        Use \`${taskSendMessageTool.id}\` with a sibling's task ID for directed communication.
+        Sibling IDs are provided in your \`<sibling_tasks>\` context.
+        `,
+        )}
+        
+        ### Example Good Broadcast
+        \`\`\`
+        ${taskBroadcastTool.id}({
+          message: "Config pattern: Use ConfigContext.use() not direct import. File: src/context.ts",
+          category: "discovery",
+          target: "siblings"
+        })
+        \`\`\`
+      </agent_communication>
+    `;
+  }
 
   export const agentsMdMaintenance = (self: ElishaAgent) => {
     const canEdit = self.hasPermission('edit:**/AGENTS.md');

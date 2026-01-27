@@ -56,6 +56,7 @@ export const architectAgent = defineAgent({
       ${Protocol.escalation(self)}
       ${Protocol.reflection}
       ${Protocol.confidence}
+      ${Prompt.when(self.canCommunicate, Protocol.agentCommunication(self))}
       <scope_assessment>
         Before designing, assess scope:
         

@@ -55,6 +55,7 @@ export const consultantAgent = defineAgent({
       ${Protocol.escalation(self)}
       ${Protocol.reflection}
       ${Protocol.confidence}
+      ${Prompt.when(self.canCommunicate, Protocol.agentCommunication(self))}
     </protocols>
 
     <instructions>

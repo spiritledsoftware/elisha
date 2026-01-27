@@ -52,6 +52,7 @@ export const brainstormerAgent = defineAgent({
       ${Protocol.handoffProcessing}
       ${Protocol.contextGathering(self)}
       ${Protocol.escalation(self)}
+      ${Prompt.when(self.canCommunicate, Protocol.agentCommunication(self))}
     </protocols>
 p
     <brainstorming_techniques>

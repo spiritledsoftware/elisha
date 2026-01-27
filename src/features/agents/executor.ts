@@ -54,6 +54,7 @@ export const executorAgent = defineAgent({
       ${Protocol.verification}
       ${Protocol.reflection}
       ${Protocol.checkpoint}
+      ${Prompt.when(self.canCommunicate, Protocol.agentCommunication(self))}
     </protocols>
 
     <execution_workflow>

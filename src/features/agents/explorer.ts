@@ -1,7 +1,7 @@
 import { defineAgent } from '~/agent';
 import { formatAgentsList } from '~/agent/util';
 import { ConfigContext } from '~/context';
-import { taskToolSet } from '~/features/tools/tasks';
+import { taskCancelTool, taskCreateTool } from '~/features/tools/tasks';
 import { Prompt } from '~/util/prompt';
 import { Protocol } from '~/util/prompt/protocols';
 
@@ -19,7 +19,9 @@ export const explorerAgent = defineAgent({
         webfetch: 'deny',
         websearch: 'deny',
         codesearch: 'deny',
-        [`${taskToolSet.id}*`]: 'deny', // Leaf node
+        // Leaf node - deny delegation
+        [taskCreateTool.id]: 'deny',
+        [taskCancelTool.id]: 'deny',
       },
       description: Prompt.template`
         **CODEBASE EXPLORATION SPECIALIST**. Searches and navigates the codebase to find files, patterns, and structure. 
@@ -59,6 +61,7 @@ export const explorerAgent = defineAgent({
       ${Protocol.escalation(self)}
       ${Protocol.reflection}
       ${Protocol.confidence}
+      ${Prompt.when(self.canCommunicate, Protocol.agentCommunication(self))}
     </protocols>
 
     <recovery_strategy>

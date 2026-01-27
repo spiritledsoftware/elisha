@@ -60,6 +60,7 @@ export const designerAgent = defineAgent({
       ${Protocol.escalation(self)}
       ${Protocol.verification}
       ${Protocol.reflection}
+      ${Prompt.when(self.canCommunicate, Protocol.agentCommunication(self))}
     </protocols>
 
     <design_philosophy>

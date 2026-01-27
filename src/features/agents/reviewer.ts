@@ -56,6 +56,7 @@ export const reviewerAgent = defineAgent({
       ${Protocol.escalation(self)}
       ${Protocol.confidence}
       ${Protocol.reflection}
+      ${Prompt.when(self.canCommunicate, Protocol.agentCommunication(self))}
     </protocols>
 
     <review_workflow>

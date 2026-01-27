@@ -25,7 +25,7 @@ export namespace Prompt {
     dedent(`\`\`\`${language}\n${code}\n\`\`\``);
 
   /**
-   * Tagged template literal for composing prompts with embedded expressions.
+   * Tagged template literal or plain string processor for composing prompts.
    *
    * Features:
    * - Filters out null, undefined, and empty string values
@@ -34,7 +34,7 @@ export namespace Prompt {
    * - Collapses 3+ newlines into 2
    * - Trims leading/trailing whitespace
    *
-   * @example
+   * @example Tagged template usage
    * ```ts
    * const agentList = `| explorer | searches code |
    * | executor | writes code |`;
@@ -52,11 +52,23 @@ export namespace Prompt {
    * //   | executor | writes code |
    * // </agents>
    * ```
+   *
+   * @example Plain string usage
+   * ```ts
+   * const prompt = Prompt.template("  hello\n  world  ");
+   * // Output: "hello\nworld"
+   * ```
    */
   export const template = (
-    strings: TemplateStringsArray,
+    strings: TemplateStringsArray | string,
     ...values: unknown[]
   ): string => {
+    // Handle plain string input - dedent first, then cleanup
+    if (typeof strings === 'string') {
+      return dedent(strings.replace(/\n{3,}/g, '\n\n')).trim();
+    }
+
+    // Original tagged template logic
     let result = '';
 
     for (let i = 0; i < strings.length; i++) {
@@ -88,7 +100,7 @@ export namespace Prompt {
       }
     }
 
-    return dedent(result.replace(/\n{3,}/g, '\n\n').trim());
+    return dedent(result.replace(/\n{3,}/g, '\n\n')).trim();
   };
 
   /**

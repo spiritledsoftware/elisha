@@ -145,18 +145,15 @@ describe('Prompt', () => {
 
     it('preserves indentation for multi-line interpolated values', () => {
       const multiLine = 'line1\nline2\nline3';
-      // After trim(), first line has 0 indent, so dedent doesn't remove anything
       // Interpolated values get indent from their position in the template
+      // dedent() removes the common 8-space indent, preserving relative indentation
       const result = Prompt.template`
         <section>
           ${multiLine}
         </section>
       `;
-      // First line after trim has 0 indent, so minimum indent is 0
-      // All other lines keep their original indentation relative to the template
-      expect(result).toBe(
-        '<section>\n          line1\n          line2\n          line3\n        </section>',
-      );
+      // dedent removes 8-space common indent, leaving 2-space relative indent for content
+      expect(result).toBe('<section>\n  line1\n  line2\n  line3\n</section>');
     });
 
     it('collapses 3+ newlines into 2', () => {
@@ -177,16 +174,14 @@ describe('Prompt', () => {
     });
 
     it('applies dedent to final result', () => {
-      // After trim(), first line (<root>) has 0 indent
-      // So minimum indent is 0 and dedent preserves all indentation
+      // dedent() finds minimum indent (8 spaces) and removes it from all lines
+      // This preserves relative indentation while removing common leading whitespace
       const result = Prompt.template`
         <root>
           <child>content</child>
         </root>
       `;
-      expect(result).toBe(
-        '<root>\n          <child>content</child>\n        </root>',
-      );
+      expect(result).toBe('<root>\n  <child>content</child>\n</root>');
     });
 
     it('handles multiple interpolations', () => {
@@ -215,11 +210,9 @@ describe('Prompt', () => {
           ${Prompt.when(disabled, '<disabled/>')}
         </doc>
       `;
-      // Empty string from disabled when still leaves the indent on that line
-      // After trim, first line has 0 indent, so dedent preserves all indentation
-      expect(result).toBe(
-        '<doc>\n          <enabled/>\n          \n        </doc>',
-      );
+      // Empty string from disabled when leaves the indent on that line
+      // dedent() removes 8-space common indent, preserving 2-space relative indent
+      expect(result).toBe('<doc>\n  <enabled/>\n  \n</doc>');
     });
 
     it('handles deeply nested indentation', () => {
@@ -231,10 +224,10 @@ describe('Prompt', () => {
           </middle>
         </outer>
       `;
-      // After trim, first line has 0 indent, so dedent preserves all indentation
       // Interpolated content gets indent from position, subsequent lines get same indent added
+      // dedent() removes 8-space common indent, preserving relative indentation
       expect(result).toBe(
-        '<outer>\n          <middle>\n            nested\n              deeper\n          </middle>\n        </outer>',
+        '<outer>\n  <middle>\n    nested\n      deeper\n  </middle>\n</outer>',
       );
     });
 

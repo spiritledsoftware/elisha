@@ -58,6 +58,7 @@ export const documenterAgent = defineAgent({
       ${Protocol.contextGathering(self)}
       ${Protocol.escalation(self)}
       ${Protocol.reflection}
+      ${Prompt.when(self.canCommunicate, Protocol.agentCommunication(self))}
     </protocols>
 
     <documentation_types>

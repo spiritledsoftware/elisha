@@ -1,161 +1,159 @@
 # Elisha
 
-An OpenCode plugin providing AI agent orchestration with persistent memory, specialized agents, and MCP tool integration.
+OpenCode plugin providing specialized AI agent orchestration with persistent memory.
 
 ## Tech Stack
 
-- **TypeScript** (ESNext, strict mode)
-- **Bun** - Runtime and build tool
-- **Biome** - Formatting and linting
-- **OpenCode Plugin SDK** (`@opencode-ai/plugin`, `@opencode-ai/sdk`)
-- **defu** - Deep object merging for config
-- **nanoid** - ID generation
+- **Runtime**: Bun >= 1.0.0
+- **Language**: TypeScript (strict mode, ESNext target)
+- **Core Dependencies**:
+  - `@opencode-ai/plugin` / `@opencode-ai/sdk/v2` - Plugin framework
+  - `zod` v4 - Schema validation
+  - `defu` - Deep object defaults
+- **Tooling**: Biome (format/lint), tsgo (typecheck), Husky (git hooks)
 
 ## Project Structure
 
 ```
 src/
-├── index.ts          # Plugin entry point, exports ElishaPlugin
-├── context.ts        # AsyncLocalStorage contexts (ConfigContext, PluginContext)
-├── types.ts          # Shared type definitions
-├── agent/            # Agent definitions and utilities
-├── mcp/              # MCP server configurations
-├── task/             # Task delegation tools
-├── instruction/      # AGENTS.md injection system
-├── permission/       # Permission utilities
-├── command/          # Slash commands (/init-deep)
-├── skill/            # Skill configurations
-└── util/             # Shared utilities
+├── index.ts              # Plugin entry, exports ElishaPlugin
+├── context.ts            # PluginContext and ConfigContext
+├── types.ts              # Global types
+├── agent/                # Agent builder and utilities
+├── command/              # Command builder
+├── hook/                 # Hook builder and utilities
+├── mcp/                  # MCP builder
+├── tool/                 # Tool builder
+├── permission/           # Permission system
+├── instruction/          # AGENTS.md injection config
+├── skill/                # Skill configuration
+├── util/                 # Utilities (prompt, session, context)
+└── features/             # Feature implementations
+    ├── agents/           # 11 agent definitions
+    ├── commands/         # Custom commands
+    ├── hooks/            # Hook implementations
+    ├── mcps/             # MCP configurations
+    └── tools/            # Tool implementations
 ```
 
-## Code Standards
+## Core Patterns
 
-### Naming Conventions
+### Builder Pattern
 
-- **Files**: `kebab-case.ts` (e.g., `chrome-devtools.ts`)
-- **Functions**: `camelCase` (e.g., `setupAgentConfig`)
-- **Types/Interfaces**: `PascalCase` (e.g., `ElishaAgent`)
-- **Constants**: `SCREAMING_SNAKE_CASE` (e.g., `TOOL_TASK_ID`)
-
-### Import Conventions
-
-- Use `~` path alias for src imports: `import { ConfigContext } from '~/context'`
-- Group imports: external packages first, then internal modules
-- Use `type` imports for type-only imports: `import type { Config } from '@opencode-ai/sdk/v2'`
-
-### Module Pattern
-
-Each domain module follows this structure:
-```typescript
-// index.ts - Re-exports public API
-export { setupXxxConfig } from './config'
-export { setupXxxHooks } from './hook'
-export * from './types'
-```
-
-## Key Patterns
-
-### Context Pattern (AsyncLocalStorage)
-
-All config access uses `AsyncLocalStorage` contexts:
+All entity types use a `define*` builder function:
 
 ```typescript
-import { ConfigContext, PluginContext } from '~/context';
-
-// Access current config (throws if not in context)
-const config = ConfigContext.use();
-
-// Provide context for async operations
-await ConfigContext.provide(config, async () => {
-  // config available here
-});
-```
-
-### Define Pattern (Agents, MCPs)
-
-Use factory functions that return objects with `setupConfig` methods:
-
-```typescript
-// Agent definition
+// Agent
+import { defineAgent } from '~/agent';
 export const myAgent = defineAgent({
   id: 'Name (role)',
-  capabilities: ['What it does'],
   config: () => ({ /* AgentConfig */ }),
-  prompt: (self) => Prompt.template`...`,
+  prompt: (self) => `...`,
 });
 
-// MCP definition
+// Tool
+import { defineTool } from '~/tool';
+export const myTool = defineTool({
+  id: 'my_tool',
+  config: { description: '...', args: { /* zod schema */ }, execute: async () => {} },
+});
+
+// MCP
+import { defineMcp } from '~/mcp';
 export const myMcp = defineMcp({
-  id: 'mcp-name',
-  capabilities: ['What it provides'],
+  id: 'my-mcp',
+  capabilities: ['...'],
   config: { /* McpConfig */ },
 });
 ```
 
-### Prompt Template Pattern
+### Context System
 
-Use `Prompt.template` for agent prompts with conditional sections:
+Uses `AsyncLocalStorage` for request-scoped context:
 
 ```typescript
-import { Prompt } from './util/prompt';
-import { Protocol } from './util/prompt/protocols';
+import { ConfigContext, PluginContext } from '~/context';
 
-const prompt = Prompt.template`
-  <role>...</role>
-  ${Prompt.when(condition, '<optional-section>...</optional-section>')}
-  ${Protocol.contextGathering(self)}
-`;
+// Access context (throws if not provided)
+const config = ConfigContext.use();
+const { client, directory } = PluginContext.use();
+
+// Provide context to async scope
+await ConfigContext.provide(config, async () => {
+  // config available in this scope
+});
 ```
 
-### Hook Aggregation
+### Path Alias
 
-Multiple hook sets are combined with isolated execution:
+Use `~` for src imports: `import { Prompt } from '~/util/prompt'`
+
+### Result Pattern
+
+Async operations return discriminated unions:
 
 ```typescript
-import { aggregateHooks } from './util/hook';
+const result = await someOperation();
+if (result.error) {
+  return { error: result.error };
+}
+return { data: result.data };
+```
 
-return aggregateHooks([
-  setupMcpHooks(),
-  setupInstructionHooks(),
-  setupTaskHooks(),
-]);
+### Prompt Templates
+
+Use `Prompt.template` for composing prompts:
+
+```typescript
+import { Prompt } from '~/util/prompt';
+
+const prompt = Prompt.template`
+  <section>
+    ${Prompt.when(condition, 'conditional content')}
+    ${otherContent}
+  </section>
+`;
 ```
 
 ## Commands
 
 | Command | Description |
 |---------|-------------|
-| `bun install` | Install dependencies |
-| `bun run build` | Build to `dist/` |
-| `bun run build:watch` | Build with watch mode |
-| `bun run typecheck` | TypeScript type checking |
-| `bun run lint` | Biome linting |
-| `bun run lint:fix` | Fix lint issues |
-| `bun run format` | Format with Biome |
-| `bun run format:check` | Check formatting |
+| `bun run build` | Typecheck + bundle to dist/ |
+| `bun run build:watch` | Watch mode build |
+| `bun run typecheck` | TypeScript check with tsgo |
 | `bun run test` | Run tests |
-| `bun run test:watch` | Run tests in watch mode |
+| `bun run check` | Biome lint + format check |
+| `bun run check:fix` | Auto-fix lint/format issues |
+
+## Naming Conventions
+
+| Element | Convention | Example |
+|---------|------------|---------|
+| Files | kebab-case | `init-deep.ts` |
+| Types | PascalCase | `ElishaAgent` |
+| Functions | camelCase | `defineAgent` |
+| Agent IDs | `Name (role)` | `Baruch (executor)` |
+| Tool IDs | `prefix_action` | `elisha_task_create` |
+| MCP IDs | kebab-case | `chrome-devtools` |
 
 ## Testing
 
-- Test files: `*.test.ts` co-located with source
-- Use `bun:test` (`describe`, `it`, `expect`)
-- Mock utilities in `src/test-setup.ts`:
-  - `createMockConfig()` - Mock Config object
-  - `createMockPluginInput()` - Mock PluginInput
-  - `createMockConfigWithMcp()` - Config with MCP servers
-  - `createMockConfigWithAgent()` - Config with specific agent
+- Use Bun test runner (`bun test`)
+- Tests colocated with source: `foo.ts` → `foo.test.ts`
+- Mock helpers in `src/test-setup.ts`
+- Use `ConfigContext.provide()` to inject test config
 
 ```typescript
 import { describe, expect, it } from 'bun:test';
 import { ConfigContext } from '~/context';
 import { createMockConfig } from '../test-setup';
 
-describe('myFunction', () => {
-  it('does something', () => {
+describe('feature', () => {
+  it('works', () => {
     const ctx = createMockConfig();
     ConfigContext.provide(ctx, () => {
-      // test code
+      // test with mocked config
     });
   });
 });
@@ -163,23 +161,16 @@ describe('myFunction', () => {
 
 ## Critical Rules
 
-- **Always use contexts** - Never access config directly; use `ConfigContext.use()`
-- **Re-provide context across async boundaries** - AsyncLocalStorage doesn't persist across some async operations
-- **Use `defu` for config merging** - Preserves user overrides while applying defaults
-- **Test files must use `ConfigContext.provide()`** - Tests need explicit context setup
-- **CI runs format, typecheck, lint, build, test** - All must pass before merge
+1. **Always use context pattern** - Never pass config/client as parameters; use `ConfigContext.use()` / `PluginContext.use()`
+2. **Wrap async in context** - When crossing async boundaries, re-provide context
+3. **Use path alias** - Import from `~/` not relative `../`
+4. **Return result objects** - Use `{ data, error }` pattern for async operations
+5. **Register features** - Add new entities to the appropriate index file (`src/features/*/index.ts`)
 
 ## Anti-Patterns
 
-- ❌ Importing from `@opencode-ai/sdk` without `/v2` suffix
-- ❌ Using `config.agent?.foo` without null coalescing defaults
-- ❌ Modifying config outside of `setupConfig` functions
-- ❌ Creating agents without `defineAgent` factory
-- ❌ Hardcoding MCP tool names (use `${mcp.id}*` pattern)
-- ❌ Skipping `cleanupPermissions` when setting agent permissions
-
-## Versioning
-
-Uses [changesets](https://github.com/changesets/changesets) for version management:
-- Run `bunx @changesets/cli` to create a changeset
-- Merging to `main` triggers release workflow
+- ❌ Direct config access without context: `const config = globalConfig`
+- ❌ Relative imports from src: `import { x } from '../../../agent'`
+- ❌ Throwing errors from async operations (return error objects instead)
+- ❌ Modifying config outside `setup*` functions
+- ❌ Forgetting to add new agents/tools/mcps to their index exports

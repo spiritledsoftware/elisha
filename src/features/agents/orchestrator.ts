@@ -53,6 +53,7 @@ export const orchestratorAgent = defineAgent({
       ${Prompt.when(self.canDelegate, Protocol.parallelWork)}
       ${Prompt.when(self.canDelegate, Protocol.resultSynthesis)}
       ${Prompt.when(self.canDelegate, Protocol.progressTracking)}
+      ${Prompt.when(self.canCommunicate, Protocol.agentCommunication(self))}
     </protocols>
 
     <workflow>

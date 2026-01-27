@@ -2,7 +2,7 @@ import { defineAgent } from '~/agent';
 import { formatAgentsList } from '~/agent/util';
 import { ConfigContext } from '~/context';
 import { chromeDevtoolsMcp } from '~/features/mcps/chrome-devtools';
-import { taskToolSet } from '~/features/tools/tasks';
+import { taskCancelTool, taskCreateTool } from '~/features/tools/tasks';
 import { Prompt } from '~/util/prompt';
 import { Protocol } from '~/util/prompt/protocols';
 
@@ -21,7 +21,9 @@ export const researcherAgent = defineAgent({
         websearch: 'allow',
         codesearch: 'allow',
         [`${chromeDevtoolsMcp.id}*`]: 'allow',
-        [`${taskToolSet.id}*`]: 'deny', // Leaf node
+        // Leaf node - deny delegation
+        [taskCreateTool.id]: 'deny',
+        [taskCancelTool.id]: 'deny',
       },
       description: Prompt.template`
         **EXTERNAL RESEARCH SPECIALIST**. Researches external sources for documentation, examples, and best practices.
@@ -59,6 +61,7 @@ export const researcherAgent = defineAgent({
       ${Protocol.escalation(self)}
       ${Protocol.confidence}
       ${Protocol.retryStrategy}
+      ${Prompt.when(self.canCommunicate, Protocol.agentCommunication(self))}
     </protocols>
 
     <recovery_strategies>
