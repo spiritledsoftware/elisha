@@ -65,18 +65,18 @@ export const defineAgent = ({
         return;
       }
 
-      if (agentConfig.prompt) {
-        agentConfig.prompt = agentConfig.prompt + agentConfig.prompt_append;
-        return;
-      }
-
       if (typeof prompt === 'function') {
         prompt = await prompt(this);
+      }
+
+      if (agentConfig.prompt) {
+        prompt = agentConfig.prompt;
       }
 
       if (agentConfig.prompt_prepend) {
         prompt = `${agentConfig.prompt_prepend}\n${prompt}`;
       }
+
       if (agentConfig.prompt_append) {
         prompt = `${prompt}\n${agentConfig.prompt_append}`;
       }

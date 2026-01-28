@@ -43,8 +43,6 @@ export const taskHooks = defineHookSet({
   hooks: () => {
     const { client } = PluginContext.use();
 
-    const injectedSessions = new Set<string>();
-
     return {
       event: async ({ event }) => {
         // Handle session created event for sibling injection
@@ -66,15 +64,22 @@ export const taskHooks = defineHookSet({
           // Announce new task to existing siblings
           const announcement = formatNewSiblingAnnouncement(session.id, newTaskAgent, newTaskTitle);
           for (const sibling of siblings) {
-            const siblingAgentResult = await getSessionAgentAndModel(sibling);
-            await client.session.promptAsync({
-              sessionID: sibling.id,
-              noReply: true,
-              agent: siblingAgentResult.data?.agent,
-              model: siblingAgentResult.data?.model,
-              parts: [{ type: 'text', text: announcement, synthetic: true }],
-              directory: sibling.directory,
-            });
+            try {
+              const siblingAgentResult = await getSessionAgentAndModel(sibling);
+              await client.session.promptAsync({
+                sessionID: sibling.id,
+                noReply: true,
+                agent: siblingAgentResult.data?.agent,
+                model: siblingAgentResult.data?.model,
+                parts: [{ type: 'text', text: announcement, synthetic: true }],
+                directory: sibling.directory,
+              });
+            } catch (err) {
+              log({
+                level: 'warn',
+                message: `Failed to announce new sibling to session(${sibling.id}): ${err}`,
+              });
+            }
           }
         }
 
@@ -199,8 +204,6 @@ export const taskHooks = defineHookSet({
             }
 
             const { agent, model } = agentModelResult.data;
-
-            injectedSessions.add(session.id);
 
             const promptResult = await client.session.promptAsync({
               sessionID: session.id,
