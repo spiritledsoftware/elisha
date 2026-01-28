@@ -1,4 +1,5 @@
 #!/bin/sh
-bun run check
+bun run format:check
+bun run lint
 bun run build
 bun run test

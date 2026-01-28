@@ -6,15 +6,13 @@
 
 import type { PluginInput } from '@opencode-ai/plugin';
 import type { Config, OpencodeClient } from '@opencode-ai/sdk/v2';
-import type { PluginContext } from './types';
+import type { ElishaConfig, PluginContext } from './types';
 
 /**
  * Creates a mock OpencodeClient for testing.
  * All methods are stubs that can be overridden as needed.
  */
-export const createMockClient = (
-  overrides: Partial<OpencodeClient> = {},
-): OpencodeClient => {
+export const createMockClient = (overrides: Partial<OpencodeClient> = {}): OpencodeClient => {
   return {
     session: {
       create: async () => ({ id: 'test-session-id' }),
@@ -79,9 +77,7 @@ export const createMockClient = (
  * Creates a mock PluginInput for testing.
  * Provides sensible defaults that can be overridden.
  */
-export const createMockPluginCtx = (
-  overrides: Partial<PluginContext> = {},
-): PluginContext => {
+export const createMockPluginCtx = (overrides: Partial<PluginContext> = {}): PluginContext => {
   return {
     client: createMockClient(),
     project: {
@@ -102,8 +98,8 @@ export const createMockPluginCtx = (
  */
 export const createMockConfig = (
   overrides: { input?: Partial<PluginInput>; config?: Partial<Config> } = {},
-): Config => {
-  const config: Config = {
+): ElishaConfig => {
+  const config: ElishaConfig = {
     model: 'anthropic/claude-sonnet-4-20250514',
     agent: {},
     mcp: {},

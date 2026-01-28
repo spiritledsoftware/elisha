@@ -357,12 +357,12 @@ Run verification commands to ensure all changes are valid:
 
 ## Risks
 
-| Risk | Impact | Mitigation |
-| ---- | ------ | ---------- |
-| Prompt length increases degrade performance | High | Keep additions minimal, use protocols for reuse |
-| Agents over-clarify, annoying users | Medium | Clear "do NOT ask when" guidance in Protocol.clarification |
-| Temperature changes affect output quality | Low | Changes are conservative (0.7→0.4, 0.7→0.5) |
-| Backward compatibility breaks | High | Existing sections unchanged, only additions |
+| Risk                                        | Impact | Mitigation                                                 |
+| ------------------------------------------- | ------ | ---------------------------------------------------------- |
+| Prompt length increases degrade performance | High   | Keep additions minimal, use protocols for reuse            |
+| Agents over-clarify, annoying users         | Medium | Clear "do NOT ask when" guidance in Protocol.clarification |
+| Temperature changes affect output quality   | Low    | Changes are conservative (0.7→0.4, 0.7→0.5)                |
+| Backward compatibility breaks               | High   | Existing sections unchanged, only additions                |
 
 ## Checkpoint
 

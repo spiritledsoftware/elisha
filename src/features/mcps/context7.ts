@@ -1,5 +1,5 @@
 import { defineMcp } from '~/mcp';
-import { log } from '~/util';
+import { log } from '~/utils';
 
 export const context7Mcp = defineMcp({
   id: 'context7',
@@ -8,8 +8,7 @@ export const context7Mcp = defineMcp({
     if (!process.env.CONTEXT7_API_KEY) {
       log({
         level: 'warn',
-        message:
-          '[Elisha] CONTEXT7_API_KEY not set - Context7 will use public rate limits',
+        message: '[Elisha] CONTEXT7_API_KEY not set - Context7 will use public rate limits',
       });
     }
     return {

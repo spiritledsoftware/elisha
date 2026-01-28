@@ -8,12 +8,12 @@
 
 ## Acceptance Criteria
 
-| Criterion | Status | Evidence |
-|-----------|--------|----------|
-| Review document created | ✅ | This file |
-| Redundancies identified per agent | ✅ | See Per-Agent Findings |
-| Cross-agent patterns documented | ✅ | See Cross-Agent Duplication |
-| No code changes made | ✅ | READ-ONLY review |
+| Criterion                         | Status | Evidence                    |
+| --------------------------------- | ------ | --------------------------- |
+| Review document created           | ✅     | This file                   |
+| Redundancies identified per agent | ✅     | See Per-Agent Findings      |
+| Cross-agent patterns documented   | ✅     | See Cross-Agent Duplication |
+| No code changes made              | ✅     | READ-ONLY review            |
 
 ## Summary
 
@@ -229,12 +229,12 @@ Repeated phrases:
 
 ### executor.ts (233 lines)
 
-| Line | Issue | Severity | Recommendation |
-|------|-------|----------|----------------|
-| 99-109 | `<handoff_processing>` duplicates `Protocol.taskHandoff` content | Warning | Remove - taskHandoff already in orchestrator |
-| 138-167 | `<execution_workflow>` overlaps with `<instructions>` | Nitpick | Merge into single workflow section |
-| 154-159 | Verification checklist duplicates `Protocol.verification` | Warning | Remove inline checklist, rely on protocol |
-| 170 | "Follow the protocols provided" redundant | Nitpick | Remove line |
+| Line    | Issue                                                            | Severity | Recommendation                               |
+| ------- | ---------------------------------------------------------------- | -------- | -------------------------------------------- |
+| 99-109  | `<handoff_processing>` duplicates `Protocol.taskHandoff` content | Warning  | Remove - taskHandoff already in orchestrator |
+| 138-167 | `<execution_workflow>` overlaps with `<instructions>`            | Nitpick  | Merge into single workflow section           |
+| 154-159 | Verification checklist duplicates `Protocol.verification`        | Warning  | Remove inline checklist, rely on protocol    |
+| 170     | "Follow the protocols provided" redundant                        | Nitpick  | Remove line                                  |
 
 **Estimated savings**: ~150 tokens
 
@@ -242,11 +242,11 @@ Repeated phrases:
 
 ### planner.ts (277 lines)
 
-| Line | Issue | Severity | Recommendation |
-|------|-------|----------|----------------|
-| 106-133 | `<planning_workflow>` overlaps with `<instructions>` | Nitpick | Consolidate |
-| 161 | "Follow the protocols provided" redundant | Nitpick | Remove line |
-| 172-249 | `<plan_format>` is 77 lines - very verbose | Warning | Consider linking to template file instead |
+| Line    | Issue                                                | Severity | Recommendation                            |
+| ------- | ---------------------------------------------------- | -------- | ----------------------------------------- |
+| 106-133 | `<planning_workflow>` overlaps with `<instructions>` | Nitpick  | Consolidate                               |
+| 161     | "Follow the protocols provided" redundant            | Nitpick  | Remove line                               |
+| 172-249 | `<plan_format>` is 77 lines - very verbose           | Warning  | Consider linking to template file instead |
 
 **Estimated savings**: ~100 tokens (format is necessary but could reference external template)
 
@@ -254,12 +254,12 @@ Repeated phrases:
 
 ### reviewer.ts (245 lines)
 
-| Line | Issue | Severity | Recommendation |
-|------|-------|----------|----------------|
-| 89 | Uses `Protocol.confidence` | - | - |
-| 181-185 | Also defines custom `<confidence_levels>` | Warning | Remove one - they serve different purposes but confuse |
-| 162 | "Follow the protocols provided" redundant | Nitpick | Remove line |
-| 187-228 | `<output_format>` is 41 lines | Nitpick | Acceptable for review format |
+| Line    | Issue                                     | Severity | Recommendation                                         |
+| ------- | ----------------------------------------- | -------- | ------------------------------------------------------ |
+| 89      | Uses `Protocol.confidence`                | -        | -                                                      |
+| 181-185 | Also defines custom `<confidence_levels>` | Warning  | Remove one - they serve different purposes but confuse |
+| 162     | "Follow the protocols provided" redundant | Nitpick  | Remove line                                            |
+| 187-228 | `<output_format>` is 41 lines             | Nitpick  | Acceptable for review format                           |
 
 **Estimated savings**: ~80 tokens
 
@@ -267,10 +267,10 @@ Repeated phrases:
 
 ### architect.ts (172 lines)
 
-| Line | Issue | Severity | Recommendation |
-|------|-------|----------|----------------|
-| 97 | "Follow the protocols provided" redundant | Nitpick | Remove line |
-| 148-158 | `<scope_assessment>` duplicates `Protocol.scopeAssessment` | Warning | Remove inline, use protocol |
+| Line    | Issue                                                      | Severity | Recommendation              |
+| ------- | ---------------------------------------------------------- | -------- | --------------------------- |
+| 97      | "Follow the protocols provided" redundant                  | Nitpick  | Remove line                 |
+| 148-158 | `<scope_assessment>` duplicates `Protocol.scopeAssessment` | Warning  | Remove inline, use protocol |
 
 **Estimated savings**: ~100 tokens
 
@@ -278,11 +278,11 @@ Repeated phrases:
 
 ### orchestrator.ts (250 lines)
 
-| Line | Issue | Severity | Recommendation |
-|------|-------|----------|----------------|
-| 99-132 | `<workflow>` is comprehensive and necessary | - | Keep |
-| 134-178 | `<fast_path>` and `<error_recovery>` are well-gated | - | Keep |
-| 191-207 | `<parallel_patterns>` duplicates `Protocol.parallelWork` | Warning | Remove inline, protocol already included at line 85 |
+| Line    | Issue                                                    | Severity | Recommendation                                      |
+| ------- | -------------------------------------------------------- | -------- | --------------------------------------------------- |
+| 99-132  | `<workflow>` is comprehensive and necessary              | -        | Keep                                                |
+| 134-178 | `<fast_path>` and `<error_recovery>` are well-gated      | -        | Keep                                                |
+| 191-207 | `<parallel_patterns>` duplicates `Protocol.parallelWork` | Warning  | Remove inline, protocol already included at line 85 |
 
 **Estimated savings**: ~80 tokens
 
@@ -290,11 +290,11 @@ Repeated phrases:
 
 ### designer.ts (201 lines)
 
-| Line | Issue | Severity | Recommendation |
-|------|-------|----------|----------------|
-| 99-113 | `<design_philosophy>` is unique and valuable | - | Keep |
-| 148 | "Follow the protocols provided" redundant | Nitpick | Remove line |
-| 193-197 | NEVER constraints are specific and valuable | - | Keep |
+| Line    | Issue                                        | Severity | Recommendation |
+| ------- | -------------------------------------------- | -------- | -------------- |
+| 99-113  | `<design_philosophy>` is unique and valuable | -        | Keep           |
+| 148     | "Follow the protocols provided" redundant    | Nitpick  | Remove line    |
+| 193-197 | NEVER constraints are specific and valuable  | -        | Keep           |
 
 **Estimated savings**: ~10 tokens
 
@@ -302,10 +302,10 @@ Repeated phrases:
 
 ### documenter.ts (163 lines)
 
-| Line | Issue | Severity | Recommendation |
-|------|-------|----------|----------------|
-| 93 | "Follow the protocols provided" redundant | Nitpick | Remove line |
-| 104-111 | `<documentation_types>` table is useful | - | Keep |
+| Line    | Issue                                     | Severity | Recommendation |
+| ------- | ----------------------------------------- | -------- | -------------- |
+| 93      | "Follow the protocols provided" redundant | Nitpick  | Remove line    |
+| 104-111 | `<documentation_types>` table is useful   | -        | Keep           |
 
 **Estimated savings**: ~10 tokens
 
@@ -313,12 +313,12 @@ Repeated phrases:
 
 ### researcher.ts (140 lines)
 
-| Line | Issue | Severity | Recommendation |
-|------|-------|----------|----------------|
-| 71 | Uses `Protocol.confidence` | - | - |
-| 101-106 | Also defines `<confidence_indicators>` | Warning | Choose one - they overlap |
-| 83 | "Follow the protocols provided" redundant | Nitpick | Remove line |
-| 93-99 | `<recovery_strategies>` could use `Protocol.retryStrategy` | Nitpick | Already has retryStrategy at line 72 |
+| Line    | Issue                                                      | Severity | Recommendation                       |
+| ------- | ---------------------------------------------------------- | -------- | ------------------------------------ |
+| 71      | Uses `Protocol.confidence`                                 | -        | -                                    |
+| 101-106 | Also defines `<confidence_indicators>`                     | Warning  | Choose one - they overlap            |
+| 83      | "Follow the protocols provided" redundant                  | Nitpick  | Remove line                          |
+| 93-99   | `<recovery_strategies>` could use `Protocol.retryStrategy` | Nitpick  | Already has retryStrategy at line 72 |
 
 **Estimated savings**: ~60 tokens
 
@@ -326,10 +326,10 @@ Repeated phrases:
 
 ### consultant.ts (128 lines)
 
-| Line | Issue | Severity | Recommendation |
-|------|-------|----------|----------------|
-| - | No `Protocol.confidence` but mentions confidence in constraints | Nitpick | Add `Protocol.confidence` for consistency |
-| 98-116 | `<escalation_path>` is unique to consultant | - | Keep |
+| Line   | Issue                                                           | Severity | Recommendation                            |
+| ------ | --------------------------------------------------------------- | -------- | ----------------------------------------- |
+| -      | No `Protocol.confidence` but mentions confidence in constraints | Nitpick  | Add `Protocol.confidence` for consistency |
+| 98-116 | `<escalation_path>` is unique to consultant                     | -        | Keep                                      |
 
 **Estimated savings**: ~0 tokens (well-optimized)
 
@@ -337,10 +337,10 @@ Repeated phrases:
 
 ### explorer.ts (126 lines)
 
-| Line | Issue | Severity | Recommendation |
-|------|-------|----------|----------------|
-| 79 | "Follow the protocols provided" redundant | Nitpick | Remove line |
-| 89-99 | `<recovery_strategy>` could become protocol | Nitpick | Consider `Protocol.searchRecovery` |
+| Line  | Issue                                       | Severity | Recommendation                     |
+| ----- | ------------------------------------------- | -------- | ---------------------------------- |
+| 79    | "Follow the protocols provided" redundant   | Nitpick  | Remove line                        |
+| 89-99 | `<recovery_strategy>` could become protocol | Nitpick  | Consider `Protocol.searchRecovery` |
 
 **Estimated savings**: ~10 tokens
 
@@ -348,10 +348,10 @@ Repeated phrases:
 
 ### brainstormer.ts (130 lines)
 
-| Line | Issue | Severity | Recommendation |
-|------|-------|----------|----------------|
-| 76 | "Follow the protocols provided" redundant | Nitpick | Remove line |
-| 84-92 | `<techniques>` table is unique and valuable | - | Keep |
+| Line  | Issue                                       | Severity | Recommendation |
+| ----- | ------------------------------------------- | -------- | -------------- |
+| 76    | "Follow the protocols provided" redundant   | Nitpick  | Remove line    |
+| 84-92 | `<techniques>` table is unique and valuable | -        | Keep           |
 
 **Estimated savings**: ~10 tokens
 
@@ -406,16 +406,16 @@ Repeated phrases:
 
 ## Token Savings Estimate
 
-| Category | Tokens Saved |
-|----------|--------------|
-| Remove redundant preamble | ~90 |
-| Extract direct request handling | ~300 |
-| Resolve confidence duplication | ~100 |
-| Remove parallel patterns duplicate | ~80 |
-| Remove verification duplicate | ~50 |
-| Output header extraction | ~60 |
-| Search recovery protocol | ~80 |
-| **Total Potential** | **~760 tokens** |
+| Category                           | Tokens Saved    |
+| ---------------------------------- | --------------- |
+| Remove redundant preamble          | ~90             |
+| Extract direct request handling    | ~300            |
+| Resolve confidence duplication     | ~100            |
+| Remove parallel patterns duplicate | ~80             |
+| Remove verification duplicate      | ~50             |
+| Output header extraction           | ~60             |
+| Search recovery protocol           | ~80             |
+| **Total Potential**                | **~760 tokens** |
 
 **Conservative estimate**: 500-800 tokens (5-8% reduction)
 **Aggressive estimate**: 1,500-2,000 tokens (15-20% reduction with full protocol extraction)

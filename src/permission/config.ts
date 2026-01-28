@@ -1,7 +1,7 @@
 import { ConfigContext } from '~/context';
-import { cleanupPermissions, getGlobalPermissions } from './util';
+import { cleanupPermissions, getGlobalPermissions } from './utils';
 
-export function setupPermissionConfig() {
+export const setupPermissionConfig = async () => {
   const config = ConfigContext.use();
   config.permission = cleanupPermissions(getGlobalPermissions());
-}
+};

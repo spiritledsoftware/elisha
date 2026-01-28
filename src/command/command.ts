@@ -4,19 +4,14 @@ import type { CommandConfig } from './types';
 
 export type ElishaCommandOptions = {
   id: string;
-  config:
-    | CommandConfig
-    | ((self: ElishaCommand) => CommandConfig | Promise<CommandConfig>);
+  config: CommandConfig | ((self: ElishaCommand) => CommandConfig | Promise<CommandConfig>);
 };
 
 export type ElishaCommand = Omit<ElishaCommandOptions, 'config'> & {
   setup: () => Promise<void>;
 };
 
-export const defineCommand = ({
-  config: commandConfig,
-  ...input
-}: ElishaCommandOptions) => {
+export const defineCommand = ({ config: commandConfig, ...input }: ElishaCommandOptions) => {
   let self: ElishaCommand;
 
   const command: ElishaCommand = {
@@ -29,10 +24,7 @@ export const defineCommand = ({
       const config = ConfigContext.use();
 
       config.command ??= {};
-      config.command[self.id] = defu(
-        config.command?.[self.id] ?? {},
-        commandConfig,
-      );
+      config.command[self.id] = defu(config.command?.[self.id] ?? {}, commandConfig);
     },
   };
 

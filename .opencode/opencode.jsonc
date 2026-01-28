@@ -4,16 +4,7 @@
     "typescript": { "disabled": true },
     "tsgo": {
       "command": ["bunx", "tsgo", "--lsp", "--stdio"],
-      "extensions": [
-        ".ts",
-        ".tsx",
-        ".mts",
-        ".cts",
-        ".js",
-        ".jsx",
-        ".mjs",
-        ".cjs"
-      ]
-    }
-  }
+      "extensions": [".ts", ".tsx", ".mts", ".cts", ".js", ".jsx", ".mjs", ".cjs"],
+    },
+  },
 }

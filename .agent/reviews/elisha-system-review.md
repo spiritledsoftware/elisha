@@ -18,12 +18,12 @@ The Elisha plugin system demonstrates **strong architectural design** with clear
 
 ## Critical Issues
 
-| File | Line | Issue | Confidence | Suggestion |
-|------|------|-------|------------|------------|
-| `src/util/hooks.ts` | 9-65 | Hook aggregation uses `Promise.all` - one failing hook crashes all hooks | Definite | Switch to `Promise.allSettled` for error isolation |
-| `src/mcp/hooks.ts` | 11-56 | Memory context injection has no sanitization - vulnerable to memory poisoning | Definite | Add content validation before injecting memory context |
-| `src/task/tools.ts` | 147-203 | Task tool returns unstructured strings - calling agents can't reliably detect failures | Likely | Return structured `TaskResult` objects with status codes |
-| `src/permission/defaults.ts` | 14-51 | No protection against indirect prompt injection via file reads | Definite | Add content scanning or delimiter-based data isolation |
+| File                         | Line    | Issue                                                                                  | Confidence | Suggestion                                               |
+| ---------------------------- | ------- | -------------------------------------------------------------------------------------- | ---------- | -------------------------------------------------------- |
+| `src/util/hooks.ts`          | 9-65    | Hook aggregation uses `Promise.all` - one failing hook crashes all hooks               | Definite   | Switch to `Promise.allSettled` for error isolation       |
+| `src/mcp/hooks.ts`           | 11-56   | Memory context injection has no sanitization - vulnerable to memory poisoning          | Definite   | Add content validation before injecting memory context   |
+| `src/task/tools.ts`          | 147-203 | Task tool returns unstructured strings - calling agents can't reliably detect failures | Likely     | Return structured `TaskResult` objects with status codes |
+| `src/permission/defaults.ts` | 14-51   | No protection against indirect prompt injection via file reads                         | Definite   | Add content scanning or delimiter-based data isolation   |
 
 ### Critical 1: Hook Error Isolation (Definite)
 
@@ -41,9 +41,7 @@ await Promise.all(hookSets.map((h) => h['chat.message']?.(input, output)));
 **Fix**:
 
 ```typescript
-const results = await Promise.allSettled(
-  hookSets.map((h) => h['chat.message']?.(input, output))
-);
+const results = await Promise.allSettled(hookSets.map((h) => h['chat.message']?.(input, output)));
 // Log failures but don't block other hooks
 results
   .filter((r): r is PromiseRejectedResult => r.status === 'rejected')
@@ -85,9 +83,14 @@ return `Failed to create session for task: ${error.message}`;
 **Fix**:
 
 ```typescript
-type TaskResult = 
+type TaskResult =
   | { status: 'completed'; taskId: string; agent: string; result: string }
-  | { status: 'failed'; taskId: string; error: string; code: 'AGENT_NOT_FOUND' | 'SESSION_ERROR' | 'TIMEOUT' }
+  | {
+      status: 'failed';
+      taskId: string;
+      error: string;
+      code: 'AGENT_NOT_FOUND' | 'SESSION_ERROR' | 'TIMEOUT';
+    }
   | { status: 'running'; taskId: string }
   | { status: 'cancelled'; taskId: string };
 
@@ -117,16 +120,16 @@ return JSON.stringify({ status: 'completed', taskId: session.id, agent: args.age
 
 ## Warnings
 
-| File | Line | Issue | Confidence | Suggestion |
-|------|------|-------|------------|------------|
-| `src/task/tools.ts` | 10-11 | No concurrency limit on async tasks | Likely | Add max concurrent task limit (e.g., 5) |
-| `src/task/hooks.ts` | 8 | `injectedSessions` Set grows unbounded | Likely | Add TTL or max size limit |
-| `src/mcp/exa.ts` | 11-13 | API key in headers without validation | Potential | Warn if EXA_API_KEY is missing |
-| `src/mcp/context7.ts` | 11-13 | API key in headers without validation | Potential | Warn if CONTEXT7_API_KEY is missing |
-| `src/agent/explorer/index.ts` | 15 | Temperature 0.9 is very high for search tasks | Potential | Consider 0.3-0.5 for more deterministic results |
-| `src/agent/researcher/index.ts` | 15 | Temperature 0.9 is very high for research tasks | Potential | Consider 0.3-0.5 for more reliable results |
-| `src/agent/brainstormer/index.ts` | 15 | Temperature 1.2 exceeds typical range | Potential | Document why this is intentional |
-| `src/permission/defaults.ts` | 43-49 | MCP server enabled checks use `?? true` - enabled by default even if config missing | Likely | Consider explicit opt-in for external services |
+| File                              | Line  | Issue                                                                               | Confidence | Suggestion                                      |
+| --------------------------------- | ----- | ----------------------------------------------------------------------------------- | ---------- | ----------------------------------------------- |
+| `src/task/tools.ts`               | 10-11 | No concurrency limit on async tasks                                                 | Likely     | Add max concurrent task limit (e.g., 5)         |
+| `src/task/hooks.ts`               | 8     | `injectedSessions` Set grows unbounded                                              | Likely     | Add TTL or max size limit                       |
+| `src/mcp/exa.ts`                  | 11-13 | API key in headers without validation                                               | Potential  | Warn if EXA_API_KEY is missing                  |
+| `src/mcp/context7.ts`             | 11-13 | API key in headers without validation                                               | Potential  | Warn if CONTEXT7_API_KEY is missing             |
+| `src/agent/explorer/index.ts`     | 15    | Temperature 0.9 is very high for search tasks                                       | Potential  | Consider 0.3-0.5 for more deterministic results |
+| `src/agent/researcher/index.ts`   | 15    | Temperature 0.9 is very high for research tasks                                     | Potential  | Consider 0.3-0.5 for more reliable results      |
+| `src/agent/brainstormer/index.ts` | 15    | Temperature 1.2 exceeds typical range                                               | Potential  | Document why this is intentional                |
+| `src/permission/defaults.ts`      | 43-49 | MCP server enabled checks use `?? true` - enabled by default even if config missing | Likely     | Consider explicit opt-in for external services  |
 
 ### Warning 1: No Task Concurrency Limit
 
@@ -160,12 +163,15 @@ const injectedSessions = new Map<string, number>(); // sessionId -> timestamp
 const SESSION_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 // Periodically clean old entries
-setInterval(() => {
-  const now = Date.now();
-  for (const [id, timestamp] of injectedSessions) {
-    if (now - timestamp > SESSION_TTL_MS) injectedSessions.delete(id);
-  }
-}, 60 * 60 * 1000); // Every hour
+setInterval(
+  () => {
+    const now = Date.now();
+    for (const [id, timestamp] of injectedSessions) {
+      if (now - timestamp > SESSION_TTL_MS) injectedSessions.delete(id);
+    }
+  },
+  60 * 60 * 1000,
+); // Every hour
 ```
 
 ### Warning 3: Missing API Key Validation
@@ -200,20 +206,20 @@ export const getDefaults = (ctx: ElishaConfigContext): McpConfig => {
 
 ## Nitpicks
 
-| File | Line | Issue | Confidence | Suggestion |
-|------|------|-------|------------|------------|
-| `src/agent/explorer/index.ts` | 28 | Description has duplicate text ("An autonomous agent that explores...") | Definite | Remove duplicate prefix |
-| `src/agent/compaction/index.ts` | 1 | Imports from `@opencode-ai/sdk` instead of `@opencode-ai/sdk/v2` | Definite | Use consistent import path |
-| `src/agent/researcher/prompt.md` | 329-331 | Trailing empty code blocks | Definite | Remove empty code blocks |
-| `src/task/index.ts` | 1-2 | Empty comments ("// Re-export tools setup") | Potential | Remove or add meaningful content |
-| `src/mcp/index.ts` | - | Missing barrel export file | Potential | Add index.ts for consistent imports |
-| `src/types.ts` | 4-11 | Types could be more descriptive | Potential | Add JSDoc comments |
-| `src/agent/util/protocol/index.ts` | 20 | Throws on unknown protocol - could be more graceful | Potential | Return placeholder with warning |
-| `src/permission/defaults.ts` | 17-18 | Bash deny patterns are basic | Potential | Consider more comprehensive dangerous command list |
-| `src/agent/tester/index.ts` | 23 | Tester allows chrome-devtools but description says "READ-ONLY" | Potential | Clarify if browser automation is intended |
-| `src/agent/orchestrator/prompt.md` | 399-426 | Anti-patterns section is very long | Potential | Consider moving to separate protocol file |
-| `src/agent/executor/prompt.md` | 50 | Protocol expansion inline looks cluttered | Potential | Consider cleaner formatting |
-| `src/mcp/memory-prompt.md` | - | File not reviewed - should verify content | Potential | Ensure memory prompt doesn't enable unsafe operations |
+| File                               | Line    | Issue                                                                   | Confidence | Suggestion                                            |
+| ---------------------------------- | ------- | ----------------------------------------------------------------------- | ---------- | ----------------------------------------------------- |
+| `src/agent/explorer/index.ts`      | 28      | Description has duplicate text ("An autonomous agent that explores...") | Definite   | Remove duplicate prefix                               |
+| `src/agent/compaction/index.ts`    | 1       | Imports from `@opencode-ai/sdk` instead of `@opencode-ai/sdk/v2`        | Definite   | Use consistent import path                            |
+| `src/agent/researcher/prompt.md`   | 329-331 | Trailing empty code blocks                                              | Definite   | Remove empty code blocks                              |
+| `src/task/index.ts`                | 1-2     | Empty comments ("// Re-export tools setup")                             | Potential  | Remove or add meaningful content                      |
+| `src/mcp/index.ts`                 | -       | Missing barrel export file                                              | Potential  | Add index.ts for consistent imports                   |
+| `src/types.ts`                     | 4-11    | Types could be more descriptive                                         | Potential  | Add JSDoc comments                                    |
+| `src/agent/util/protocol/index.ts` | 20      | Throws on unknown protocol - could be more graceful                     | Potential  | Return placeholder with warning                       |
+| `src/permission/defaults.ts`       | 17-18   | Bash deny patterns are basic                                            | Potential  | Consider more comprehensive dangerous command list    |
+| `src/agent/tester/index.ts`        | 23      | Tester allows chrome-devtools but description says "READ-ONLY"          | Potential  | Clarify if browser automation is intended             |
+| `src/agent/orchestrator/prompt.md` | 399-426 | Anti-patterns section is very long                                      | Potential  | Consider moving to separate protocol file             |
+| `src/agent/executor/prompt.md`     | 50      | Protocol expansion inline looks cluttered                               | Potential  | Consider cleaner formatting                           |
+| `src/mcp/memory-prompt.md`         | -       | File not reviewed - should verify content                               | Potential  | Ensure memory prompt doesn't enable unsafe operations |
 
 ### Nitpick 1: Inconsistent SDK Import
 
@@ -233,10 +239,10 @@ import type { AgentConfig } from '@opencode-ai/sdk/v2';
 
 ```typescript
 // Current (redundant)
-description: 'An autonomous agent that explores the codebase to gather information and insights to assist other agents in making informed decisions.Codebase search specialist...'
+description: 'An autonomous agent that explores the codebase to gather information and insights to assist other agents in making informed decisions.Codebase search specialist...';
 
 // Should be
-description: 'Codebase search specialist. Finds files, searches code, maps structure...'
+description: 'Codebase search specialist. Finds files, searches code, maps structure...';
 ```
 
 ---
@@ -267,15 +273,15 @@ description: 'Codebase search specialist. Finds files, searches code, maps struc
 
 ### Recommendations
 
-| Priority | Action | Effort | Impact |
-|----------|--------|--------|--------|
-| **P0** | Switch hooks to `Promise.allSettled` | 30 min | Prevents cascade failures |
-| **P0** | Add memory content validation | 2 hours | Prevents memory poisoning |
-| **P1** | Structured task results | 1 hour | Reliable error detection |
-| **P1** | Task concurrency limits | 1 hour | Prevents resource exhaustion |
-| **P2** | API key validation warnings | 30 min | Better developer experience |
-| **P2** | Session tracking cleanup | 1 hour | Prevents memory leaks |
-| **P3** | Prompt injection mitigations | 4 hours | Defense in depth |
+| Priority | Action                               | Effort  | Impact                       |
+| -------- | ------------------------------------ | ------- | ---------------------------- |
+| **P0**   | Switch hooks to `Promise.allSettled` | 30 min  | Prevents cascade failures    |
+| **P0**   | Add memory content validation        | 2 hours | Prevents memory poisoning    |
+| **P1**   | Structured task results              | 1 hour  | Reliable error detection     |
+| **P1**   | Task concurrency limits              | 1 hour  | Prevents resource exhaustion |
+| **P2**   | API key validation warnings          | 30 min  | Better developer experience  |
+| **P2**   | Session tracking cleanup             | 1 hour  | Prevents memory leaks        |
+| **P3**   | Prompt injection mitigations         | 4 hours | Defense in depth             |
 
 ---
 
@@ -283,14 +289,14 @@ description: 'Codebase search specialist. Finds files, searches code, maps struc
 
 ### Threat Model
 
-| Threat | Current Mitigation | Gap | Risk Level |
-|--------|-------------------|-----|------------|
-| **Indirect Prompt Injection** | None | File content can inject instructions | High |
-| **Memory Poisoning** | None | Malicious memories persist across sessions | High |
-| **Tool Abuse** | Permission system | Bash allows most commands | Medium |
-| **Data Exfiltration** | MCP permissions | No egress filtering | Medium |
-| **Permission Bypass** | Layered permissions | No config signing | Low |
-| **Session Smuggling** | Parent-child sessions | Tokens may leak to sub-agents | Low |
+| Threat                        | Current Mitigation    | Gap                                        | Risk Level |
+| ----------------------------- | --------------------- | ------------------------------------------ | ---------- |
+| **Indirect Prompt Injection** | None                  | File content can inject instructions       | High       |
+| **Memory Poisoning**          | None                  | Malicious memories persist across sessions | High       |
+| **Tool Abuse**                | Permission system     | Bash allows most commands                  | Medium     |
+| **Data Exfiltration**         | MCP permissions       | No egress filtering                        | Medium     |
+| **Permission Bypass**         | Layered permissions   | No config signing                          | Low        |
+| **Session Smuggling**         | Parent-child sessions | Tokens may leak to sub-agents              | Low        |
 
 ### Recommended Security Enhancements
 
@@ -308,14 +314,14 @@ description: 'Codebase search specialist. Finds files, searches code, maps struc
 
 ### Missing from AGENTS.md Files
 
-| Location | Missing Information |
-|----------|---------------------|
-| Root `AGENTS.md` | Security considerations section |
-| Root `AGENTS.md` | Troubleshooting common issues |
-| `src/task/AGENTS.md` | Concurrency limits and best practices |
-| `src/mcp/AGENTS.md` | API key requirements per server |
-| `src/permission/` | No AGENTS.md file exists |
-| `src/agent/` | Agent interaction patterns (who delegates to whom) |
+| Location             | Missing Information                                |
+| -------------------- | -------------------------------------------------- |
+| Root `AGENTS.md`     | Security considerations section                    |
+| Root `AGENTS.md`     | Troubleshooting common issues                      |
+| `src/task/AGENTS.md` | Concurrency limits and best practices              |
+| `src/mcp/AGENTS.md`  | API key requirements per server                    |
+| `src/permission/`    | No AGENTS.md file exists                           |
+| `src/agent/`         | Agent interaction patterns (who delegates to whom) |
 
 ### Recommended Additions
 
@@ -364,9 +370,9 @@ Tasks for executor to address (Critical and Warning issues):
 
 ## Resolution Log
 
-| Version | Agent | Action | Timestamp |
-|---------|-------|--------|-----------|
-| 1.0 | reviewer | Initial comprehensive review | 2026-01-20T12:00:00Z |
+| Version | Agent    | Action                       | Timestamp            |
+| ------- | -------- | ---------------------------- | -------------------- |
+| 1.0     | reviewer | Initial comprehensive review | 2026-01-20T12:00:00Z |
 
 ---
 

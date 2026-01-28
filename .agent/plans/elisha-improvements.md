@@ -125,9 +125,9 @@ bun run build
 
 ## Risks
 
-| Risk | Mitigation |
-|------|------------|
-| Breaking existing task tool consumers | Structured results are JSON-serializable strings |
-| Memory validation false positives | Start with conservative patterns, log warnings instead of blocking |
-| Session cleanup race conditions | Use atomic Map operations, cleanup on add not on interval |
-| API key warnings spam | Only warn once at setup time, not on every request |
+| Risk                                  | Mitigation                                                         |
+| ------------------------------------- | ------------------------------------------------------------------ |
+| Breaking existing task tool consumers | Structured results are JSON-serializable strings                   |
+| Memory validation false positives     | Start with conservative patterns, log warnings instead of blocking |
+| Session cleanup race conditions       | Use atomic Map operations, cleanup on add not on interval          |
+| API key warnings spam                 | Only warn once at setup time, not on every request                 |

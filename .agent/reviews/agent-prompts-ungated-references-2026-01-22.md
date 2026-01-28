@@ -8,12 +8,12 @@
 
 ## Acceptance Criteria
 
-| Criterion | Status | Evidence |
-|-----------|--------|----------|
-| All agent references gated with availability checks | ✅ | All `<teammates>` sections use `Prompt.when(canDelegate, ...)` |
-| All MCP references gated with `isMcpAvailableForAgent()` | ✅ | designer.ts uses `isMcpAvailableForAgent()` for chrome-devtools |
-| All tool references gated with permission checks | ✅ | Protocols use `agentHasPermission()` for tool checks |
-| Conditional sections only appear when capabilities available | ⚠️ | Minor issues found - see below |
+| Criterion                                                    | Status | Evidence                                                        |
+| ------------------------------------------------------------ | ------ | --------------------------------------------------------------- |
+| All agent references gated with availability checks          | ✅     | All `<teammates>` sections use `Prompt.when(canDelegate, ...)`  |
+| All MCP references gated with `isMcpAvailableForAgent()`     | ✅     | designer.ts uses `isMcpAvailableForAgent()` for chrome-devtools |
+| All tool references gated with permission checks             | ✅     | Protocols use `agentHasPermission()` for tool checks            |
+| Conditional sections only appear when capabilities available | ⚠️     | Minor issues found - see below                                  |
 
 ## Summary
 
@@ -124,22 +124,22 @@
 
 ### Critical (must fix)
 
-*None found*
+_None found_
 
 ### Warnings (should fix)
 
-| File | Line | Issue | Confidence | Fix |
-| ---- | ---- | ----- | ---------- | --- |
-| `protocols.ts` | 28 | `hasGrepApp` uses `isAgentEnabled()` instead of `isMcpAvailableForAgent()` | Definite | Change to `isMcpAvailableForAgent(MCP_GREP_APP_ID, agentName, ctx)` |
-| `protocols.ts` | 26 | `hasWebFetch` checks `websearch` permission instead of `webfetch` | Definite | Change to `agentHasPermission('webfetch', agentName, ctx)` |
-| `orchestrator.ts` | 123-135 | `<parallel_patterns>` section mentions "explorer tasks" without gating | Likely | Consider gating with `Prompt.when(isAgentEnabled(AGENT_EXPLORER_ID, ctx), ...)` or make generic |
+| File              | Line    | Issue                                                                      | Confidence | Fix                                                                                             |
+| ----------------- | ------- | -------------------------------------------------------------------------- | ---------- | ----------------------------------------------------------------------------------------------- |
+| `protocols.ts`    | 28      | `hasGrepApp` uses `isAgentEnabled()` instead of `isMcpAvailableForAgent()` | Definite   | Change to `isMcpAvailableForAgent(MCP_GREP_APP_ID, agentName, ctx)`                             |
+| `protocols.ts`    | 26      | `hasWebFetch` checks `websearch` permission instead of `webfetch`          | Definite   | Change to `agentHasPermission('webfetch', agentName, ctx)`                                      |
+| `orchestrator.ts` | 123-135 | `<parallel_patterns>` section mentions "explorer tasks" without gating     | Likely     | Consider gating with `Prompt.when(isAgentEnabled(AGENT_EXPLORER_ID, ctx), ...)` or make generic |
 
 ### Nitpicks (optional)
 
-| File | Line | Issue | Fix |
-| ---- | ---- | ----- | --- |
-| `orchestrator.ts` | 154 | Hardcoded "consultant" reference in constraints | Gate with `Prompt.when(hasConsultant, 'Escalate to consultant when stuck, don\'t spin')` |
-| `executor.ts` | 114-115 | Hardcoded `bun run` commands | Consider gating based on project type detection or making generic |
+| File              | Line    | Issue                                           | Fix                                                                                      |
+| ----------------- | ------- | ----------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `orchestrator.ts` | 154     | Hardcoded "consultant" reference in constraints | Gate with `Prompt.when(hasConsultant, 'Escalate to consultant when stuck, don\'t spin')` |
+| `executor.ts`     | 114-115 | Hardcoded `bun run` commands                    | Consider gating based on project type detection or making generic                        |
 
 ## Verdict Rationale
 

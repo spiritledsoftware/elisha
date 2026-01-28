@@ -1,12 +1,11 @@
 import { defineCommand } from '~/command';
-import { Prompt } from '~/util/prompt';
+import { Prompt } from '~/utils/prompt';
 
 export const initDeepCommand = defineCommand({
   id: 'init-deep',
   config: () => {
     return {
-      description:
-        'Initialize AGENTS.md instructions within the current project',
+      description: 'Initialize AGENTS.md instructions within the current project',
       template: Prompt.template`
         You are creating AGENTS.md instruction files for a codebase. These files guide AI coding agents to work effectively within this project.
 

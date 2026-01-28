@@ -18,27 +18,27 @@
 
 ### Critical
 
-| File | Line | Issue | Confidence | Suggestion |
-|------|------|-------|------------|------------|
-| `src/permission/defaults.ts` | 16-24 | Bash command denylist is easily bypassed with variations (e.g., `rm -r -f`, `\rm`, `$(rm)`, backticks, pipes) | Definite | Consider allowlist approach or integrate with shell parser; current patterns are trivially circumvented |
-| `src/mcp/hooks.ts` | 21-27 | Suspicious pattern detection is incomplete and easily bypassed (case variations, unicode, obfuscation) | Likely | Expand pattern list, add unicode normalization, or document this as defense-in-depth only |
+| File                         | Line  | Issue                                                                                                         | Confidence | Suggestion                                                                                              |
+| ---------------------------- | ----- | ------------------------------------------------------------------------------------------------------------- | ---------- | ------------------------------------------------------------------------------------------------------- |
+| `src/permission/defaults.ts` | 16-24 | Bash command denylist is easily bypassed with variations (e.g., `rm -r -f`, `\rm`, `$(rm)`, backticks, pipes) | Definite   | Consider allowlist approach or integrate with shell parser; current patterns are trivially circumvented |
+| `src/mcp/hooks.ts`           | 21-27 | Suspicious pattern detection is incomplete and easily bypassed (case variations, unicode, obfuscation)        | Likely     | Expand pattern list, add unicode normalization, or document this as defense-in-depth only               |
 
 ### Warnings
 
-| File | Line | Issue | Confidence | Suggestion |
-|------|------|-------|------------|------------|
-| `src/instruction/hooks.ts` | 8 | Session tracking uses unbounded `Set<string>` with no TTL cleanup | Definite | Add TTL-based cleanup like `src/mcp/hooks.ts` and `src/task/hooks.ts` do |
-| `src/task/tools.ts` | 13 | `activeTasks` Set is module-level singleton - won't work correctly across multiple plugin instances | Likely | Consider using session-scoped or context-scoped storage |
-| `src/agent/researcher/index.ts` | 3 | Uses tilde import alias `~/mcp/chrome-devtools.ts` inconsistent with other files using relative paths | Definite | Use relative import `../../mcp/chrome-devtools.ts` for consistency |
-| `src/agent/util/index.ts` | 24 | Checks `config?.disabled` but agents use `config?.disable` (without 'd') | Definite | Change to `config?.disable !== true` to match actual property name |
+| File                            | Line | Issue                                                                                                 | Confidence | Suggestion                                                               |
+| ------------------------------- | ---- | ----------------------------------------------------------------------------------------------------- | ---------- | ------------------------------------------------------------------------ |
+| `src/instruction/hooks.ts`      | 8    | Session tracking uses unbounded `Set<string>` with no TTL cleanup                                     | Definite   | Add TTL-based cleanup like `src/mcp/hooks.ts` and `src/task/hooks.ts` do |
+| `src/task/tools.ts`             | 13   | `activeTasks` Set is module-level singleton - won't work correctly across multiple plugin instances   | Likely     | Consider using session-scoped or context-scoped storage                  |
+| `src/agent/researcher/index.ts` | 3    | Uses tilde import alias `~/mcp/chrome-devtools.ts` inconsistent with other files using relative paths | Definite   | Use relative import `../../mcp/chrome-devtools.ts` for consistency       |
+| `src/agent/util/index.ts`       | 24   | Checks `config?.disabled` but agents use `config?.disable` (without 'd')                              | Definite   | Change to `config?.disable !== true` to match actual property name       |
 
 ### Nitpicks
 
-| File | Line | Issue | Confidence | Suggestion |
-|------|------|-------|------------|------------|
-| `src/mcp/hooks.ts` | 48-49 | Magic numbers for SESSION_TTL_MS and MAX_SESSIONS duplicated in task/hooks.ts | Potential | Extract to shared constants in util/ |
-| `src/util/hooks.ts` | 8-24 | `runHooksWithIsolation` logs errors but doesn't include hook name for debugging | Potential | Include hook type in error message for easier debugging |
-| `src/agent/util/protocol/index.ts` | 20 | `expandProtocols` throws on unknown protocol but doesn't validate at build time | Potential | Consider compile-time validation or graceful fallback with warning |
+| File                               | Line  | Issue                                                                           | Confidence | Suggestion                                                         |
+| ---------------------------------- | ----- | ------------------------------------------------------------------------------- | ---------- | ------------------------------------------------------------------ |
+| `src/mcp/hooks.ts`                 | 48-49 | Magic numbers for SESSION_TTL_MS and MAX_SESSIONS duplicated in task/hooks.ts   | Potential  | Extract to shared constants in util/                               |
+| `src/util/hooks.ts`                | 8-24  | `runHooksWithIsolation` logs errors but doesn't include hook name for debugging | Potential  | Include hook type in error message for easier debugging            |
+| `src/agent/util/protocol/index.ts` | 20    | `expandProtocols` throws on unknown protocol but doesn't validate at build time | Potential  | Consider compile-time validation or graceful fallback with warning |
 
 ---
 
@@ -89,8 +89,8 @@
 
    ```typescript
    const suspiciousPatterns = [
-     /ignore previous/i,    // Bypassed: "1gnore prev1ous", "ignore\u200Bprevious"
-     /execute/i,            // Too broad (matches "execute" in legitimate code)
+     /ignore previous/i, // Bypassed: "1gnore prev1ous", "ignore\u200Bprevious"
+     /execute/i, // Too broad (matches "execute" in legitimate code)
      // ...
    ];
    ```
@@ -185,7 +185,7 @@
 1. **Unbounded Session Set**: Unlike mcp/hooks.ts and task/hooks.ts which have TTL cleanup, instruction/hooks.ts uses a plain `Set<string>` that grows unbounded:
 
    ```typescript
-   const injectedSessions = new Set<string>();  // No cleanup!
+   const injectedSessions = new Set<string>(); // No cleanup!
    ```
 
    This is a memory leak for long-running processes.
@@ -233,6 +233,6 @@ Tasks for executor to address (Critical and Warning issues):
 
 ## Resolution Log
 
-| Version | Agent | Action | Timestamp |
-|---------|-------|--------|-----------|
-| 1.0 | reviewer | Initial security and robustness review | 2026-01-21T00:00:00Z |
+| Version | Agent    | Action                                 | Timestamp            |
+| ------- | -------- | -------------------------------------- | -------------------- |
+| 1.0     | reviewer | Initial security and robustness review | 2026-01-21T00:00:00Z |

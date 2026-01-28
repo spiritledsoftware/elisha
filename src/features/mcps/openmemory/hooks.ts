@@ -1,6 +1,6 @@
 import { defineHookSet } from '~/hook';
-import { log } from '~/util';
-import { Prompt } from '~/util/prompt';
+import { log } from '~/utils';
+import { Prompt } from '~/utils/prompt';
 
 /**
  * Validates and sanitizes memory content to prevent poisoning attacks.

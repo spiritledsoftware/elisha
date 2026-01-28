@@ -8,14 +8,14 @@
 
 ## Acceptance Criteria
 
-| Criterion | Status | Evidence |
-|-----------|--------|----------|
-| Wildcard behavior matches OpenCode | :x: | `*` uses `[^:]*` instead of `.*` (intentional design difference) |
-| Special trailing space+wildcard case | :x: | Not implemented |
-| dotAll flag for newline matching | :x: | Not implemented |
-| Home expansion support | :x: | Not implemented |
-| Default behavior matches OpenCode | :x: | Returns `false` instead of `"ask"` |
-| Pattern matching direction correct | :white_check_mark: | Both use pattern-to-input matching |
+| Criterion                            | Status             | Evidence                                                         |
+| ------------------------------------ | ------------------ | ---------------------------------------------------------------- |
+| Wildcard behavior matches OpenCode   | :x:                | `*` uses `[^:]*` instead of `.*` (intentional design difference) |
+| Special trailing space+wildcard case | :x:                | Not implemented                                                  |
+| dotAll flag for newline matching     | :x:                | Not implemented                                                  |
+| Home expansion support               | :x:                | Not implemented                                                  |
+| Default behavior matches OpenCode    | :x:                | Returns `false` instead of `"ask"`                               |
+| Pattern matching direction correct   | :white_check_mark: | Both use pattern-to-input matching                               |
 
 ## Summary
 
@@ -43,12 +43,12 @@
 
 **Analysis**: The `[^:]*` pattern is **intentional** for segment matching in colon-separated permission strings. This is a reasonable design choice:
 
-| Pattern | Input | OpenCode | Elisha |
-|---------|-------|----------|--------|
+| Pattern           | Input                  | OpenCode           | Elisha             |
+| ----------------- | ---------------------- | ------------------ | ------------------ |
 | `mcp-openmemory*` | `mcp-openmemory_store` | :white_check_mark: | :white_check_mark: |
-| `edit*` | `edit` | :white_check_mark: | :white_check_mark: |
-| `edit*` | `editFile` | :white_check_mark: | :white_check_mark: |
-| `bash:*` | `bash:rm -rf /` | :white_check_mark: | :white_check_mark: |
+| `edit*`           | `edit`                 | :white_check_mark: | :white_check_mark: |
+| `edit*`           | `editFile`             | :white_check_mark: | :white_check_mark: |
+| `bash:*`          | `bash:rm -rf /`        | :white_check_mark: | :white_check_mark: |
 
 The `[^:]*` works correctly because permission patterns don't typically contain colons in the tool name segment. **Not a bug.**
 
@@ -58,8 +58,8 @@ The `[^:]*` works correctly because permission patterns don't typically contain 
 
 ```typescript
 // Special case: "ls *" matches "ls" and "ls -la"
-if (escaped.endsWith(" .*")) {
-  escaped = escaped.slice(0, -3) + "( .*)?"
+if (escaped.endsWith(' .*')) {
+  escaped = escaped.slice(0, -3) + '( .*)?';
 }
 ```
 
@@ -85,7 +85,7 @@ bash: {
 **OpenCode:**
 
 ```typescript
-return new RegExp("^" + escaped + "$", "s").test(str)
+return new RegExp('^' + escaped + '$', 's').test(str);
 //                                      ^ dotAll flag
 ```
 
@@ -104,7 +104,7 @@ const regex = new RegExp(`^${regexPattern}$`);
 
 ```typescript
 // Default to "ask" if no specific rule is found
-return match ?? { action: "ask", permission, pattern: "*" }
+return match ?? { action: 'ask', permission, pattern: '*' };
 ```
 
 **Elisha (line 143):**
@@ -142,22 +142,22 @@ This is correct. :white_check_mark:
 
 ### Critical (must fix)
 
-| File | Line | Issue | Confidence | Fix |
-| ---- | ---- | ----- | ---------- | --- |
-| `src/permission/util.ts` | 143 | Default returns `false` instead of `"ask"` equivalent - undocumented behavior difference | Definite | Document if intentional; if not, consider returning `true` for "ask" semantics |
+| File                     | Line | Issue                                                                                    | Confidence | Fix                                                                            |
+| ------------------------ | ---- | ---------------------------------------------------------------------------------------- | ---------- | ------------------------------------------------------------------------------ |
+| `src/permission/util.ts` | 143  | Default returns `false` instead of `"ask"` equivalent - undocumented behavior difference | Definite   | Document if intentional; if not, consider returning `true` for "ask" semantics |
 
 ### Warnings (should fix)
 
-| File | Line | Issue | Confidence | Fix |
-| ---- | ---- | ----- | ---------- | --- |
-| `src/permission/util.ts` | 21-31 | Missing trailing space+wildcard special case | Definite | Add special case handling for patterns ending in `*` |
-| `src/permission/util.ts` | 21-31 | Missing home expansion for file paths | Medium | Add home expansion before pattern matching if file paths are involved |
+| File                     | Line  | Issue                                        | Confidence | Fix                                                                   |
+| ------------------------ | ----- | -------------------------------------------- | ---------- | --------------------------------------------------------------------- |
+| `src/permission/util.ts` | 21-31 | Missing trailing space+wildcard special case | Definite   | Add special case handling for patterns ending in `*`                  |
+| `src/permission/util.ts` | 21-31 | Missing home expansion for file paths        | Medium     | Add home expansion before pattern matching if file paths are involved |
 
 ### Nitpicks (optional)
 
-| File | Line | Issue | Fix |
-| ---- | ---- | ----- | --- |
-| `src/permission/util.ts` | 30 | Missing dotAll flag | Add `'s'` flag: `new RegExp(\`^${regexPattern}$\`, 's')` |
+| File                     | Line | Issue               | Fix                                                      |
+| ------------------------ | ---- | ------------------- | -------------------------------------------------------- |
+| `src/permission/util.ts` | 30   | Missing dotAll flag | Add `'s'` flag: `new RegExp(\`^${regexPattern}$\`, 's')` |
 
 ## Verdict Rationale
 
@@ -186,10 +186,7 @@ The `[^:]*` vs `.*` difference is a reasonable design choice for segment-based m
 ```typescript
 export const isPatternMatch = (pattern: string, input: string): boolean => {
   const escaped = pattern.replace(/[.+^${}()|[\]\\]/g, '\\$&');
-  let regexPattern = escaped
-    .replace(/\*\*/g, '.*')
-    .replace(/\*/g, '[^:]*')
-    .replace(/\?/g, '.');
+  let regexPattern = escaped.replace(/\*\*/g, '.*').replace(/\*/g, '[^:]*').replace(/\?/g, '.');
 
   // Special case: "cmd *" matches both "cmd" and "cmd args" (OpenCode compatibility)
   if (regexPattern.endsWith(' [^:]*')) {
@@ -221,7 +218,7 @@ describe('isPatternMatch', () => {
       // Currently FAILS - needs fix
       expect(isPatternMatch('rm *', 'rm')).toBe(true);
     });
-    
+
     it('matches command with args', () => {
       expect(isPatternMatch('rm *', 'rm -rf /')).toBe(true);
     });

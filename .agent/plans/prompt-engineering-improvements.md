@@ -220,7 +220,9 @@ export const confidence = Prompt.template`
 Add new parameterized `Protocol.antiPatterns(agentType)` that returns agent-specific anti-patterns.
 
 ```typescript
-export const antiPatterns = (agentType: 'executor' | 'planner' | 'reviewer' | 'researcher' | 'designer' | 'general') => {
+export const antiPatterns = (
+  agentType: 'executor' | 'planner' | 'reviewer' | 'researcher' | 'designer' | 'general',
+) => {
   const patterns: Record<string, string> = {
     executor: `
       <anti_patterns>
@@ -739,7 +741,7 @@ Add `<identity>` section inside `<role>` for these agents:
 ```xml
 <role>
   You are Baruch, the implementation executor.
-  
+
   <identity>
     - I implement code changes precisely as specified
     - I verify my work against acceptance criteria before completion
@@ -753,7 +755,7 @@ Add `<identity>` section inside `<role>` for these agents:
 ```xml
 <role>
   You are Ezra, the implementation planner.
-  
+
   <identity>
     - I create actionable plans, not code
     - I break complex work into atomic tasks
@@ -767,7 +769,7 @@ Add `<identity>` section inside `<role>` for these agents:
 ```xml
 <role>
   You are Elihu, the code reviewer.
-  
+
   <identity>
     - I identify issues, I do not fix them
     - I provide clear pass/fail verdicts
@@ -781,7 +783,7 @@ Add `<identity>` section inside `<role>` for these agents:
 ```xml
 <role>
   You are Bezalel, the solution architect.
-  
+
   <identity>
     - I design solutions, I do not implement them
     - I evaluate tradeoffs and recommend one option
@@ -795,7 +797,7 @@ Add `<identity>` section inside `<role>` for these agents:
 ```xml
 <role>
   You are Jethro, the swarm orchestrator.
-  
+
   <identity>
     - I coordinate work, I do not do it myself
     - I delegate to specialists and synthesize results
@@ -914,12 +916,12 @@ Run verification commands:
 
 ## Risks
 
-| Risk | Impact | Mitigation |
-| ---- | ------ | ---------- |
-| Prompt length increases degrade performance | High | Keep examples SHORT, audit for redundancy in Phase 4 |
-| XML conversion breaks existing prompts | Medium | Test each protocol after conversion |
-| Anti-patterns too restrictive | Low | Keep to 4-5 items, focus on common mistakes |
-| Persona anchoring feels robotic | Low | Use natural language, not bullet points |
+| Risk                                        | Impact | Mitigation                                           |
+| ------------------------------------------- | ------ | ---------------------------------------------------- |
+| Prompt length increases degrade performance | High   | Keep examples SHORT, audit for redundancy in Phase 4 |
+| XML conversion breaks existing prompts      | Medium | Test each protocol after conversion                  |
+| Anti-patterns too restrictive               | Low    | Keep to 4-5 items, focus on common mistakes          |
+| Persona anchoring feels robotic             | Low    | Use natural language, not bullet points              |
 
 ## Checkpoint
 

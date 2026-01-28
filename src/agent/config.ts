@@ -2,7 +2,7 @@ import { ConfigContext } from '~/context';
 import { elishaAgents } from '~/features/agents';
 import { executorAgent } from '../features/agents/executor';
 import { orchestratorAgent } from '../features/agents/orchestrator';
-import { changeAgentModel, disableAgent } from './util';
+import { changeAgentModel, disableAgent } from './utils';
 
 const setupDefaultAgent = () => {
   const config = ConfigContext.use();

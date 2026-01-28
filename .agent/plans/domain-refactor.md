@@ -98,14 +98,10 @@ export type Hooks = {
 export const aggregateHooks = (...hookSets: Hooks[]): Hooks => {
   return {
     'chat.message': async (input, output) => {
-      await Promise.all(
-        hookSets.map(h => h['chat.message']?.(input, output))
-      );
+      await Promise.all(hookSets.map((h) => h['chat.message']?.(input, output)));
     },
     event: async (input) => {
-      await Promise.all(
-        hookSets.map(h => h.event?.(input))
-      );
+      await Promise.all(hookSets.map((h) => h.event?.(input)));
     },
   };
 };
@@ -463,12 +459,12 @@ Update directory structure documentation.
 
 ## Risks
 
-| Risk | Mitigation |
-|------|------------|
-| Circular imports between domains | Domains should only import from `util/`, never from each other (except permission → mcp for IDs) |
-| Permission logic depends on MCP IDs | Permission imports MCP ID constants directly from `../mcp/` |
-| Hook aggregation order matters | Document that hook order is not guaranteed; use `Promise.all` pattern |
-| Breaking existing user configs | Ensure `defu` merging still works identically |
+| Risk                                | Mitigation                                                                                       |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------ |
+| Circular imports between domains    | Domains should only import from `util/`, never from each other (except permission → mcp for IDs) |
+| Permission logic depends on MCP IDs | Permission imports MCP ID constants directly from `../mcp/`                                      |
+| Hook aggregation order matters      | Document that hook order is not guaranteed; use `Promise.all` pattern                            |
+| Breaking existing user configs      | Ensure `defu` merging still works identically                                                    |
 
 ## Migration Strategy
 
@@ -484,21 +480,21 @@ This allows rollback at any phase if issues arise.
 
 ## File Movement Summary
 
-| Current Path | New Path |
-|--------------|----------|
-| `src/config/types.ts` | `src/util/types.ts` |
-| `src/config/agent/**` | `src/agent/**` |
+| Current Path                        | New Path                                              |
+| ----------------------------------- | ----------------------------------------------------- |
+| `src/config/types.ts`               | `src/util/types.ts`                                   |
+| `src/config/agent/**`               | `src/agent/**`                                        |
 | `src/config/agent/util/protocol/**` | `src/agent/util/protocol/**` (same relative location) |
-| `src/config/command/**` | `src/command/**` |
-| `src/config/instruction/**` | `src/instruction/` (merge with hooks) |
-| `src/config/mcp/**` | `src/mcp/` (merge with hooks/memory) |
-| `src/config/permission/**` | `src/permission/**` |
-| `src/config/skill/**` | `src/skill/**` |
-| `src/hooks/index.ts` | `src/util/hooks.ts` (aggregation utility only) |
-| `src/hooks/instruction/**` | `src/instruction/hooks.ts` |
-| `src/hooks/memory/**` | `src/mcp/hooks.ts` |
-| `src/hooks/task/**` | `src/task/hooks.ts` |
-| `src/tools/task/**` | `src/task/tools.ts` |
-| `src/util/**` | `src/util/**` (stays, add types.ts and hooks.ts) |
-| `src/index.ts` | `src/index.ts` (updated with direct wiring) |
-| `src/globals.d.ts` | `src/globals.d.ts` (unchanged) |
+| `src/config/command/**`             | `src/command/**`                                      |
+| `src/config/instruction/**`         | `src/instruction/` (merge with hooks)                 |
+| `src/config/mcp/**`                 | `src/mcp/` (merge with hooks/memory)                  |
+| `src/config/permission/**`          | `src/permission/**`                                   |
+| `src/config/skill/**`               | `src/skill/**`                                        |
+| `src/hooks/index.ts`                | `src/util/hooks.ts` (aggregation utility only)        |
+| `src/hooks/instruction/**`          | `src/instruction/hooks.ts`                            |
+| `src/hooks/memory/**`               | `src/mcp/hooks.ts`                                    |
+| `src/hooks/task/**`                 | `src/task/hooks.ts`                                   |
+| `src/tools/task/**`                 | `src/task/tools.ts`                                   |
+| `src/util/**`                       | `src/util/**` (stays, add types.ts and hooks.ts)      |
+| `src/index.ts`                      | `src/index.ts` (updated with direct wiring)           |
+| `src/globals.d.ts`                  | `src/globals.d.ts` (unchanged)                        |

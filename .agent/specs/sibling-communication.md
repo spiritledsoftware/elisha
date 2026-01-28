@@ -96,7 +96,7 @@ const siblings = await client.session.children({ sessionID: parent.parentID });
 // Inject message into session
 await client.session.promptAsync({
   sessionID: targetSessionID,
-  parts: [{ type: "text", text: message, synthetic: true }],
+  parts: [{ type: 'text', text: message, synthetic: true }],
   noReply: true, // Don't trigger agent response
 });
 
@@ -172,13 +172,13 @@ Automatically inject sibling task IDs into task context so agents can communicat
 
 ```typescript
 // src/features/tools/tasks/sibling-hook.ts
-import { defineHookSet } from "~/hook/hook";
-import { PluginContext } from "~/context";
-import { Prompt } from "~/util/prompt";
+import { defineHookSet } from '~/hook/hook';
+import { PluginContext } from '~/context';
+import { Prompt } from '~/util/prompt';
 
 export const siblingInjectionHooks = defineHookSet({
-  id: "sibling-injection-hooks",
-  capabilities: ["Automatic sibling task ID injection"],
+  id: 'sibling-injection-hooks',
+  capabilities: ['Automatic sibling task ID injection'],
   hooks: () => {
     const { client, directory } = PluginContext.use();
 
@@ -188,7 +188,7 @@ export const siblingInjectionHooks = defineHookSet({
     return {
       event: async ({ event }) => {
         // When a new task session is created
-        if (event.type === "session.created") {
+        if (event.type === 'session.created') {
           const sessionID = event.properties.sessionID;
 
           // Get session to check if it's a child task
@@ -207,9 +207,7 @@ export const siblingInjectionHooks = defineHookSet({
           });
           if (siblingsResult.error) return;
 
-          const siblings = siblingsResult.data.filter(
-            (s) => s.id !== sessionID
-          );
+          const siblings = siblingsResult.data.filter((s) => s.id !== sessionID);
 
           // 1. Inject existing siblings into new task
           if (siblings.length > 0) {
@@ -221,8 +219,7 @@ export const siblingInjectionHooks = defineHookSet({
           // 2. Inject new task into existing siblings
           const newTaskInfo = await getTaskInfo(sessionID);
           for (const sibling of siblings) {
-            const existingInjections =
-              injectedSessions.get(sibling.id) || new Set();
+            const existingInjections = injectedSessions.get(sibling.id) || new Set();
             if (!existingInjections.has(sessionID)) {
               await injectNewSibling(sibling.id, newTaskInfo);
               existingInjections.add(sessionID);
@@ -268,9 +265,9 @@ async function formatSiblingList(siblings: Session[]): Promise<string> {
   const rows = await Promise.all(
     siblings.map(async (s) => {
       const agentResult = await getSessionAgentAndModel(s.id);
-      const agent = agentResult.data?.agent || "unknown";
+      const agent = agentResult.data?.agent || 'unknown';
       return `| ${s.id} | ${agent} | ${s.title} |`;
-    })
+    }),
   );
 
   return Prompt.template`
@@ -281,13 +278,13 @@ async function formatSiblingList(siblings: Session[]): Promise<string> {
 
     | Task ID | Agent | Title |
     |---------|-------|-------|
-    ${rows.join("\n")}
+    ${rows.join('\n')}
     </sibling_tasks>
   `;
 }
 
 async function getTaskInfo(
-  sessionID: string
+  sessionID: string,
 ): Promise<{ id: string; agent: string; title: string }> {
   const { client, directory } = PluginContext.use();
   const sessionResult = await client.session.get({ sessionID, directory });
@@ -295,15 +292,12 @@ async function getTaskInfo(
 
   return {
     id: sessionID,
-    agent: agentResult.data?.agent || "unknown",
-    title: sessionResult.data?.title || "Unknown task",
+    agent: agentResult.data?.agent || 'unknown',
+    title: sessionResult.data?.title || 'Unknown task',
   };
 }
 
-async function injectSiblingContext(
-  sessionID: string,
-  content: string
-): Promise<void> {
+async function injectSiblingContext(sessionID: string, content: string): Promise<void> {
   const { client, directory } = PluginContext.use();
   const agentResult = await getSessionAgentAndModel(sessionID);
 
@@ -312,14 +306,14 @@ async function injectSiblingContext(
     noReply: true,
     agent: agentResult.data?.agent,
     model: agentResult.data?.model,
-    parts: [{ type: "text", text: content, synthetic: true }],
+    parts: [{ type: 'text', text: content, synthetic: true }],
     directory,
   });
 }
 
 async function injectNewSibling(
   sessionID: string,
-  taskInfo: { id: string; agent: string; title: string }
+  taskInfo: { id: string; agent: string; title: string },
 ): Promise<void> {
   const { client, directory } = PluginContext.use();
   const agentResult = await getSessionAgentAndModel(sessionID);
@@ -333,7 +327,7 @@ A new sibling task has been created. You can communicate with it using \`task_br
     noReply: true,
     agent: agentResult.data?.agent,
     model: agentResult.data?.model,
-    parts: [{ type: "text", text: content, synthetic: true }],
+    parts: [{ type: 'text', text: content, synthetic: true }],
     directory,
   });
 }
@@ -535,17 +529,17 @@ const validTargets = [...childrenResult.data, ...siblingsResult.data.siblings];
 
 **Behavior**:
 
-| `noReply` | Behavior | Use Case |
-|-----------|----------|----------|
-| `false` (default) | Current behavior - triggers response from recipient | Directed questions, requests for action |
-| `true` | Passive injection like broadcasts, but to specific task | Notifications, context sharing, status updates |
+| `noReply`         | Behavior                                                | Use Case                                       |
+| ----------------- | ------------------------------------------------------- | ---------------------------------------------- |
+| `false` (default) | Current behavior - triggers response from recipient     | Directed questions, requests for action        |
+| `true`            | Passive injection like broadcasts, but to specific task | Notifications, context sharing, status updates |
 
 **Implementation**:
 
 ```typescript
 await client.session.promptAsync({
   sessionID: targetSessionID,
-  parts: [{ type: "text", text: message, synthetic: noReply }],
+  parts: [{ type: 'text', text: message, synthetic: noReply }],
   noReply: noReply,
   // ... other params
 });
@@ -567,7 +561,7 @@ export const siblingCommunication = (self: AgentSelf) => Prompt.template`
     As an orchestrator, you can:
     - **Broadcast to children**: \`task_broadcast({ target: 'children', ... })\` to share context with all delegated tasks
     - **Read child broadcasts**: \`task_broadcasts_read({ source: 'children' })\` to see what tasks discovered
-    `
+    `,
     )}
     
     ${Prompt.when(
@@ -595,7 +589,7 @@ export const siblingCommunication = (self: AgentSelf) => Prompt.template`
     #### Direct Sibling Messages
     Use \`task_send_message\` with a sibling's task ID for directed communication.
     Sibling IDs are provided in your \`<sibling_tasks>\` context.
-    `
+    `,
     )}
     
     ### Example Good Broadcast
@@ -687,38 +681,35 @@ const siblingsResult = await getSiblingSessionsFromChild(toolCtx.sessionID);
 const validTargets = [...childrenResult.data, ...siblingsResult.data.siblings];
 
 // Validate task_id against validTargets
-if (!validTargets.some(t => t.id === task_id)) {
+if (!validTargets.some((t) => t.id === task_id)) {
   return { error: 'Invalid task ID - must be a child or sibling task' };
 }
 ```
 
 **Behavior Matrix**:
 
-| Caller | Target | Result |
-|--------|--------|--------|
-| Subagent | Child task | Output from delegated task (existing behavior) |
-| Subagent | Sibling task | Output from peer task (NEW) |
-| Orchestrator | Child task | Output from delegated task (existing behavior) |
-| Orchestrator | Invalid ID | Error: Invalid task ID |
+| Caller       | Target       | Result                                         |
+| ------------ | ------------ | ---------------------------------------------- |
+| Subagent     | Child task   | Output from delegated task (existing behavior) |
+| Subagent     | Sibling task | Output from peer task (NEW)                    |
+| Orchestrator | Child task   | Output from delegated task (existing behavior) |
+| Orchestrator | Invalid ID   | Error: Invalid task ID                         |
 
 ## Implementation Notes
 
 ### File Changes Required
 
 1. **`src/features/tools/tasks/sibling-hook.ts`** (NEW)
-
    - Define `siblingInjectionHooks` hook set
    - Implement sibling context injection on task creation
    - Implement new sibling announcement to existing siblings
 
 2. **`src/features/tools/tasks/broadcast.ts`** (NEW)
-
    - Add `taskBroadcastTool` definition with `target` parameter
    - Add `taskBroadcastsReadTool` definition with `source` parameter
    - Export in `taskToolSet`
 
 3. **`src/features/tools/tasks/index.ts`**
-
    - Import and export broadcast tools
    - Update `taskToolSet` to include broadcast tools
    - Update `taskSendMessageTool` to validate against siblings too
@@ -726,23 +717,19 @@ if (!validTargets.some(t => t.id === task_id)) {
    - Update `taskOutputTool` to validate against siblings
 
 4. **`src/features/tools/tasks/types.ts`**
-
    - Add `BroadcastResult` type
    - Add `Broadcast` type for parsed broadcasts
    - Add `BroadcastTarget` type
 
 5. **`src/util/session.ts`**
-
    - Add `getSiblingSessionsFromChild(sessionID)` helper
    - Add `parseSessionBroadcasts(sessionID)` helper
    - Add `getChildSessionBroadcasts(sessionID)` helper
 
 6. **`src/util/prompt/protocols.ts`**
-
    - Add `Protocol.siblingCommunication`
 
 7. **`src/hook/hooks.ts`**
-
    - Import and register `siblingInjectionHooks`
 
 8. **Agent prompts** (all agents)
@@ -762,7 +749,7 @@ export async function getSiblingSessionsFromChild(sessionID: string) {
 
   const { parentID } = sessionResult.data;
   if (!parentID) {
-    return { error: { code: "NO_PARENT", message: "Session has no parent" } };
+    return { error: { code: 'NO_PARENT', message: 'Session has no parent' } };
   }
 
   // Get siblings (children of parent)
@@ -782,7 +769,7 @@ export function formatBroadcastMessage(
   agentName: string,
   taskId: string,
   category: string,
-  message: string
+  message: string,
 ): string {
   const timestamp = new Date().toISOString();
   return `<sibling_broadcast from="${agentName}" task_id="${taskId}" category="${category}" timestamp="${timestamp}">
@@ -797,7 +784,7 @@ export function parseBroadcasts(messages: Message[]): Broadcast[] {
 
   for (const msg of messages) {
     for (const part of msg.parts) {
-      if (part.type === "text") {
+      if (part.type === 'text') {
         let match;
         while ((match = regex.exec(part.text)) !== null) {
           broadcasts.push({
@@ -813,13 +800,11 @@ export function parseBroadcasts(messages: Message[]): Broadcast[] {
   }
 
   return broadcasts.sort(
-    (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+    (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
   );
 }
 
-export async function getChildSessionBroadcasts(
-  sessionID: string
-): Promise<Broadcast[]> {
+export async function getChildSessionBroadcasts(sessionID: string): Promise<Broadcast[]> {
   const { client, directory } = PluginContext.use();
 
   const childrenResult = await client.session.children({
@@ -838,13 +823,11 @@ export async function getChildSessionBroadcasts(
     if (messagesResult.error) continue;
 
     const broadcasts = parseBroadcasts(messagesResult.data);
-    allBroadcasts.push(
-      ...broadcasts.map((b) => ({ ...b, source: "child" as const }))
-    );
+    allBroadcasts.push(...broadcasts.map((b) => ({ ...b, source: 'child' as const })));
   }
 
   return allBroadcasts.sort(
-    (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+    (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
   );
 }
 ```
@@ -852,7 +835,6 @@ export async function getChildSessionBroadcasts(
 ### Testing Strategy
 
 1. **Unit Tests**:
-
    - `formatBroadcastMessage` produces valid XML
    - `parseBroadcasts` extracts all broadcasts from messages
    - `getSiblingSessionsFromChild` handles no-parent case
@@ -860,7 +842,6 @@ export async function getChildSessionBroadcasts(
    - Sibling list formatting includes all required fields
 
 2. **Integration Tests**:
-
    - Broadcast from Task A appears in Task B's messages
    - `task_broadcasts_read` returns parsed broadcasts
    - Completed siblings receive broadcasts
@@ -974,11 +955,9 @@ export async function getChildSessionBroadcasts(
 ## Resolved Questions (from v1.0)
 
 1. **Should broadcasts survive session compaction?**
-
    - **Decision**: Trust LLM summarization for MVP. No special handling.
 
 2. **Should orchestrator see child broadcasts?**
-
    - **Decision**: Yes. Added `source: 'children'` parameter to `task_broadcasts_read`.
 
 3. **Maximum message length?**
@@ -987,13 +966,11 @@ export async function getChildSessionBroadcasts(
 ## Resolved Questions (from v2.0)
 
 1. **Should `task_send_message` trigger a response from the recipient?**
-
    - **Decision**: Default behavior triggers response, but added `noReply: true` option for passive directed messages (v2.1)
 
 ## Open Questions
 
 1. **Should sibling injection include task status?**
-
    - Current design only injects ID, agent, and title
    - Could add `status: 'running' | 'completed'` for better awareness
    - **Recommendation**: Defer to future enhancement

@@ -553,11 +553,9 @@ Standardize on `NEVER` for absolute prohibitions, `Do NOT` for strong guidance:
 ## Open Questions
 
 1. Should `Protocol.clarification` use the `mcp_question` tool or natural language questions?
-
    - **Recommendation**: Natural language for flexibility, tool for structured choices
 
 2. Should we add a dedicated "assistant" agent for Q&A in a future iteration?
-
    - **Recommendation**: Defer - see if dual-mode addresses the need first
 
 3. How should agents detect structured handoff vs. direct request?

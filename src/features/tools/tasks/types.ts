@@ -3,28 +3,26 @@ export type TaskResult =
   | {
       status: 'completed';
       task_id: string;
-      agent: string;
       title: string;
+      work_dir: string;
+      agent?: string;
       result: string;
     }
   | {
       status: 'failed';
       task_id?: string;
-      agent?: string;
       title?: string;
+      work_dir?: string;
+      agent?: string;
       error: string;
-      code:
-        | 'AGENT_NOT_FOUND'
-        | 'SESSION_ERROR'
-        | 'CANCELLED'
-        | 'TIMEOUT'
-        | 'UNKNOWN_ERROR';
+      code: 'AGENT_NOT_FOUND' | 'SESSION_ERROR' | 'CANCELLED' | 'TIMEOUT' | 'UNKNOWN_ERROR';
     }
   | {
       status: 'running';
       task_id: string;
-      agent: string;
       title: string;
+      work_dir: string;
+      agent?: string;
       partialResult?: string;
     }
   | {

@@ -12,14 +12,12 @@ import {
   getGlobalPermissions,
   hasPermission,
   isPatternMatch,
-} from '~/permission/util';
-import { getEnabledAgents, hasSubAgents } from './util';
+} from '~/permission/utils';
+import { getEnabledAgents, hasSubAgents } from './utils';
 
 export type ElishaAgentOptions = {
   id: string;
-  config:
-    | AgentConfig
-    | ((self: ElishaAgent) => AgentConfig | Promise<AgentConfig>);
+  config: AgentConfig | ((self: ElishaAgent) => AgentConfig | Promise<AgentConfig>);
   prompt: string | ((self: ElishaAgent) => string | Promise<string>);
 };
 
@@ -51,11 +49,7 @@ export const defineAgent = ({
       const permissions = agentConfig.permission;
       if (permissions) {
         agentConfig.permission = cleanupPermissions(
-          defu(
-            config.agent?.[this.id]?.permission ?? {},
-            permissions,
-            getGlobalPermissions(),
-          ),
+          defu(config.agent?.[this.id]?.permission ?? {}, permissions, getGlobalPermissions()),
         );
       }
 
@@ -66,13 +60,25 @@ export const defineAgent = ({
       const config = ConfigContext.use();
 
       const agentConfig = config.agent?.[this.id];
-      // Skip if agent is disabled or prompt is already set
-      if (!agentConfig || agentConfig.disable || agentConfig.prompt) {
+      // Skip if agent is disabled
+      if (!agentConfig || agentConfig.disable) {
+        return;
+      }
+
+      if (agentConfig.prompt) {
+        agentConfig.prompt = agentConfig.prompt + agentConfig.prompt_append;
         return;
       }
 
       if (typeof prompt === 'function') {
         prompt = await prompt(this);
+      }
+
+      if (agentConfig.prompt_prepend) {
+        prompt = `${agentConfig.prompt_prepend}\n${prompt}`;
+      }
+      if (agentConfig.prompt_append) {
+        prompt = `${prompt}\n${agentConfig.prompt_append}`;
       }
 
       agentConfig.prompt = prompt;
@@ -121,9 +127,7 @@ export const defineAgent = ({
       // Must have agents to delegate to
       if (!hasSubAgents()) return false;
 
-      return (
-        this.hasPermission(taskCreateTool.id) || this.hasPermission('task')
-      );
+      return this.hasPermission(taskCreateTool.id) || this.hasPermission('task');
     },
     get canCommunicate(): boolean {
       return (

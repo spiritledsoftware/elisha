@@ -106,10 +106,10 @@ Elisha works with zero configuration, but you can customize behavior in your `op
 {
   "agent": {
     "Jethro (orchestrator)": {
-      "disable": true
+      "disable": true,
       // Other OpenCode agent settings
-    }
-  }
+    },
+  },
 }
 ```
 
@@ -121,10 +121,10 @@ Agents will use your `model` and `small_model` settings from OpenCode config app
 {
   "mcp": {
     "openmemory": {
-      "enabled": false
+      "enabled": false,
       // Other OpenCode MCP settings
-    }
-  }
+    },
+  },
 }
 ```
 

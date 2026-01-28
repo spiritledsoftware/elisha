@@ -40,41 +40,41 @@ The Elisha codebase demonstrates excellent architectural patterns with consisten
 
 ### Critical
 
-| File | Line | Issue | Confidence | Suggestion |
-|------|------|-------|------------|------------|
-| `src/tools/task/index.ts` | 109 | Memory leak: `tasks` object grows unbounded without cleanup mechanism | Definite | Add task cleanup after completion or implement TTL-based eviction |
-| Multiple files | - | Inconsistent import extensions: ~50% of imports missing `.ts` extension (Bun requirement) | Definite | Add `.ts` extension to all relative imports |
-| `src/hooks/memory/index.ts` | 57-95 | No error handling for `session.compacted` event - API failures will crash | Likely | Wrap in try-catch, log errors gracefully |
+| File                        | Line  | Issue                                                                                     | Confidence | Suggestion                                                        |
+| --------------------------- | ----- | ----------------------------------------------------------------------------------------- | ---------- | ----------------------------------------------------------------- |
+| `src/tools/task/index.ts`   | 109   | Memory leak: `tasks` object grows unbounded without cleanup mechanism                     | Definite   | Add task cleanup after completion or implement TTL-based eviction |
+| Multiple files              | -     | Inconsistent import extensions: ~50% of imports missing `.ts` extension (Bun requirement) | Definite   | Add `.ts` extension to all relative imports                       |
+| `src/hooks/memory/index.ts` | 57-95 | No error handling for `session.compacted` event - API failures will crash                 | Likely     | Wrap in try-catch, log errors gracefully                          |
 
 ### Warnings
 
-| File | Line | Issue | Confidence | Suggestion |
-|------|------|-------|------------|------------|
-| `src/hooks/memory/index.ts` | - | Near-duplicate of `instruction/index.ts` (~90% identical code) | Definite | Extract shared hook factory function |
-| `src/hooks/instruction/index.ts` | - | Near-duplicate of `memory/index.ts` (~90% identical code) | Definite | Extract shared hook factory function |
-| `src/config/agent/compaction/index.ts` | 1 | Imports from `@opencode-ai/sdk` instead of `@opencode-ai/sdk/v2` | Definite | Use consistent SDK import path |
-| `src/config/mcp/exa.ts` | 11-13 | API key exposed in headers without validation | Likely | Add validation for API key format, consider warning if missing |
-| `src/config/mcp/context7.ts` | 11-13 | API key header name inconsistent (`CONTEXT7_API_KEY` vs `x-api-key`) | Potential | Verify correct header name with Context7 docs |
-| `src/tools/task/index.ts` | 160-167 | Fire-and-forget `ctx.client.session.prompt()` - no await, errors silently ignored | Definite | Add await and error handling |
-| `src/config/agent/explorer/index.ts` | 28 | Description has duplicate text ("An autonomous agent..." + "Codebase search specialist...") | Definite | Remove duplicate description prefix |
-| `src/config/skill/index.ts` | 3 | Empty function body - placeholder with no implementation | Potential | Either implement or add TODO comment explaining intent |
+| File                                   | Line    | Issue                                                                                       | Confidence | Suggestion                                                     |
+| -------------------------------------- | ------- | ------------------------------------------------------------------------------------------- | ---------- | -------------------------------------------------------------- |
+| `src/hooks/memory/index.ts`            | -       | Near-duplicate of `instruction/index.ts` (~90% identical code)                              | Definite   | Extract shared hook factory function                           |
+| `src/hooks/instruction/index.ts`       | -       | Near-duplicate of `memory/index.ts` (~90% identical code)                                   | Definite   | Extract shared hook factory function                           |
+| `src/config/agent/compaction/index.ts` | 1       | Imports from `@opencode-ai/sdk` instead of `@opencode-ai/sdk/v2`                            | Definite   | Use consistent SDK import path                                 |
+| `src/config/mcp/exa.ts`                | 11-13   | API key exposed in headers without validation                                               | Likely     | Add validation for API key format, consider warning if missing |
+| `src/config/mcp/context7.ts`           | 11-13   | API key header name inconsistent (`CONTEXT7_API_KEY` vs `x-api-key`)                        | Potential  | Verify correct header name with Context7 docs                  |
+| `src/tools/task/index.ts`              | 160-167 | Fire-and-forget `ctx.client.session.prompt()` - no await, errors silently ignored           | Definite   | Add await and error handling                                   |
+| `src/config/agent/explorer/index.ts`   | 28      | Description has duplicate text ("An autonomous agent..." + "Codebase search specialist...") | Definite   | Remove duplicate description prefix                            |
+| `src/config/skill/index.ts`            | 3       | Empty function body - placeholder with no implementation                                    | Potential  | Either implement or add TODO comment explaining intent         |
 
 ### Nitpicks
 
-| File | Line | Issue | Confidence | Suggestion |
-|------|------|-------|------------|------------|
-| `src/config/mcp/index.ts` | 1 | Inconsistent `.ts` extension usage (has `.ts` on types import) | Potential | Standardize all imports to include `.ts` |
-| `src/config/mcp/grep-app.ts` | 2-3 | Missing `.ts` extension on imports (inconsistent with other MCP files) | Definite | Add `.ts` extension for consistency |
-| `src/config/agent/researcher/prompt.md` | 329-331 | Trailing empty code blocks at end of file | Definite | Remove trailing empty code blocks |
-| `src/config/agent/tester/prompt.md` | 370 | Trailing empty code block at end of file | Definite | Remove trailing empty code block |
-| `src/config/agent/orchestrator/index.ts` | 29 | Uses `expandProtocols(PROMPT)` but orchestrator prompt uses protocols | Potential | Verified - orchestrator does use `{{protocol:context-handling}}` |
-| `src/index.ts` | 2-4 | Missing `.ts` extensions on imports | Definite | Add `.ts` extension |
-| `src/config/index.ts` | 3-9 | Missing `.ts` extensions on imports | Definite | Add `.ts` extension |
-| `src/hooks/index.ts` | 2-3 | Missing `.ts` extensions on imports | Definite | Add `.ts` extension |
-| `src/config/agent/index.ts` | 3-16 | Missing `.ts` extensions on imports | Definite | Add `.ts` extension |
-| `src/config/command/index.ts` | 1-2 | Missing `.ts` extensions on imports | Definite | Add `.ts` extension |
-| `src/config/permission/index.ts` | 4-9 | Missing `.ts` extensions on imports | Definite | Add `.ts` extension |
-| `src/config/permission/agent.ts` | 3-4 | Missing `.ts` extensions on imports | Definite | Add `.ts` extension |
+| File                                     | Line    | Issue                                                                  | Confidence | Suggestion                                                       |
+| ---------------------------------------- | ------- | ---------------------------------------------------------------------- | ---------- | ---------------------------------------------------------------- |
+| `src/config/mcp/index.ts`                | 1       | Inconsistent `.ts` extension usage (has `.ts` on types import)         | Potential  | Standardize all imports to include `.ts`                         |
+| `src/config/mcp/grep-app.ts`             | 2-3     | Missing `.ts` extension on imports (inconsistent with other MCP files) | Definite   | Add `.ts` extension for consistency                              |
+| `src/config/agent/researcher/prompt.md`  | 329-331 | Trailing empty code blocks at end of file                              | Definite   | Remove trailing empty code blocks                                |
+| `src/config/agent/tester/prompt.md`      | 370     | Trailing empty code block at end of file                               | Definite   | Remove trailing empty code block                                 |
+| `src/config/agent/orchestrator/index.ts` | 29      | Uses `expandProtocols(PROMPT)` but orchestrator prompt uses protocols  | Potential  | Verified - orchestrator does use `{{protocol:context-handling}}` |
+| `src/index.ts`                           | 2-4     | Missing `.ts` extensions on imports                                    | Definite   | Add `.ts` extension                                              |
+| `src/config/index.ts`                    | 3-9     | Missing `.ts` extensions on imports                                    | Definite   | Add `.ts` extension                                              |
+| `src/hooks/index.ts`                     | 2-3     | Missing `.ts` extensions on imports                                    | Definite   | Add `.ts` extension                                              |
+| `src/config/agent/index.ts`              | 3-16    | Missing `.ts` extensions on imports                                    | Definite   | Add `.ts` extension                                              |
+| `src/config/command/index.ts`            | 1-2     | Missing `.ts` extensions on imports                                    | Definite   | Add `.ts` extension                                              |
+| `src/config/permission/index.ts`         | 4-9     | Missing `.ts` extensions on imports                                    | Definite   | Add `.ts` extension                                              |
+| `src/config/permission/agent.ts`         | 3-4     | Missing `.ts` extensions on imports                                    | Definite   | Add `.ts` extension                                              |
 
 ---
 
@@ -130,13 +130,11 @@ The AGENTS.md explicitly states: "All imports MUST include `.ts` extension. Bun 
 
 ```typescript
 // src/hooks/util/createContextHook.ts
-export const createContextHook = (options: {
-  contextTag: string;
-  prompt: string;
-  enabledCheck?: (config: Config) => boolean;
-}) => (ctx: PluginInput): Hooks => {
-  // Shared implementation
-};
+export const createContextHook =
+  (options: { contextTag: string; prompt: string; enabledCheck?: (config: Config) => boolean }) =>
+  (ctx: PluginInput): Hooks => {
+    // Shared implementation
+  };
 ```
 
 ### 3. Task Tool Memory Leak (Critical)
@@ -219,7 +217,7 @@ event: async ({ event }) => {
       // Optionally remove from injectedSessions to retry on next message
     }
   }
-}
+};
 ```
 
 ### 6. SDK Import Inconsistency (Warning)
@@ -236,8 +234,7 @@ import type { AgentConfig } from '@opencode-ai/sdk/v2';
 
 ```typescript
 // src/config/agent/explorer/index.ts:27-28
-description:
-  'An autonomous agent that explores the codebase to gather information and insights to assist other agents in making informed decisions.Codebase search specialist. Finds files, searches code, maps structure...'
+description: 'An autonomous agent that explores the codebase to gather information and insights to assist other agents in making informed decisions.Codebase search specialist. Finds files, searches code, maps structure...';
 ```
 
 The description has two concatenated sentences without proper spacing, suggesting accidental duplication.
@@ -257,18 +254,18 @@ The description has two concatenated sentences without proper spacing, suggestin
 
 ### Agent Prompt Quality
 
-| Agent | Quality | Notes |
-|-------|---------|-------|
-| orchestrator | Excellent | Comprehensive delegation patterns, context handling, decision flow |
-| executor | Excellent | Clear modes, checkpoint protocol, anti-patterns, examples |
-| explorer | Good | Clear search strategies, but description has typo |
-| architect | Excellent | Confidence levels, escalation patterns, option analysis |
-| planner | Excellent | Dependency analysis, task breakdown guidance, templates |
-| researcher | Excellent | Tool selection decision tree, fallback strategies, confidence indicators |
-| reviewer | Good | Clear scope levels, security checklist |
-| tester | Good | Framework detection, mode examples, confidence levels |
-| documenter | Good | Style matching guidance, templates, scope levels |
-| brainstormer | Good | Creative techniques, output format, anti-patterns |
+| Agent        | Quality   | Notes                                                                    |
+| ------------ | --------- | ------------------------------------------------------------------------ |
+| orchestrator | Excellent | Comprehensive delegation patterns, context handling, decision flow       |
+| executor     | Excellent | Clear modes, checkpoint protocol, anti-patterns, examples                |
+| explorer     | Good      | Clear search strategies, but description has typo                        |
+| architect    | Excellent | Confidence levels, escalation patterns, option analysis                  |
+| planner      | Excellent | Dependency analysis, task breakdown guidance, templates                  |
+| researcher   | Excellent | Tool selection decision tree, fallback strategies, confidence indicators |
+| reviewer     | Good      | Clear scope levels, security checklist                                   |
+| tester       | Good      | Framework detection, mode examples, confidence levels                    |
+| documenter   | Good      | Style matching guidance, templates, scope levels                         |
+| brainstormer | Good      | Creative techniques, output format, anti-patterns                        |
 
 ### Missing Tests
 
@@ -284,23 +281,23 @@ No test files found in the codebase. Critical areas that need testing:
 
 ## Security Considerations
 
-| Area | Status | Notes |
-|------|--------|-------|
-| API Keys | Warning | Exa/Context7 keys read from env, but no validation |
-| Permissions | Good | Sensible defaults, `.env` files denied |
-| Bash | Good | Dangerous `rm` patterns denied |
-| External directories | Good | Requires `ask` permission |
-| Secrets in logs | Unknown | No logging review performed |
+| Area                 | Status  | Notes                                              |
+| -------------------- | ------- | -------------------------------------------------- |
+| API Keys             | Warning | Exa/Context7 keys read from env, but no validation |
+| Permissions          | Good    | Sensible defaults, `.env` files denied             |
+| Bash                 | Good    | Dangerous `rm` patterns denied                     |
+| External directories | Good    | Requires `ask` permission                          |
+| Secrets in logs      | Unknown | No logging review performed                        |
 
 ---
 
 ## Performance Concerns
 
-| Area | Severity | Issue |
-|------|----------|-------|
-| Task memory | Medium | Unbounded growth of `tasks` object |
-| Hook API calls | Low | Multiple API calls per message (could batch) |
-| Session polling | Low | 500ms interval is reasonable |
+| Area            | Severity | Issue                                        |
+| --------------- | -------- | -------------------------------------------- |
+| Task memory     | Medium   | Unbounded growth of `tasks` object           |
+| Hook API calls  | Low      | Multiple API calls per message (could batch) |
+| Session polling | Low      | 500ms interval is reasonable                 |
 
 ---
 
@@ -365,7 +362,7 @@ Tasks for executor to address (Critical and Warning issues):
 
 ## Resolution Log
 
-| Version | Agent | Action | Timestamp |
-|---------|-------|--------|-----------|
-| 1.0 | reviewer | Initial thorough review | 2026-01-20T00:00:00Z |
-| 1.1 | reviewer | Enhanced with detailed findings, architecture assessment, prompt quality review | 2026-01-20T12:00:00Z |
+| Version | Agent    | Action                                                                          | Timestamp            |
+| ------- | -------- | ------------------------------------------------------------------------------- | -------------------- |
+| 1.0     | reviewer | Initial thorough review                                                         | 2026-01-20T00:00:00Z |
+| 1.1     | reviewer | Enhanced with detailed findings, architecture assessment, prompt quality review | 2026-01-20T12:00:00Z |

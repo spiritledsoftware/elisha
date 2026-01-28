@@ -18,15 +18,10 @@ export type ElishaToolOptions<Args extends z.ZodRawShape> = {
   id: string;
   config:
     | ToolOptions<Args>
-    | ((
-        self: ElishaTool<Args>,
-      ) => ToolOptions<Args> | Promise<ToolOptions<Args>>);
+    | ((self: ElishaTool<Args>) => ToolOptions<Args> | Promise<ToolOptions<Args>>);
 };
 
-export type ElishaTool<Args extends z.ZodRawShape> = Omit<
-  ElishaToolOptions<Args>,
-  'config'
-> & {
+export type ElishaTool<Args extends z.ZodRawShape> = Omit<ElishaToolOptions<Args>, 'config'> & {
   setup: () => Promise<Tool<Args>>;
 };
 
@@ -54,10 +49,7 @@ export type ElishaToolSet = Omit<ElishaToolSetOptions, 'config'> & {
   setup: () => Promise<ToolSet>;
 };
 
-export const defineToolSet = ({
-  config: toolSetConfig,
-  ...inputs
-}: ElishaToolSetOptions) => {
+export const defineToolSet = ({ config: toolSetConfig, ...inputs }: ElishaToolSetOptions) => {
   return {
     ...inputs,
     async setup() {

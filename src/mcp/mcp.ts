@@ -13,10 +13,7 @@ export type ElishaMcp = Omit<ElishaMcpOptions, 'config'> & {
   isEnabled: boolean;
 };
 
-export const defineMcp = ({
-  config: mcpConfig,
-  ...input
-}: ElishaMcpOptions): ElishaMcp => {
+export const defineMcp = ({ config: mcpConfig, ...input }: ElishaMcpOptions): ElishaMcp => {
   return {
     ...input,
     async setup() {
@@ -27,10 +24,7 @@ export const defineMcp = ({
       const config = ConfigContext.use();
 
       config.mcp ??= {};
-      config.mcp[input.id] = defu(
-        config.mcp?.[input.id] ?? {},
-        mcpConfig,
-      ) as McpConfig;
+      config.mcp[input.id] = defu(config.mcp?.[input.id] ?? {}, mcpConfig) as McpConfig;
     },
     get isEnabled() {
       const config = ConfigContext.use();

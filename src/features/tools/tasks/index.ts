@@ -1,10 +1,10 @@
 import type { Session } from '@opencode-ai/sdk/v2';
 import * as z from 'zod';
-import { getActiveAgents } from '~/agent/util';
+import { getActiveAgents } from '~/agent/utils';
 import { PluginContext } from '~/context';
 import { defineTool, defineToolSet } from '~/tool';
-import { log } from '~/util';
-import { Prompt } from '~/util/prompt';
+import { log } from '~/utils';
+import { Prompt } from '~/utils/prompt';
 import {
   fetchSessionOutput,
   formatBroadcastMessage,
@@ -17,13 +17,8 @@ import {
   isSessionComplete,
   parseBroadcasts,
   waitForSession,
-} from '~/util/session';
-import type {
-  Broadcast,
-  BroadcastResult,
-  BroadcastsReadResult,
-  TaskResult,
-} from './types';
+} from '~/utils/session';
+import type { Broadcast, BroadcastResult, BroadcastsReadResult, TaskResult } from './types';
 
 export const ASYNC_TASK_PREFIX = '[async]';
 const TASK_TOOLSET_ID = 'elisha_task';
@@ -48,15 +43,19 @@ export const taskCreateTool = defineTool({
         .describe(
           'Maximum time in **milliseconds** to wait for task completion (only if async=false). If timeout is reached, the task will be aborted.',
         ),
+      work_dir: z
+        .string()
+        .optional()
+        .describe(
+          'Working directory for the task. If provided, task runs in this directory instead of current. Used for worktree isolation.',
+        ),
     },
     execute: async (args, toolCtx) => {
       const activeAgentsResult = await getActiveAgents();
       if (activeAgentsResult.error) {
         return JSON.stringify({
           status: 'failed',
-          error: `Failed to retrieve active agents: ${JSON.stringify(
-            activeAgentsResult.error,
-          )}`,
+          error: `Failed to retrieve active agents: ${JSON.stringify(activeAgentsResult.error)}`,
           code: 'AGENT_NOT_FOUND',
         } satisfies TaskResult);
       }
@@ -72,24 +71,52 @@ export const taskCreateTool = defineTool({
         } satisfies TaskResult);
       }
 
-      const { client, directory } = PluginContext.use();
+      const { client } = PluginContext.use();
+      const toolSessionResult = await client.session.get({
+        sessionID: toolCtx.sessionID,
+      });
+      if (toolSessionResult.error) {
+        return JSON.stringify({
+          status: 'failed',
+          task_id: toolCtx.sessionID,
+          error: `Failed to retrieve tool context session: ${JSON.stringify(
+            toolSessionResult.error,
+          )}`,
+          code: 'SESSION_ERROR',
+        } satisfies TaskResult);
+      }
+
+      const toolSession = toolSessionResult.data;
+      const taskDirectory = args.work_dir ?? toolSession.directory;
+
+      const createSessionResult = await client.session.create({
+        parentID: toolCtx.sessionID,
+        title: args.async ? `${ASYNC_TASK_PREFIX} Task: ${args.title}` : `Task: ${args.title}`,
+        directory: taskDirectory,
+      });
+      if (createSessionResult.error) {
+        return JSON.stringify({
+          status: 'failed',
+          error: `Failed to create session for task: ${JSON.stringify(createSessionResult.error)}`,
+          code: 'SESSION_ERROR',
+        } satisfies TaskResult);
+      }
+      const taskSession = createSessionResult.data;
 
       // Get existing children to inject as sibling context for the new task
       const existingChildrenResult = await getActiveChildSessions(
-        toolCtx.sessionID,
+        toolSession,
+        taskSession.directory,
       );
       let siblingContext = '';
-      if (
-        !existingChildrenResult.error &&
-        existingChildrenResult.data.length > 0
-      ) {
+      if (!existingChildrenResult.error && existingChildrenResult.data.length > 0) {
         const siblingRows = await Promise.all(
           existingChildrenResult.data.map(async (child) => {
-            const agentResult = await getSessionAgentAndModel(child.id);
+            const agentResult = await getSessionAgentAndModel(child);
             const agentName = agentResult.data?.agent || 'unknown';
             return `| ${child.id} | ${agentName} | ${child.title
               .replace(`${ASYNC_TASK_PREFIX} Task: `, '')
-              .replace('Task: ', '')} |`;
+              .replace('Task: ', '')} | ${child.directory} |`;
           }),
         );
 
@@ -97,71 +124,76 @@ export const taskCreateTool = defineTool({
           <sibling_tasks>
             You have sibling tasks working in parallel. You can communicate with them using:
             - \`${taskBroadcastTool.id}\`: Share discoveries with all siblings
-            - \`${
-              taskSendMessageTool.id
-            }\`: Send direct message to a specific sibling
+            - \`${taskSendMessageTool.id}\`: Send direct message to a specific sibling
 
-            | Task ID | Agent | Title |
-            |---------|-------|-------|
+            | Task ID | Agent | Title | Directory |
+            |---------|-------|-------|-----------|
             ${siblingRows.join('\n')}
           </sibling_tasks>
         `;
       }
 
       // Enrich prompt with sibling context
-      const enrichedPrompt = Prompt.template(siblingContext + args.prompt);
+      let enrichedPrompt = Prompt.template(siblingContext + args.prompt);
 
-      let session: Session;
-      const createSessionResult = await client.session.create({
-        parentID: toolCtx.sessionID,
-        title: args.async
-          ? `${ASYNC_TASK_PREFIX} Task: ${args.title}`
-          : `Task: ${args.title}`,
-        directory,
-      });
-      if (createSessionResult.error) {
-        return JSON.stringify({
-          status: 'failed',
-          error: `Failed to create session for task: ${JSON.stringify(
-            createSessionResult.error,
-          )}`,
-          code: 'SESSION_ERROR',
-        } satisfies TaskResult);
+      // Inject branch context if task is running in a different directory (worktree)
+      if (taskSession.directory !== toolSession.directory) {
+        const { $ } = PluginContext.use();
+        const branchProc = await $`git rev-parse --abbrev-ref HEAD`
+          .cwd(taskDirectory)
+          .quiet()
+          .nothrow();
+        const branchName = branchProc.exitCode === 0 ? branchProc.text().trim() : 'unknown';
+
+        const branchContext = Prompt.template`
+          <branch_context>
+            You are operating in a **worktree branch**: \`${branchName}\`
+
+            **Working Directory**: ${taskSession.directory}
+            **Parent Directory**: ${toolSession.directory}
+
+            **Constraints**:
+            - All work must stay within this branch's domain
+            - Do NOT merge to parent branch - report completion instead
+            - Do NOT modify files outside your assigned scope
+          </branch_context>
+        `;
+
+        enrichedPrompt = Prompt.template(branchContext + enrichedPrompt);
       }
-
-      session = createSessionResult.data;
 
       if (args.async) {
         const promptResult = await client.session.promptAsync({
-          sessionID: session.id,
+          sessionID: taskSession.id,
           agent: agent.name,
           parts: [{ type: 'text', text: enrichedPrompt }],
-          directory,
+          directory: taskSession.directory,
         });
         if (promptResult.error) {
           return JSON.stringify({
             status: 'failed',
-            task_id: session.id,
-            error: `Failed to start async task: ${JSON.stringify(
-              promptResult.error,
-            )}`,
+            task_id: taskSession.id,
+            title: taskSession.title,
+            work_dir: taskSession.directory,
+            error: `Failed to start async task: ${JSON.stringify(promptResult.error)}`,
             code: 'SESSION_ERROR',
           } satisfies TaskResult);
         }
 
         return JSON.stringify({
           status: 'running',
-          task_id: session.id,
+          task_id: taskSession.id,
+          title: taskSession.title,
           agent: agent.name,
-          title: args.title,
+          work_dir: taskSession.directory,
         } satisfies TaskResult);
       }
 
       const promptPromise = client.session.prompt({
-        sessionID: session.id,
+        sessionID: taskSession.id,
         agent: agent.name,
         parts: [{ type: 'text', text: enrichedPrompt }],
-        directory,
+        directory: taskSession.directory,
       });
 
       // Handle timeout for synchronous execution
@@ -176,21 +208,23 @@ export const taskCreateTool = defineTool({
         if (didTimeout) {
           // Abort the session to clean up resources
           const abortResult = await client.session.abort({
-            sessionID: session.id,
-            directory,
+            sessionID: taskSession.id,
+            directory: taskSession.directory,
           });
           if (abortResult.error) {
             await log({
               level: 'error',
               message: `Failed to abort timed-out task(${
-                session.id
+                taskSession.id
               }): ${JSON.stringify(abortResult.error)}`,
             });
           }
 
           return JSON.stringify({
             status: 'failed',
-            task_id: session.id,
+            task_id: taskSession.id,
+            title: taskSession.title,
+            work_dir: taskSession.directory,
             error: `Task timed out after ${args.timeout_ms} ms`,
             code: 'TIMEOUT',
           } satisfies TaskResult);
@@ -202,22 +236,23 @@ export const taskCreateTool = defineTool({
       if (promptResult.error) {
         return JSON.stringify({
           status: 'failed',
-          task_id: session.id,
-          error: `Failed to execute task: ${JSON.stringify(
-            promptResult.error,
-          )}`,
+          task_id: taskSession.id,
+          title: taskSession.title,
+          work_dir: taskSession.directory,
+          error: `Failed to execute task: ${JSON.stringify(promptResult.error)}`,
           code: 'SESSION_ERROR',
         } satisfies TaskResult);
       }
 
-      const sessionOutputResult = await fetchSessionOutput(session.id);
+      const sessionOutputResult = await fetchSessionOutput(taskSession);
       if (sessionOutputResult.error) {
         return JSON.stringify({
           status: 'failed',
-          task_id: session.id,
-          error: `Failed to fetch task output: ${JSON.stringify(
-            sessionOutputResult.error,
-          )}`,
+          task_id: taskSession.id,
+          title: taskSession.title,
+          agent: agent.name,
+          work_dir: taskSession.directory,
+          error: `Failed to fetch task output: ${JSON.stringify(sessionOutputResult.error)}`,
           code: 'SESSION_ERROR',
         } satisfies TaskResult);
       }
@@ -226,12 +261,15 @@ export const taskCreateTool = defineTool({
         sessionID: toolCtx.sessionID,
         agent: toolCtx.agent,
         parts: sessionOutputResult.data.parts,
-        directory,
+        directory: taskSession.directory,
       });
       if (injectResult.error) {
         return JSON.stringify({
           status: 'failed',
-          task_id: session.id,
+          task_id: taskSession.id,
+          title: taskSession.title,
+          agent: agent.name,
+          work_dir: taskSession.directory,
           error: `Failed to inject task output into parent session: ${JSON.stringify(
             injectResult.error,
           )}`,
@@ -241,9 +279,10 @@ export const taskCreateTool = defineTool({
 
       return JSON.stringify({
         status: 'completed',
-        task_id: session.id,
+        task_id: taskSession.id,
+        title: taskSession.title,
         agent: agent.name,
-        title: args.title,
+        work_dir: taskSession.directory,
         result: 'See next message for session output',
       } satisfies TaskResult);
     },
@@ -269,18 +308,41 @@ export const taskOutputTool = defineTool({
         .describe(
           'Maximum time in **milliseconds** to wait for task completion (only if wait=true).',
         ),
+      work_dir: z
+        .string()
+        .optional()
+        .describe(
+          'Working directory of the task. Must be provided if the task was run in a different directory.',
+        ),
     },
     execute: async (args, toolCtx) => {
-      const { client, directory } = PluginContext.use();
+      const { client } = PluginContext.use();
 
-      const relatedResult = await getRelatedSessions(toolCtx.sessionID);
+      const toolSessionResult = await client.session.get({
+        sessionID: toolCtx.sessionID,
+      });
+      if (toolSessionResult.error) {
+        return JSON.stringify({
+          status: 'failed',
+          task_id: toolCtx.sessionID,
+          error: `Failed to retrieve tool context session: ${JSON.stringify(
+            toolSessionResult.error,
+          )}`,
+          code: 'SESSION_ERROR',
+        } satisfies TaskResult);
+      }
+
+      const toolSession = toolSessionResult.data;
+      const taskDirectory = args.work_dir ?? toolSession.directory;
+
+      const relatedResult = await getRelatedSessions(toolSession, taskDirectory);
       if (relatedResult.error) {
         return JSON.stringify({
           status: 'failed',
-          task_id: args.task_id,
-          error: `Failed to retrieve tasks: ${JSON.stringify(
-            relatedResult.error,
-          )}`,
+          task_id: toolSession.id,
+          title: toolSession.title,
+          work_dir: taskDirectory,
+          error: `Failed to retrieve tasks: ${JSON.stringify(relatedResult.error)}`,
           code: 'SESSION_ERROR',
         } satisfies TaskResult);
       }
@@ -290,50 +352,34 @@ export const taskOutputTool = defineTool({
         return JSON.stringify({
           status: 'failed',
           task_id: args.task_id,
+          work_dir: taskDirectory,
           error: `Invalid task ID - must be a child or sibling task.`,
           code: 'SESSION_ERROR',
         } satisfies TaskResult);
       }
 
-      const agentAndModelResult = await getSessionAgentAndModel(task.id);
-      if (agentAndModelResult.error) {
-        return JSON.stringify({
-          status: 'failed',
-          task_id: task.id,
-          title: task.title,
-          error: `Failed to get agent info: ${JSON.stringify(
-            agentAndModelResult.error,
-          )}`,
-          code: 'SESSION_ERROR',
-        } satisfies TaskResult);
-      }
-
-      const completedResult = await isSessionComplete(task.id);
+      const completedResult = await isSessionComplete(task);
       if (completedResult.error) {
         return JSON.stringify({
           status: 'failed',
           task_id: task.id,
-          agent: agentAndModelResult.data.agent || 'unknown',
           title: task.title,
-          error: `Failed to check task status: ${JSON.stringify(
-            completedResult.error,
-          )}`,
+          work_dir: task.directory,
+          error: `Failed to check task status: ${JSON.stringify(completedResult.error)}`,
           code: 'SESSION_ERROR',
         } satisfies TaskResult);
       }
 
       let isCompleted = completedResult.data;
       if (!isCompleted && args.wait) {
-        const waitResult = await waitForSession(task.id, args.timeout_ms);
+        const waitResult = await waitForSession(task, args.timeout_ms);
         if (waitResult.error) {
           return JSON.stringify({
             status: 'failed',
             task_id: task.id,
-            agent: agentAndModelResult.data.agent || 'unknown',
             title: task.title,
-            error: `Failed while waiting for task completion: ${JSON.stringify(
-              waitResult.error,
-            )}`,
+            work_dir: task.directory,
+            error: `Failed while waiting for task completion: ${JSON.stringify(waitResult.error)}`,
             code: 'SESSION_ERROR',
           } satisfies TaskResult);
         }
@@ -341,32 +387,30 @@ export const taskOutputTool = defineTool({
         isCompleted = waitResult.data;
       }
 
-      const sessionOutputResult = await fetchSessionOutput(task.id);
+      const sessionOutputResult = await fetchSessionOutput(task);
       if (sessionOutputResult.error) {
         return JSON.stringify({
           status: 'failed',
           task_id: task.id,
-          agent: agentAndModelResult.data.agent || 'unknown',
           title: task.title,
-          error: `Failed to fetch task output: ${JSON.stringify(
-            sessionOutputResult.error,
-          )}`,
+          work_dir: task.directory,
+          error: `Failed to fetch task output: ${JSON.stringify(sessionOutputResult.error)}`,
           code: 'SESSION_ERROR',
         } satisfies TaskResult);
       }
 
       const injectResult = await client.session.promptAsync({
-        sessionID: toolCtx.sessionID,
+        sessionID: toolSession.id,
         agent: toolCtx.agent,
         parts: sessionOutputResult.data.parts,
-        directory,
+        directory: toolSession.directory,
       });
       if (injectResult.error) {
         return JSON.stringify({
           status: 'failed',
           task_id: task.id,
-          agent: agentAndModelResult.data.agent || 'unknown',
           title: task.title,
+          work_dir: task.directory,
           error: `Failed to inject task output into parent session: ${JSON.stringify(
             injectResult.error,
           )}`,
@@ -378,8 +422,8 @@ export const taskOutputTool = defineTool({
         return JSON.stringify({
           status: 'completed',
           task_id: task.id,
-          agent: agentAndModelResult.data.agent || 'unknown',
           title: task.title,
+          work_dir: task.directory,
           result: 'See next message for session output',
         } satisfies TaskResult);
       }
@@ -387,8 +431,8 @@ export const taskOutputTool = defineTool({
       return JSON.stringify({
         status: 'running',
         task_id: task.id,
-        agent: agentAndModelResult.data.agent || 'unknown',
         title: task.title,
+        work_dir: task.directory,
         partialResult: 'See next message for current session output',
       } satisfies TaskResult);
     },
@@ -400,9 +444,7 @@ export const taskSendMessageTool = defineTool({
   config: {
     description: 'Send a message to a running or completed task.',
     args: {
-      task_id: z
-        .string()
-        .describe('The ID of the task to send the message to.'),
+      task_id: z.string().describe('The ID of the task to send the message to.'),
       message: z.string().describe('The message to send to the task.'),
       noReply: z
         .boolean()
@@ -410,18 +452,41 @@ export const taskSendMessageTool = defineTool({
         .describe(
           'If true, inject message without triggering a response. Useful for passive notifications.',
         ),
+      work_dir: z
+        .string()
+        .optional()
+        .describe(
+          'Working directory of the task. Must be provided if the task was run in a different directory.',
+        ),
     },
     execute: async (args, toolCtx) => {
-      const { client, directory } = PluginContext.use();
+      const { client } = PluginContext.use();
 
-      const relatedResult = await getRelatedSessions(toolCtx.sessionID);
+      const toolSessionResult = await client.session.get({
+        sessionID: toolCtx.sessionID,
+      });
+      if (toolSessionResult.error) {
+        return JSON.stringify({
+          status: 'failed',
+          task_id: toolCtx.sessionID,
+          error: `Failed to retrieve tool context session: ${JSON.stringify(
+            toolSessionResult.error,
+          )}`,
+          code: 'SESSION_ERROR',
+        } satisfies TaskResult);
+      }
+
+      const toolSession = toolSessionResult.data;
+      const taskDirectory = args.work_dir ?? toolSession.directory;
+
+      const relatedResult = await getRelatedSessions(toolSession, taskDirectory);
       if (relatedResult.error) {
         return JSON.stringify({
           status: 'failed',
-          task_id: args.task_id,
-          error: `Failed to retrieve tasks: ${JSON.stringify(
-            relatedResult.error,
-          )}`,
+          task_id: toolSession.id,
+          title: toolSession.title,
+          work_dir: taskDirectory,
+          error: `Failed to retrieve tasks: ${JSON.stringify(relatedResult.error)}`,
           code: 'SESSION_ERROR',
         } satisfies TaskResult);
       }
@@ -431,19 +496,20 @@ export const taskSendMessageTool = defineTool({
         return JSON.stringify({
           status: 'failed',
           task_id: args.task_id,
+          work_dir: taskDirectory,
           error: `Invalid task ID - must be a child or sibling task.`,
           code: 'SESSION_ERROR',
         } satisfies TaskResult);
       }
 
-      const agentAndModelResult = await getSessionAgentAndModel(task.id);
+      const agentAndModelResult = await getSessionAgentAndModel(task);
       if (agentAndModelResult.error) {
         return JSON.stringify({
           status: 'failed',
           task_id: task.id,
-          error: `Failed to get agent info: ${JSON.stringify(
-            agentAndModelResult.error,
-          )}`,
+          title: task.title,
+          work_dir: task.directory,
+          error: `Failed to get agent info: ${JSON.stringify(agentAndModelResult.error)}`,
           code: 'SESSION_ERROR',
         } satisfies TaskResult);
       }
@@ -456,20 +522,27 @@ export const taskSendMessageTool = defineTool({
         model,
         noReply: args.noReply,
         parts: [{ type: 'text', text: args.message }],
-        directory,
+        directory: task.directory,
       });
       if (error) {
         return JSON.stringify({
           status: 'failed',
-          task_id: args.task_id,
+          task_id: task.id,
+          title: task.title,
+          work_dir: task.directory,
+          agent,
           error: `Failed to send message to task: ${JSON.stringify(error)}`,
           code: 'SESSION_ERROR',
         } satisfies TaskResult);
       }
 
       return JSON.stringify({
-        task_id: args.task_id,
-        result: 'Message sent.',
+        status: 'completed',
+        task_id: task.id,
+        title: task.title,
+        work_dir: task.directory,
+        agent,
+        result: 'Message sent successfully',
       });
     },
   },
@@ -481,40 +554,64 @@ export const taskCancelTool = defineTool({
     description: 'Cancel a running task.',
     args: {
       task_id: z.string().describe('The ID of the task to cancel.'),
+      work_dir: z
+        .string()
+        .optional()
+        .describe(
+          'Working directory of the task. Must be provided if the task was run in a different directory.',
+        ),
     },
     execute: async (args, toolCtx) => {
-      const { client, directory } = PluginContext.use();
+      const { client } = PluginContext.use();
 
-      const childrenResult = await getChildSessions(toolCtx.sessionID);
-      if (childrenResult.error) {
+      const toolSessionResult = await client.session.get({
+        sessionID: toolCtx.sessionID,
+      });
+      if (toolSessionResult.error) {
         return JSON.stringify({
           status: 'failed',
-          task_id: args.task_id,
-          error: `Failed to retrieve tasks: ${JSON.stringify(
-            childrenResult.error,
+          task_id: toolCtx.sessionID,
+          error: `Failed to retrieve tool context session: ${JSON.stringify(
+            toolSessionResult.error,
           )}`,
           code: 'SESSION_ERROR',
         } satisfies TaskResult);
       }
 
-      const task = childrenResult.data.find((s) => s.id === args.task_id);
+      const toolSession = toolSessionResult.data;
+      const taskDirectory = args.work_dir ?? toolSession.directory;
+
+      const relativesResult = await getRelatedSessions(toolSession, taskDirectory);
+      if (relativesResult.error) {
+        return JSON.stringify({
+          status: 'failed',
+          task_id: toolSession.id,
+          title: toolSession.title,
+          work_dir: taskDirectory,
+          error: `Failed to retrieve tasks: ${JSON.stringify(relativesResult.error)}`,
+          code: 'SESSION_ERROR',
+        } satisfies TaskResult);
+      }
+
+      const task = relativesResult.data.find((s) => s.id === args.task_id);
       if (!task) {
         return JSON.stringify({
           status: 'failed',
           task_id: args.task_id,
+          work_dir: taskDirectory,
           error: `Task not found.`,
           code: 'SESSION_ERROR',
         } satisfies TaskResult);
       }
 
-      const completedResult = await isSessionComplete(task.id);
+      const completedResult = await isSessionComplete(task);
       if (completedResult.error) {
         return JSON.stringify({
           status: 'failed',
           task_id: task.id,
-          error: `Failed to check task status: ${JSON.stringify(
-            completedResult.error,
-          )}`,
+          title: task.title,
+          work_dir: task.directory,
+          error: `Failed to check task status: ${JSON.stringify(completedResult.error)}`,
           code: 'SESSION_ERROR',
         } satisfies TaskResult);
       }
@@ -523,6 +620,8 @@ export const taskCancelTool = defineTool({
         return JSON.stringify({
           status: 'failed',
           task_id: task.id,
+          title: task.title,
+          work_dir: task.directory,
           error: `Task already completed.`,
           code: 'SESSION_ERROR',
         } satisfies TaskResult);
@@ -530,14 +629,16 @@ export const taskCancelTool = defineTool({
 
       const abortResult = await client.session.abort({
         sessionID: task.id,
-        directory,
+        directory: task.directory,
       });
       if (abortResult.error) {
-        const nowCompletedResult = await isSessionComplete(task.id);
+        const nowCompletedResult = await isSessionComplete(task);
         if (nowCompletedResult.error) {
           return JSON.stringify({
             status: 'failed',
             task_id: task.id,
+            title: task.title,
+            work_dir: task.directory,
             error: `Failed to check task status after abort failure: ${JSON.stringify(
               nowCompletedResult.error,
             )}`,
@@ -549,6 +650,8 @@ export const taskCancelTool = defineTool({
           return JSON.stringify({
             status: 'failed',
             task_id: task.id,
+            title: task.title,
+            work_dir: task.directory,
             error: `Task completed before cancellation.`,
             code: 'SESSION_ERROR',
           } satisfies TaskResult);
@@ -557,6 +660,8 @@ export const taskCancelTool = defineTool({
         return JSON.stringify({
           status: 'failed',
           task_id: task.id,
+          title: task.title,
+          work_dir: task.directory,
           error: `Failed to cancel task: ${JSON.stringify(abortResult.error)}`,
           code: 'SESSION_ERROR',
         } satisfies TaskResult);
@@ -578,9 +683,7 @@ export const taskBroadcastTool = defineTool({
       message: z
         .string()
         .max(2000)
-        .describe(
-          'The information to share. Be concise and actionable. Max 2000 characters.',
-        ),
+        .describe('The information to share. Be concise and actionable. Max 2000 characters.'),
       category: z
         .enum(['discovery', 'warning', 'context', 'blocker'])
         .default('discovery')
@@ -593,69 +696,72 @@ export const taskBroadcastTool = defineTool({
         .describe(
           'Who to broadcast to: siblings (peer tasks), children (delegated tasks), all (both)',
         ),
+      work_dir: z
+        .string()
+        .optional()
+        .describe(
+          'Working directory of the tasks. Must be provided if the tasks were run in a different directory.',
+        ),
     },
     execute: async (args, toolCtx) => {
-      const { client, directory } = PluginContext.use();
+      const { client } = PluginContext.use();
 
-      const recipients: Array<{ id: string; title: string }> = [];
+      const toolSessionResult = await client.session.get({
+        sessionID: toolCtx.sessionID,
+      });
+      if (toolSessionResult.error) {
+        return JSON.stringify({
+          status: 'failed',
+          task_id: toolCtx.sessionID,
+          error: `Failed to retrieve tool context session: ${JSON.stringify(
+            toolSessionResult.error,
+          )}`,
+          code: 'SESSION_ERROR',
+        } satisfies TaskResult);
+      }
+
+      const toolSession = toolSessionResult.data;
+      const taskDirectory = args.work_dir ?? toolSession.directory;
+
+      const recipients: Array<Session> = [];
       const errors: string[] = [];
 
       // Get siblings if target includes them
       if (args.target === 'siblings' || args.target === 'all') {
-        const siblingsResult = await getSiblingSessions(toolCtx.sessionID);
+        const siblingsResult = await getSiblingSessions(toolSession, taskDirectory);
         if (siblingsResult.error) {
-          const errorCode =
-            typeof siblingsResult.error.data === 'object' &&
-            siblingsResult.error.data !== null &&
-            'code' in siblingsResult.error.data
-              ? siblingsResult.error.data.code
-              : null;
-          const errorMessage =
-            'message' in siblingsResult.error
-              ? siblingsResult.error.message
-              : JSON.stringify(siblingsResult.error);
+          const isNoParentError = siblingsResult.error.message === 'Session has no parent';
+          const errorMessage = siblingsResult.error.message;
 
           if (args.target === 'siblings') {
             // Only targeting siblings and failed - return error
             return JSON.stringify({
               status: 'failed',
               target: args.target,
-              error:
-                errorCode === 'NO_PARENT'
-                  ? 'Not a child task - cannot broadcast to siblings'
-                  : `Failed to get siblings: ${errorMessage}`,
+              error: isNoParentError
+                ? 'Not a child task - cannot broadcast to siblings'
+                : `Failed to get siblings: ${errorMessage}`,
             } satisfies BroadcastResult);
           }
           // Target is 'all' but no siblings - continue with children only
           errors.push(`Could not get siblings: ${errorMessage}`);
         } else {
-          recipients.push(
-            ...siblingsResult.data.siblings.map((s) => ({
-              id: s.id,
-              title: s.title,
-            })),
-          );
+          recipients.push(...siblingsResult.data.siblings);
         }
       }
 
       // Get children if target includes them
       if (args.target === 'children' || args.target === 'all') {
-        const childrenResult = await getChildSessions(toolCtx.sessionID);
+        const childrenResult = await getChildSessions(toolSession, taskDirectory);
         if (childrenResult.error) {
-          errors.push(
-            `Failed to get children: ${JSON.stringify(childrenResult.error)}`,
-          );
+          errors.push(`Failed to get children: ${JSON.stringify(childrenResult.error)}`);
         } else {
-          recipients.push(
-            ...childrenResult.data.map((s) => ({ id: s.id, title: s.title })),
-          );
+          recipients.push(...childrenResult.data);
         }
       }
 
       // Dedupe recipients by ID
-      const uniqueRecipients = Array.from(
-        new Map(recipients.map((r) => [r.id, r])).values(),
-      );
+      const uniqueRecipients = Array.from(new Map(recipients.map((r) => [r.id, r])).values());
 
       // Format the broadcast message
       const broadcastXml = formatBroadcastMessage(
@@ -676,27 +782,38 @@ export const taskBroadcastTool = defineTool({
           continue;
         }
 
+        const agentAndModelResult = await getSessionAgentAndModel(recipient);
+        if (agentAndModelResult.error) {
+          return JSON.stringify({
+            status: 'failed',
+            task_id: recipient.id,
+            title: recipient.title,
+            work_dir: recipient.directory,
+            error: `Failed to get agent info: ${JSON.stringify(agentAndModelResult.error)}`,
+            code: 'SESSION_ERROR',
+          } satisfies TaskResult);
+        }
+
+        const { agent, model } = agentAndModelResult.data;
+
         const result = await client.session.promptAsync({
           sessionID: recipient.id,
           noReply: true,
+          agent,
+          model,
           parts: [{ type: 'text', text: broadcastXml, synthetic: true }],
-          directory,
+          directory: recipient.directory,
         });
 
         if (result.error) {
-          errors.push(
-            `Failed to deliver to ${recipient.id}: ${JSON.stringify(
-              result.error,
-            )}`,
-          );
+          errors.push(`Failed to deliver to ${recipient.id}: ${JSON.stringify(result.error)}`);
         } else {
           delivered++;
         }
       }
 
       // Determine status
-      const status =
-        errors.length === 0 ? 'success' : delivered > 0 ? 'partial' : 'failed';
+      const status = errors.length === 0 ? 'success' : delivered > 0 ? 'partial' : 'failed';
 
       if (status === 'failed') {
         return JSON.stringify({
@@ -735,27 +852,43 @@ export const taskBroadcastsReadTool = defineTool({
         .enum(['discovery', 'warning', 'context', 'blocker', 'all'])
         .default('all')
         .describe('Filter broadcasts by category'),
-      limit: z
-        .number()
-        .default(10)
-        .describe('Maximum number of broadcasts to return'),
+      limit: z.number().default(10).describe('Maximum number of broadcasts to return'),
       source: z
         .enum(['self', 'children'])
         .default('self')
         .describe(
           'Where to read broadcasts from: self (current session), children (child task sessions)',
         ),
+      work_dir: z
+        .string()
+        .optional()
+        .describe(
+          'Working directory of the tasks. Must be provided if the tasks were run in a different directory.',
+        ),
     },
     execute: async (args, toolCtx) => {
-      const { client, directory } = PluginContext.use();
+      const { client } = PluginContext.use();
+
+      const toolSessionResult = await client.session.get({
+        sessionID: toolCtx.sessionID,
+      });
+      if (toolSessionResult.error) {
+        return JSON.stringify({
+          broadcasts: [],
+          total: 0,
+          source: args.source,
+        } satisfies BroadcastsReadResult);
+      }
+      const toolSession = toolSessionResult.data;
+      const taskDirectory = args.work_dir ?? toolSession.directory;
 
       let broadcasts: Broadcast[] = [];
 
       if (args.source === 'self') {
         // Read broadcasts from current session
         const messagesResult = await client.session.messages({
-          sessionID: toolCtx.sessionID,
-          directory,
+          sessionID: toolSession.id,
+          directory: taskDirectory,
         });
 
         if (messagesResult.error) {
@@ -771,7 +904,15 @@ export const taskBroadcastsReadTool = defineTool({
         broadcasts = broadcasts.map((b) => ({ ...b, source: 'self' as const }));
       } else {
         // Read broadcasts from child sessions
-        broadcasts = await getChildSessionBroadcasts(toolCtx.sessionID);
+        const childBroadcastsResult = await getChildSessionBroadcasts(toolSession, taskDirectory);
+        if (childBroadcastsResult.error) {
+          return JSON.stringify({
+            broadcasts: [],
+            total: 0,
+            source: args.source,
+          } satisfies BroadcastsReadResult);
+        }
+        broadcasts = childBroadcastsResult.data;
       }
 
       // Filter by category if not 'all'

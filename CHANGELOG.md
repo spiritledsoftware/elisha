@@ -17,7 +17,6 @@
 ### Minor Changes
 
 - dba95be: Improve agent descriptions and streamline prompts for better delegation
-
   - Enhanced all agent descriptions with "Use when:" guidance to help orchestrator make better delegation decisions
   - Added description to compaction agent (was previously missing)
   - Streamlined agent prompts by extracting shared protocols into reusable templates

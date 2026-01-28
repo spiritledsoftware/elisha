@@ -8,11 +8,11 @@
 
 ## Acceptance Criteria
 
-| Criterion | Status | Evidence |
-|-----------|--------|----------|
-| Redundancies identified with line numbers | Done | See Issues section |
-| Recommendations for condensing provided | Done | See Recommendations section |
-| No code changes made | Done | READ-ONLY review |
+| Criterion                                 | Status | Evidence                    |
+| ----------------------------------------- | ------ | --------------------------- |
+| Redundancies identified with line numbers | Done   | See Issues section          |
+| Recommendations for condensing provided   | Done   | See Recommendations section |
+| No code changes made                      | Done   | READ-ONLY review            |
 
 ## Summary
 
@@ -28,21 +28,21 @@ None.
 
 ### Warnings (should fix)
 
-| ID | Lines | Issue | Confidence | Estimated Savings |
-|----|-------|-------|------------|-------------------|
-| W1 | 141-161, 216-243 | **Duplicate format templates**: `taskHandoff` and `resultSynthesis` both include markdown code block templates with similar structure | Definite | ~50 tokens |
-| W2 | 123-135, 249-272 | **Overlapping tracking guidance**: `checkpoint` and `progressTracking` both track task status with similar fields (completed, in progress, blockers) | Definite | ~40 tokens |
-| W3 | 167-184, 331-343 | **Redundant verification concepts**: `verification` and `reflection` both check completeness and quality before finalizing | Likely | ~30 tokens |
-| W4 | 308-325, 278-302 | **Overlapping scope/clarity guidance**: `scopeAssessment` and `clarification` both address "when to proceed vs ask" | Likely | ~40 tokens |
-| W5 | 378-435 | **Verbose anti-patterns**: Each agent type has 4 items with full sentences; could use terse phrasing | Definite | ~60 tokens |
+| ID  | Lines            | Issue                                                                                                                                                | Confidence | Estimated Savings |
+| --- | ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- | ----------------- |
+| W1  | 141-161, 216-243 | **Duplicate format templates**: `taskHandoff` and `resultSynthesis` both include markdown code block templates with similar structure                | Definite   | ~50 tokens        |
+| W2  | 123-135, 249-272 | **Overlapping tracking guidance**: `checkpoint` and `progressTracking` both track task status with similar fields (completed, in progress, blockers) | Definite   | ~40 tokens        |
+| W3  | 167-184, 331-343 | **Redundant verification concepts**: `verification` and `reflection` both check completeness and quality before finalizing                           | Likely     | ~30 tokens        |
+| W4  | 308-325, 278-302 | **Overlapping scope/clarity guidance**: `scopeAssessment` and `clarification` both address "when to proceed vs ask"                                  | Likely     | ~40 tokens        |
+| W5  | 378-435          | **Verbose anti-patterns**: Each agent type has 4 items with full sentences; could use terse phrasing                                                 | Definite   | ~60 tokens        |
 
 ### Nitpicks (optional)
 
-| ID | Lines | Issue | Estimated Savings |
-|----|-------|-------|-------------------|
-| N1 | 108-118 | `confidence` table has redundant "Meaning" column - action implies meaning | ~15 tokens |
-| N2 | 190-210 | `parallelWork` lists both "when to" and "when NOT to" - negative list is redundant | ~25 tokens |
-| N3 | 349-363 | `retryStrategy` table has 4 failure types but only 2 actions per type are distinct | ~20 tokens |
+| ID  | Lines   | Issue                                                                              | Estimated Savings |
+| --- | ------- | ---------------------------------------------------------------------------------- | ----------------- |
+| N1  | 108-118 | `confidence` table has redundant "Meaning" column - action implies meaning         | ~15 tokens        |
+| N2  | 190-210 | `parallelWork` lists both "when to" and "when NOT to" - negative list is redundant | ~25 tokens        |
+| N3  | 349-363 | `retryStrategy` table has 4 failure types but only 2 actions per type are distinct | ~20 tokens        |
 
 ## Detailed Analysis
 
@@ -241,15 +241,15 @@ executor: `
 
 ## Recommendations Summary
 
-| Priority | Recommendation | Estimated Savings | Effort |
-|----------|----------------|-------------------|--------|
-| High | Condense `antiPatterns` to terse phrases | ~90 tokens | Low |
-| High | Merge `clarification` + `scopeAssessment` into `requestTriage` | ~80 tokens | Medium |
-| Medium | Condense `taskHandoff` format template | ~80 tokens | Low |
-| Medium | Condense `checkpoint` to single line | ~40 tokens | Low |
-| Medium | Condense `reflection` to single line | ~30 tokens | Low |
-| Low | Simplify `confidence` table | ~15 tokens | Low |
-| Low | Remove negative list from `parallelWork` | ~25 tokens | Low |
+| Priority | Recommendation                                                 | Estimated Savings | Effort |
+| -------- | -------------------------------------------------------------- | ----------------- | ------ |
+| High     | Condense `antiPatterns` to terse phrases                       | ~90 tokens        | Low    |
+| High     | Merge `clarification` + `scopeAssessment` into `requestTriage` | ~80 tokens        | Medium |
+| Medium   | Condense `taskHandoff` format template                         | ~80 tokens        | Low    |
+| Medium   | Condense `checkpoint` to single line                           | ~40 tokens        | Low    |
+| Medium   | Condense `reflection` to single line                           | ~30 tokens        | Low    |
+| Low      | Simplify `confidence` table                                    | ~15 tokens        | Low    |
+| Low      | Remove negative list from `parallelWork`                       | ~25 tokens        | Low    |
 
 **Total Estimated Savings**: ~360 tokens (conservative: ~200 tokens)
 

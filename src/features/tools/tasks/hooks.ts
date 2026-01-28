@@ -1,13 +1,14 @@
+import type { Session } from '@opencode-ai/sdk/v2';
 import { PluginContext } from '~/context';
 import { defineHookSet } from '~/hook';
-import { log } from '~/util';
-import { Prompt } from '~/util/prompt';
+import { log } from '~/utils';
+import { Prompt } from '~/utils/prompt';
 import {
   formatChildSessionList,
   getSessionAgentAndModel,
   getSiblingSessions,
   isSessionComplete,
-} from '~/util/session';
+} from '~/utils/session';
 import {
   ASYNC_TASK_PREFIX,
   taskBroadcastTool,
@@ -29,11 +30,7 @@ The following task session IDs were created in this conversation. You can use th
 /**
  * Formats new sibling announcement for injection into existing tasks
  */
-const formatNewSiblingAnnouncement = (
-  taskId: string,
-  agent: string,
-  title: string,
-): string => {
+const formatNewSiblingAnnouncement = (taskId: string, agent: string, title: string): string => {
   return Prompt.template`
     <new_sibling task_id="${taskId}" agent="${agent}" title="${title}">
       A new sibling task has been created. You can communicate with it using \`${taskBroadcastTool.id}\` or \`${taskSendMessageTool.id}\`.
@@ -44,7 +41,7 @@ const formatNewSiblingAnnouncement = (
 export const taskHooks = defineHookSet({
   id: 'task-hooks',
   hooks: () => {
-    const { client, directory } = PluginContext.use();
+    const { client } = PluginContext.use();
 
     const injectedSessions = new Set<string>();
 
@@ -52,109 +49,98 @@ export const taskHooks = defineHookSet({
       event: async ({ event }) => {
         // Handle session created event for sibling injection
         if (event.type === 'session.created') {
-          const sessionInfo = event.properties.info;
-          if (!sessionInfo.id || !sessionInfo.parentID) return;
-
-          const sessionID = sessionInfo.id;
+          const session = event.properties.info as Session;
+          if (!session.id || !session.parentID) return;
 
           // Get all sibling sessions
-          const siblingsResult = await getSiblingSessions(sessionID);
+          const siblingsResult = await getSiblingSessions(session);
           if (siblingsResult.error) return;
 
           const siblings = siblingsResult.data.siblings;
 
           // Get new task's agent info
-          const newTaskAgentResult = await getSessionAgentAndModel(sessionID);
+          const newTaskAgentResult = await getSessionAgentAndModel(session);
           const newTaskAgent = newTaskAgentResult.data?.agent || 'unknown';
-          const newTaskTitle = sessionInfo.title;
+          const newTaskTitle = session.title;
 
           // Announce new task to existing siblings
-          const announcement = formatNewSiblingAnnouncement(
-            sessionID,
-            newTaskAgent,
-            newTaskTitle,
-          );
+          const announcement = formatNewSiblingAnnouncement(session.id, newTaskAgent, newTaskTitle);
           for (const sibling of siblings) {
-            const siblingAgentResult = await getSessionAgentAndModel(
-              sibling.id,
-            );
+            const siblingAgentResult = await getSessionAgentAndModel(sibling);
             await client.session.promptAsync({
               sessionID: sibling.id,
               noReply: true,
               agent: siblingAgentResult.data?.agent,
               model: siblingAgentResult.data?.model,
               parts: [{ type: 'text', text: announcement, synthetic: true }],
-              directory,
+              directory: sibling.directory,
             });
           }
         }
 
         // Notify parent session when task completes
-        if (
-          event.type === 'session.status' &&
-          event.properties.status.type === 'idle'
-        ) {
-          const sessionID = event.properties.sessionID;
-          const completedResult = await isSessionComplete(sessionID);
+        if (event.type === 'session.status' && event.properties.status.type === 'idle') {
+          const sessionResult = await client.session.get({
+            sessionID: event.properties.sessionID,
+          });
+          if (sessionResult.error) {
+            log({
+              level: 'error',
+              message: `Failed to get session(${event.properties.sessionID}): ${sessionResult.error}`,
+            });
+            return;
+          }
+
+          const session = sessionResult.data;
+
+          const completedResult = await isSessionComplete(session);
           if (completedResult.error) {
             log({
               level: 'error',
-              message: `Failed to check if session(${sessionID}) is complete: ${completedResult.error}`,
+              message: `Failed to check if session(${session.id}) is complete: ${completedResult.error}`,
             });
             return;
           }
 
           if (completedResult.data) {
-            const sessionResult = await client.session.get({
-              sessionID,
-              directory,
+            if (!session.title.startsWith(ASYNC_TASK_PREFIX) || !session.parentID) return;
+
+            const parentSessionResult = await client.session.get({
+              sessionID: session.parentID,
+              directory: session.directory,
             });
-            if (sessionResult.error) {
+            if (parentSessionResult.error) {
               log({
                 level: 'error',
-                message: `Failed to get session(${sessionID}): ${sessionResult.error}`,
+                message: `Failed to get parent session(${session.parentID}): ${parentSessionResult.error}`,
               });
               return;
             }
 
-            const { title, parentID } = sessionResult.data;
-            if (!title.startsWith(ASYNC_TASK_PREFIX) || !parentID) return;
-            const parentAgentAndModelResult =
-              await getSessionAgentAndModel(parentID);
+            const parentSession = parentSessionResult.data;
+
+            const parentAgentAndModelResult = await getSessionAgentAndModel(parentSession);
             if (parentAgentAndModelResult.error) {
               log({
                 level: 'error',
-                message: `Failed to get agent/model for parent session(${parentID}): ${parentAgentAndModelResult.error}`,
+                message: `Failed to get agent/model for parent session(${parentSession.id}): ${parentAgentAndModelResult.error}`,
               });
               return;
             }
 
-            const { agent: parentAgent, model: parentModel } =
-              parentAgentAndModelResult.data;
-
-            const taskAgentModelResult =
-              await getSessionAgentAndModel(sessionID);
-            if (taskAgentModelResult.error) {
-              log({
-                level: 'error',
-                message: `Failed to get agent/model for task session(${sessionID}): ${taskAgentModelResult.error}`,
-              });
-              return;
-            }
-
-            const { agent: taskAgent } = taskAgentModelResult.data;
+            const { agent: parentAgent, model: parentModel } = parentAgentAndModelResult.data;
 
             // Notify parent that task completed (use elisha_task_output to get result)
             const notification = JSON.stringify({
               status: 'completed',
-              task_id: sessionID,
-              agent: taskAgent || 'unknown',
-              title,
+              task_id: session.id,
+              title: session.title,
+              work_dir: session.directory,
               message: `Task completed. Use \`${taskOutputTool.id}\` to get the result.`,
             });
 
             const promptResult = await client.session.promptAsync({
-              sessionID: parentID,
+              sessionID: session.parentID,
               agent: parentAgent,
               model: parentModel,
               parts: [
@@ -164,12 +150,12 @@ export const taskHooks = defineHookSet({
                   synthetic: true,
                 },
               ],
-              directory,
+              directory: session.directory,
             });
             if (promptResult.error) {
               log({
                 level: 'error',
-                message: `Failed to notify parent session(${parentID}) of task(${sessionID}) completion: ${promptResult.error}`,
+                message: `Failed to notify parent session(${session.parentID}) of task(${session.id}) completion: ${promptResult.error}`,
               });
               return;
             }
@@ -178,27 +164,46 @@ export const taskHooks = defineHookSet({
 
         // Inject task context when session is compacted
         if (event.type === 'session.compacted') {
-          const sessionID = event.properties.sessionID;
+          const sessionResult = await client.session.get({
+            sessionID: event.properties.sessionID,
+          });
+          if (sessionResult.error) {
+            log({
+              level: 'error',
+              message: `Failed to get session(${event.properties.sessionID}): ${sessionResult.error}`,
+            });
+            return;
+          }
+
+          const session = sessionResult.data;
 
           // Get tasks for this session
-          const taskList = await formatChildSessionList(sessionID);
+          const taskListResult = await formatChildSessionList(session);
+          if (taskListResult.error) {
+            log({
+              level: 'error',
+              message: `Failed to get task list for session(${session.id}): ${taskListResult.error.message}`,
+            });
+            return;
+          }
+          const taskList = taskListResult.data;
           if (taskList) {
             // Get model/agent from recent messages
-            const agentModelResult = await getSessionAgentAndModel(sessionID);
+            const agentModelResult = await getSessionAgentAndModel(session);
             if (agentModelResult.error) {
               log({
                 level: 'error',
-                message: `Failed to get agent/model for session(${sessionID}): ${agentModelResult.error}`,
+                message: `Failed to get agent/model for session(${session.id}): ${agentModelResult.error}`,
               });
               return;
             }
 
             const { agent, model } = agentModelResult.data;
 
-            injectedSessions.add(sessionID);
+            injectedSessions.add(session.id);
 
             const promptResult = await client.session.promptAsync({
-              sessionID,
+              sessionID: session.id,
               noReply: true,
               model,
               agent,
@@ -215,12 +220,12 @@ export const taskHooks = defineHookSet({
                   synthetic: true,
                 },
               ],
-              directory,
+              directory: session.directory,
             });
             if (promptResult.error) {
               log({
                 level: 'error',
-                message: `Failed to inject task context into session(${sessionID}): ${promptResult.error}`,
+                message: `Failed to inject task context into session(${session.id}): ${promptResult.error}`,
               });
               return;
             }

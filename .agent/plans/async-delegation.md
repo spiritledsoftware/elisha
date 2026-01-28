@@ -217,12 +217,12 @@ bun run lint
 
 ## Risks
 
-| Risk | Mitigation |
-|------|------------|
-| Protocol content too verbose | Keep decision matrix concise, use tables |
-| Inconsistent integration across prompts | Follow exact pattern from context-handling protocol |
-| Build failures from .md import | Verify globals.d.ts handles .md imports (already configured) |
-| Agents ignore async guidance | Make examples concrete and actionable |
+| Risk                                    | Mitigation                                                   |
+| --------------------------------------- | ------------------------------------------------------------ |
+| Protocol content too verbose            | Keep decision matrix concise, use tables                     |
+| Inconsistent integration across prompts | Follow exact pattern from context-handling protocol          |
+| Build failures from .md import          | Verify globals.d.ts handles .md imports (already configured) |
+| Agents ignore async guidance            | Make examples concrete and actionable                        |
 
 ## Protocol Content Outline
 
@@ -233,12 +233,12 @@ The async-delegation.md protocol should contain:
 
 ## Decision Matrix
 
-| Criteria | Use Async | Use Sync |
-|----------|-----------|----------|
-| Tasks are independent | ✓ | |
-| Need result before next step | | ✓ |
-| Multiple similar lookups | ✓ | |
-| Sequential dependency | | ✓ |
+| Criteria                     | Use Async | Use Sync |
+| ---------------------------- | --------- | -------- |
+| Tasks are independent        | ✓         |          |
+| Need result before next step |           | ✓        |
+| Multiple similar lookups     | ✓         |          |
+| Sequential dependency        |           | ✓        |
 
 ## Async Pattern
 
@@ -248,13 +248,13 @@ The async-delegation.md protocol should contain:
 
 ## Timeout Guidelines
 
-| Task Type | Recommended Timeout | Rationale |
-|-----------|---------------------|-----------|
-| Explorer (quick) | 30s | File search is fast |
-| Explorer (thorough) | 60s | Deep search needs time |
-| Researcher (quick) | 45s | Web calls have latency |
-| Researcher (thorough) | 90s | Multiple sources |
-| Architect | 120s | Design requires thought |
+| Task Type             | Recommended Timeout | Rationale               |
+| --------------------- | ------------------- | ----------------------- |
+| Explorer (quick)      | 30s                 | File search is fast     |
+| Explorer (thorough)   | 60s                 | Deep search needs time  |
+| Researcher (quick)    | 45s                 | Web calls have latency  |
+| Researcher (thorough) | 90s                 | Multiple sources        |
+| Architect             | 120s                | Design requires thought |
 
 ## Handling Partial Results
 

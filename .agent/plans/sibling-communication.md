@@ -23,21 +23,21 @@ Implement sibling task communication for the Elisha agent swarm based on spec v2
 
 ## Functional Requirements Mapping
 
-| FR | Description | Tasks |
-|----|-------------|-------|
-| FR-1 | Broadcast to siblings | 3.1 |
-| FR-2 | Broadcasts persist in history | 3.1 |
-| FR-3 | Works for parallel and sequential tasks | 3.1, 3.2 |
-| FR-4 | Prevent broadcast storms | 3.1 (noReply) |
-| FR-5 | Completed tasks receive broadcasts | 3.1 |
-| FR-6 | Read broadcasts without triggering responses | 3.2 |
-| FR-7 | Orchestrator broadcast to children | 3.1 |
-| FR-8 | Orchestrator read child broadcasts | 3.2 |
-| FR-9 | Auto-inject sibling IDs on task creation | 4.1 |
-| FR-10 | Announce new siblings to existing tasks | 4.1 |
-| FR-11 | Direct sibling messaging | 5.1 |
-| FR-12 | Sibling output access | 5.2 |
-| FR-13 | Passive directed messages (noReply) | 5.1 |
+| FR    | Description                                  | Tasks         |
+| ----- | -------------------------------------------- | ------------- |
+| FR-1  | Broadcast to siblings                        | 3.1           |
+| FR-2  | Broadcasts persist in history                | 3.1           |
+| FR-3  | Works for parallel and sequential tasks      | 3.1, 3.2      |
+| FR-4  | Prevent broadcast storms                     | 3.1 (noReply) |
+| FR-5  | Completed tasks receive broadcasts           | 3.1           |
+| FR-6  | Read broadcasts without triggering responses | 3.2           |
+| FR-7  | Orchestrator broadcast to children           | 3.1           |
+| FR-8  | Orchestrator read child broadcasts           | 3.2           |
+| FR-9  | Auto-inject sibling IDs on task creation     | 4.1           |
+| FR-10 | Announce new siblings to existing tasks      | 4.1           |
+| FR-11 | Direct sibling messaging                     | 5.1           |
+| FR-12 | Sibling output access                        | 5.2           |
+| FR-13 | Passive directed messages (noReply)          | 5.1           |
 
 ## Tasks
 
@@ -481,7 +481,9 @@ Modify `taskSendMessageTool`:
    ```typescript
    noReply: z.boolean()
      .default(false)
-     .describe('If true, inject message without triggering a response. Useful for passive notifications.')
+     .describe(
+       'If true, inject message without triggering a response. Useful for passive notifications.',
+     );
    ```
 
 3. **Update execute logic**:
@@ -557,7 +559,7 @@ export function siblingCommunication(self: ElishaAgent) {
       As an orchestrator, you can:
       - **Broadcast to children**: \`task_broadcast({ target: 'children', ... })\` to share context with all delegated tasks
       - **Read child broadcasts**: \`task_broadcasts_read({ source: 'children' })\` to see what tasks discovered
-      `
+      `,
       )}
       
       ${Prompt.when(
@@ -585,7 +587,7 @@ export function siblingCommunication(self: ElishaAgent) {
       #### Direct Sibling Messages
       Use \`task_send_message\` with a sibling's task ID for directed communication.
       Sibling IDs are provided in your \`<sibling_tasks>\` context.
-      `
+      `,
       )}
       
       ### Example Good Broadcast
@@ -907,16 +909,16 @@ Review implementation against all acceptance criteria from spec v2.1:
 
 ## Risks
 
-| Risk | Impact | Mitigation |
-|------|--------|------------|
-| Broadcast spam degrades performance | High | Protocol guidance limits what to broadcast |
-| Agents ignore broadcasts | Medium | Protocol emphasizes reading at task start |
-| Message parsing fails on edge cases | Medium | Robust regex, skip malformed broadcasts |
-| Large sibling count causes latency | Medium | Async delivery via `promptAsync` |
-| Broadcasts create context bloat | Medium | 2000 char limit, concise message guidance |
-| Loop prevention fails | High | `noReply: true` + protocol guidance |
-| Sibling injection race condition | Medium | Hook fires on event, not polling |
-| Compaction loses broadcast context | Medium | Trust LLM summarization for MVP |
+| Risk                                | Impact | Mitigation                                 |
+| ----------------------------------- | ------ | ------------------------------------------ |
+| Broadcast spam degrades performance | High   | Protocol guidance limits what to broadcast |
+| Agents ignore broadcasts            | Medium | Protocol emphasizes reading at task start  |
+| Message parsing fails on edge cases | Medium | Robust regex, skip malformed broadcasts    |
+| Large sibling count causes latency  | Medium | Async delivery via `promptAsync`           |
+| Broadcasts create context bloat     | Medium | 2000 char limit, concise message guidance  |
+| Loop prevention fails               | High   | `noReply: true` + protocol guidance        |
+| Sibling injection race condition    | Medium | Hook fires on event, not polling           |
+| Compaction loses broadcast context  | Medium | Trust LLM summarization for MVP            |
 
 ## Checkpoint
 
@@ -933,4 +935,4 @@ Review implementation against all acceptance criteria from spec v2.1:
 - Expanded `task_send_message` validation for siblings (FR-11)
 - Protocol is now dynamic based on agent type
 - All tools remain in `index.ts` (no separate broadcast.ts)
-**Blockers**: None
+  **Blockers**: None
