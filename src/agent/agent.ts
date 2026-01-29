@@ -13,6 +13,7 @@ import {
   hasPermission,
   isPatternMatch,
 } from '~/permission/utils';
+import { resolveSessionStartSkills } from '~/skill/reader';
 import { getEnabledAgents, hasSubAgents } from './utils';
 
 export type ElishaAgentOptions = {
@@ -79,6 +80,14 @@ export const defineAgent = ({
 
       if (agentConfig.prompt_append) {
         prompt = `${prompt}\n${agentConfig.prompt_append}`;
+      }
+
+      // Auto-inject session-start skill content into the prompt.
+      // This ensures agents always have critical skill knowledge available
+      // without relying on the LLM to call skill() at runtime.
+      const skillContent = await resolveSessionStartSkills(prompt);
+      if (skillContent) {
+        prompt = `${prompt}\n\n${skillContent}`;
       }
 
       agentConfig.prompt = prompt;
